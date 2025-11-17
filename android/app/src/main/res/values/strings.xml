@@ -7,6 +7,42 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Start</string>
+
+    <string name="onboarding_intro_title">Welcome to MindBricks</string>
+    <string name="onboarding_intro_body">We use mindful Pomodoro cycles, gentle cues, and environmental sensing to keep your focus energy high.</string>
+    <string name="onboarding_intro_card_title">Meet your focus coach</string>
+    <string name="onboarding_intro_card_body">INSERT TEXT HERE</string>
+
+    <string name="onboarding_profile_title">Let\'s personalize your coaching</string>
+    <string name="onboarding_profile_subtitle">Add a friendly face and a few focus goals so we can cheer you on.</string>
+    <string name="onboarding_profile_upload_photo">Add profile picture</string>
+    <string name="onboarding_profile_photo_helper">Don\'t have the right photo yet? You can always update it later.</string>
+    <string name="onboarding_profile_name_label">What should we call you?</string>
+    <string name="onboarding_profile_goal_label">What project or habits do you want to focus on?</string>
+    <string name="onboarding_profile_session_label">Preferred sprint length (minutes)</string>
+    <string name="onboarding_profile_session_helper">Start with 25 minutes to follow the classic Pomodoro technique.</string>
+
+    <string name="onboarding_sensors_title">Sense your environment</string>
+    <string name="onboarding_sensors_description">MindBricks learns based on ambient noise and light environment during study sessions.</string>
+    <string name="onboarding_sensors_microphone_title">Microphone check-ins</string>
+    <string name="onboarding_sensors_microphone_body">We only listen for noise levels during your sessions to understand in what environment you are.</string>
+    <string name="onboarding_sensors_light_title">Luminance insights</string>
+    <string name="onboarding_sensors_light_body">Ambient light data helps us understand if you are more productive in the dark, or in the bright.</string>
+    <string name="onboarding_enable_microphone">Allow microphone</string>
+    <string name="onboarding_enable_light">Allow luminance sensor</string>
+
+    <string name="onboarding_notifications_title">Stay on track</string>
+    <string name="onboarding_notifications_body">Enable reminders so MindBricks can nudge you to start, pause, and celebrate after each focus session.</string>
+    <string name="onboarding_enable_notifications">Allow notifications</string>
+    <string name="onboarding_notifications_secondary">You can change this preference later in Settings.</string>
+
+    <string name="onboarding_done_title">Ready to focus</string>
+    <string name="onboarding_done_body">You have everything set. When you tap Start we\'ll open your focus dashboard.</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
