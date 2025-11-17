@@ -29,7 +29,10 @@
         <!-- main activity -->
         <activity android:name=".MainActivity" />
         <!-- onboarding activity -->
-        <activity android:name=".ui.onboarding.OnboardingActivity" />
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:theme="@style/Theme.MindBricks.NoActionBar" />
+        />
     </application>
 
 </manifest>
