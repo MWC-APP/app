@@ -7,19 +7,19 @@
 
     <fragment
         android:id="@+id/navigation_home"
-        android:name="ch.inf.usi.mindbricks.ui.home.HomeFragment"
+        android:name="ch.inf.usi.mindbricks.ui.nav.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/navigation_metrics"
-        android:name="ch.inf.usi.mindbricks.ui.metrics.MetricsFragment"
+        android:name="ch.inf.usi.mindbricks.ui.nav.metrics.MetricsFragment"
         android:label="@string/title_metrics"
         tools:layout="@layout/fragment_metrics" />
 
     <fragment
         android:id="@+id/navigation_profile"
-        android:name="ch.inf.usi.mindbricks.ui.profile.ProfileFragment"
+        android:name="ch.inf.usi.mindbricks.ui.nav.profile.ProfileFragment"
         android:label="@string/title_profile"
         tools:layout="@layout/fragment_profile" />
 </navigation>

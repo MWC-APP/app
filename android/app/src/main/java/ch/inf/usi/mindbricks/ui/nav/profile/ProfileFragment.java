@@ -1,4 +1,4 @@
-package ch.inf.usi.mindbricks.ui.profile;
+package ch.inf.usi.mindbricks.ui.nav.profile;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

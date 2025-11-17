@@ -1,4 +1,4 @@
-package ch.inf.usi.mindbricks.ui.metrics;
+package ch.inf.usi.mindbricks.ui.nav.home;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -9,15 +9,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import ch.inf.usi.mindbricks.databinding.FragmentMetricsBinding;
+import ch.inf.usi.mindbricks.databinding.FragmentHomeBinding;
 
-public class MetricsFragment extends Fragment implements View.OnClickListener {
+public class HomeFragment extends Fragment implements View.OnClickListener {
 
-    private FragmentMetricsBinding binding;
+    private FragmentHomeBinding binding;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // inflate to get binding
-        binding = FragmentMetricsBinding.inflate(inflater, container, false);
+        binding = FragmentHomeBinding.inflate(inflater, container, false);
 
         // add click listener to handle local events
 
