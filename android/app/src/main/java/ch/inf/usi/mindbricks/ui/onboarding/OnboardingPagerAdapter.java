@@ -8,7 +8,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingDoneFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingIntroFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingNotificationsFragment;
-import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingSensorsFragment;
+import ch.inf.usi.mindbricks.ui.onboarding.page.sensors.OnboardingSensorsFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingUserFragment;
 
 public class OnboardingPagerAdapter extends FragmentStateAdapter {
