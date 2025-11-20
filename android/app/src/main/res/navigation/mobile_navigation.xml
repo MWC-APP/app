@@ -15,7 +15,7 @@
         android:id="@+id/navigation_metrics"
         android:name="ch.inf.usi.mindbricks.ui.nav.metrics.MetricsFragment"
         android:label="@string/title_metrics"
-        tools:layout="@layout/fragment_metrics" />
+        tools:layout="@layout/fragment_timer" />
 
     <fragment
         android:id="@+id/navigation_profile"
