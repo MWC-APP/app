@@ -106,12 +106,22 @@ public class OnboardingActivity extends AppCompatActivity {
         updateBottomButtons(viewPager.getCurrentItem());
     }
 
+    /**
+     * Updates the bottom buttons based on the current page:
+     * - the skip button is hidden if it's the last page
+     * - the next button is set to "Start" if it's the last page otherwise to "Next"
+     * @param position index of the current page
+     */
     private void updateBottomButtons(int position) {
         boolean isLastPage = position == pagerAdapter.getItemCount() - 1;
         buttonNext.setText(isLastPage ? R.string.onboarding_start : R.string.onboarding_next);
         buttonSkip.setVisibility(isLastPage ? View.GONE : View.VISIBLE);
     }
 
+    /**
+     * Triggers validation routine for the current onboarding step
+     * @return true if step is valid, false otherwise
+     */
     private boolean validateCurrentStep() {
         return validateStepAtPosition(viewPager.getCurrentItem());
     }
