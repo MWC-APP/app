@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,6 +17,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -204,15 +206,23 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
 
     /**
      * Shows a dialog to add a new tag to the list
+     *
+     * NOTE: this solution is inspired from this tutorial:
+     * <https://www.geeksforgeeks.org/android/how-to-create-a-custom-alertdialog-in-android/>
      */
     private void showAddTagDialog() {
+        // loads the dialog view from the layout
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_tag, null);
+
+        // extract fields from the view
         TextInputLayout tagNameLayout = dialogView.findViewById(R.id.layoutTagName);
         TextInputEditText editTagName = dialogView.findViewById(R.id.editTagName);
         ChipGroup colorGroup = dialogView.findViewById(R.id.chipTagColors);
 
+        // loads a tag color selector for each available colors
         int[] palette = Tags.getTagColorPalette(requireContext());
         for (int i = 0; i < palette.length; i++) {
+            // load chip component view + update settings
             Chip chip = (Chip) LayoutInflater.from(requireContext())
                     .inflate(R.layout.view_color_chip, colorGroup, false);
             chip.setId(View.generateViewId());
@@ -222,34 +232,46 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
             colorGroup.addView(chip);
         }
 
+        // create dialog with custom view
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.onboarding_tags_dialog_title)
                 .setView(dialogView)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.onboarding_tags_dialog_add, null);
 
+        // show dialog + listen for positive button click
         AlertDialog dialog = builder.create();
         dialog.setOnShowListener(d -> dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener(v -> {
+                    // validate tag name -> ensure it is not empty
                     String title = readText(editTagName);
                     if (TextUtils.isEmpty(title)) {
+                        // show error if not valid
                         tagNameLayout.setError(getString(R.string.onboarding_error_tag_name_required));
                         return;
                     } else {
                         tagNameLayout.setError(null);
                     }
 
+                    // get the selected color from the list
                     int checkedChipId = colorGroup.getCheckedChipId();
                     if (checkedChipId == View.NO_ID) {
+                        // NOTE: this shouldn't be possible as the UI already enforces that a color is selected
+                        // but still check for it
+                        Snackbar.make(requireView(), R.string.onboarding_error_tag_color_required, Snackbar.LENGTH_SHORT).show();
                         return;
                     }
                     Chip selected = colorGroup.findViewById(checkedChipId);
 
+                    // get the color to use from the selected chip
                     ColorStateList chipBgColor = Objects.requireNonNull(selected.getChipBackgroundColor());
                     int color = chipBgColor.getDefaultColor();
 
+                    // create tag and add it to the list + re-render
                     tags.add(new Tag(title, color));
                     renderTags();
+
+                    // store the new tags in preferences
                     prefs.setUserTagsJson(serializeTags());
                     dialog.dismiss();
                 }));

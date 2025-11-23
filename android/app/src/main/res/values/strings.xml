@@ -38,6 +38,7 @@
     <string name="onboarding_tags_dialog_name_label">Tag name</string>
     <string name="onboarding_tags_dialog_color_label">Pick a color</string>
     <string name="onboarding_error_tag_name_required">Give your tag a name.</string>
+    <string name="onboarding_error_tag_color_required">You need to pick a color to create a tag.</string>
 
     <string name="onboarding_sensors_title">Sense your environment</string>
     <string name="onboarding_sensors_description">MindBricks learns based on ambient noise and light environment during study sessions.</string>
