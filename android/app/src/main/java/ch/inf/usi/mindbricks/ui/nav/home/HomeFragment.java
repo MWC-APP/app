@@ -1,5 +1,6 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
+import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
@@ -9,10 +10,13 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.os.Bundle;
+import android.widget.Toast;
+
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -81,7 +85,8 @@ public class HomeFragment extends Fragment {
 
     private void handleStartStop() {
         if (isRunning) {
-            stopTimer();
+            // Check confirmation from user before closing the session
+            checkEndedSession();
         } else {
             startTimer();
         }
@@ -130,5 +135,30 @@ public class HomeFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         timerHandler.removeCallbacks(timerRunnable);
+    }
+    public void checkEndedSession(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireActivity());
+        builder.setTitle("Are you sure you want to end the session?");
+        builder.setMessage("By confirming your house will be demolished!");
+        builder.setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Call the method that actually ends the session.
+                stopTimer();
+            }
+        });
+
+        builder.setNegativeButton("Abort", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // User clicked the Abort button.
+                // The dialog will automatically close. You can add a toast if you want.
+                dialog.dismiss();
+            }
+        });
+
+        // To actually create and show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 }
