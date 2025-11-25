@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_metrics, R.id.navigation_profile)
+                R.id.navigation_home, R.id.navigation_shop, R.id.navigation_profile)
                 .build();
 
         // this setups how the fragments are displayed in the activity

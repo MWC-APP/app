@@ -118,11 +118,14 @@
         vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
     </string>
     <string name="title_home">Home</string>
-    <string name="title_metrics">Metrics</string>
+    <string name="title_shop">Shop</string>
     <string name="title_profile">Profile</string>
 
     <!-- Timer  -->
     <string name="start_session">Start Session</string>
     <string name="stop_session">Stop Session</string>
+
+    <!-- Shop -->
+    <string name="shop_category_1">Furniture</string>
 
 </resources>

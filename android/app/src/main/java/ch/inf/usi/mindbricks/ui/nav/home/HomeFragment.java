@@ -1,6 +1,7 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
 import android.content.DialogInterface;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
@@ -9,10 +10,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.os.Bundle;
 import android.widget.Toast;
-
-import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,22 +19,25 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.navigation.NavigationView;
+import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.util.CoinManager;
 
 public class HomeFragment extends Fragment {
 
     private TextView timerTextView;
     private Button startStopButton;
-    private DrawerLayout drawer;
-    private NavigationView navigationView;
     private ImageView menuIcon;
+    private TextView coinBalanceTextView;
 
+    // Timer variables
     private int seconds = 0;
     private boolean isRunning = false;
-    private Handler timerHandler = new Handler(Looper.getMainLooper());
+    private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private Runnable timerRunnable;
+
+    private CoinManager coinManager;
 
     @Nullable
     @Override
@@ -48,53 +49,63 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Find UI elements inside the fragment layout
+        coinManager = new CoinManager(requireActivity().getApplicationContext());
+
         timerTextView = view.findViewById(R.id.timer_text_view);
         startStopButton = view.findViewById(R.id.start_stop_button);
-        drawer = view.findViewById(R.id.drawer_layout);
-        menuIcon = view.findViewById(R.id.drawer_menu);            // Top-right icon
-        navigationView = view.findViewById(R.id.navigation_view);  // Drawer menu
+        menuIcon = view.findViewById(R.id.drawer_menu);
+        coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
 
+        updateCoinDisplay();
 
-        // Open the drawer when the menu icon is clicked
-        menuIcon.setOnClickListener(v -> drawer.openDrawer(GravityCompat.END));
-
-        // Handle drawer menu item clicks
-        navigationView.setNavigationItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.drawer_menu) {
-                // TODO: open settings fragment/activity here
-            }
-            drawer.closeDrawer(GravityCompat.END);
-            return true;
-        });
-
-        // Timer start/stop button
         startStopButton.setOnClickListener(v -> handleStartStop());
 
-
-        // Setup the drawer
-        navigationView.setNavigationItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_settings) {
-                // Open Settings fragment or activity
+        menuIcon.setOnClickListener(v -> {
+            DrawerLayout drawer = requireActivity().findViewById(R.id.drawer_layout);
+            if (drawer != null) {
+                drawer.openDrawer(GravityCompat.END);
             }
-            drawer.closeDrawer(GravityCompat.END);
-            return true;
         });
-
     }
 
+    /**
+     * Handles the logic for the main Start/Stop button.
+     */
     private void handleStartStop() {
         if (isRunning) {
-            // Check confirmation from user before closing the session
             checkEndedSession();
         } else {
             startTimer();
         }
     }
 
+    /**
+     * Displays a confirmation dialog before stopping the session.
+     */
+    public void checkEndedSession() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireActivity());
+        builder.setTitle("End Session?");
+        builder.setMessage("Are you sure you want to end the current study session?");
+
+        builder.setPositiveButton("Confirm", (dialog, which) -> {
+            stopTimer(); // This also updates the coin display
+        });
+
+        builder.setNegativeButton("Abort", (dialog, which) -> {
+            dialog.dismiss();
+            Toast.makeText(getContext(), "Session continued", Toast.LENGTH_SHORT).show();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    /**
+     * Starts the timer and updates the UI.
+     */
     private void startTimer() {
         isRunning = true;
-        startStopButton.setText("Stop Session");
+        startStopButton.setText(R.string.stop_session);
 
         timerRunnable = new Runnable() {
             @Override
@@ -107,22 +118,34 @@ public class HomeFragment extends Fragment {
         timerHandler.post(timerRunnable);
     }
 
+    /**
+     * Stops the timer, calculates coins, resets the UI, and updates the coin display.
+     */
     private void stopTimer() {
-        if (!isRunning) return; // safety check
+        if (!isRunning) return;
 
-        // Stop the timer Runnable
+        int minutesStudied = seconds / 60;
+        int coinsEarned = minutesStudied;
+
+        if (coinsEarned > 0) {
+            coinManager.addCoins(coinsEarned);
+            Toast.makeText(getContext(), "You earned " + coinsEarned + " coins!", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(getContext(), "Session ended. Study for at least a minute to earn coins.", Toast.LENGTH_LONG).show();
+        }
+
         timerHandler.removeCallbacks(timerRunnable);
-
-        // Reset counter
         seconds = 0;
         isRunning = false;
+        startStopButton.setText(R.string.start_session);
+        updateTimerUI();
 
-        // Update UI
-        startStopButton.setText("Start Session"); // or use string resource
-        timerTextView.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", 0, 0, 0));
+        updateCoinDisplay();
     }
 
-
+    /**
+     * Updates the timer TextView with the properly formatted time.
+     */
     private void updateTimerUI() {
         int hours = seconds / 3600;
         int minutes = (seconds % 3600) / 60;
@@ -131,34 +154,22 @@ public class HomeFragment extends Fragment {
         timerTextView.setText(timeString);
     }
 
+    /**
+     * 5. NEW METHOD TO HANDLE UPDATING THE COIN TEXTVIEW
+     * Gets the current balance from CoinManager and sets the text.
+     */
+    private void updateCoinDisplay() {
+        if (coinBalanceTextView != null) {
+            int balance = coinManager.getCoinBalance();
+            coinBalanceTextView.setText(String.valueOf(balance));
+        }
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        timerHandler.removeCallbacks(timerRunnable);
-    }
-    public void checkEndedSession(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireActivity());
-        builder.setTitle("Are you sure you want to end the session?");
-        builder.setMessage("By confirming your house will be demolished!");
-        builder.setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // Call the method that actually ends the session.
-                stopTimer();
-            }
-        });
-
-        builder.setNegativeButton("Abort", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // User clicked the Abort button.
-                // The dialog will automatically close. You can add a toast if you want.
-                dialog.dismiss();
-            }
-        });
-
-        // To actually create and show the dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
+        if (timerRunnable != null) {
+            timerHandler.removeCallbacks(timerRunnable);
+        }
     }
 }
