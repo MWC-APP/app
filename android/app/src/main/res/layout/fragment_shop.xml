@@ -20,18 +20,34 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.01" />
 
+
     <!-- This is the Horizontal Slidable Bar -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/shop_items_recycler_view"
-        android:layout_width="391dp"
-        android:layout_height="162dp"
-        android:layout_marginTop="120dp"
-        android:orientation="horizontal"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+
+    <TextView
+        android:id="@+id/shop_category"
+        android:layout_width="173dp"
+        android:layout_height="42dp"
+        android:text="@string/shop_category_1"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/shop_items_recycler_view"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.49"
+        app:layout_constraintHorizontal_bias="0.067"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/shop_items_recycler_view"
+        android:layout_width="399dp"
+        android:layout_height="165dp"
+        android:orientation="horizontal"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.318"
         tools:listitem="@layout/shop_item" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
