@@ -116,7 +116,7 @@ public class HomeFragment extends Fragment {
     private void startTimer(int minutes) {
         isTimerRunning = true;
         startSessionButton.setText(R.string.stop_session);
-        startSessionButton.setEnabled(false); // Disable button immediately
+        startSessionButton.setEnabled(false);
 
         long durationInMillis = (long) minutes * 60 * 1000;
         lastMinuteMark = minutes; // Initialize the last minute mark
@@ -126,15 +126,16 @@ public class HomeFragment extends Fragment {
             public void onTick(long millisUntilFinished) {
                 updateTimerUI(millisUntilFinished);
 
-                // Calculate the current minute (e.g., 29, 28, 27...)
+                // Calculate the current minute å
                 long currentMinute = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished);
 
-                // If we've crossed into a new minute that's less than the last one we recorded
-                if (currentMinute < lastMinuteMark) {
+                // If we've crossed into a new minute that's less than the last one we recorded...
+                if (currentMinute < lastMinuteMark) { // <<< THE PROBLEM IS HERE
                     lastMinuteMark = currentMinute; // Update the mark
                     earnCoin(); // Award a coin
                 }
             }
+
 
             @Override
             public void onFinish() {

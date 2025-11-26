@@ -18,10 +18,10 @@ import ch.inf.usi.mindbricks.R;
 
 public class SessionTimerDialogFragment extends DialogFragment {
 
-    private Slider durationSlider;
-    private TextView durationText;
-    private Button startTimerButton;
-    private HomeViewModel homeViewModel;
+    public Slider durationSlider;
+    public TextView durationText;
+    public Button startTimerButton;
+    public HomeViewModel homeViewModel;
 
     @Nullable
     @Override
@@ -50,7 +50,7 @@ public class SessionTimerDialogFragment extends DialogFragment {
         startTimerButton.setOnClickListener(v -> {
             int durationInMinutes = (int) durationSlider.getValue();
             homeViewModel.startTimer(durationInMinutes);
-            dismiss(); // Close the dialog
+            dismiss();
         });
     }
 
