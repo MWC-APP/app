@@ -64,4 +64,5 @@ dependencies {
     // http image component + caching
     implementation(libs.glide.runtime)
     annotationProcessor(libs.glide.compiler)
+    implementation("com.google.android.material:material:1.10.0")
 }
