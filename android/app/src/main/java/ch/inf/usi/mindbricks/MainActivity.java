@@ -18,7 +18,6 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
 
-    // event handlers
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,11 +33,11 @@ public class MainActivity extends AppCompatActivity {
                 R.id.navigation_home, R.id.navigation_shop, R.id.navigation_profile)
                 .build();
 
-        // this setups how the fragments are displayed in the activity
+        // Setup navigation controller
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
         NavigationUI.setupWithNavController(binding.navView, navController);
 
-        // Handle bottom navigation item selection for Analytics
+        // Handle bottom navigation item selection
         navView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
@@ -47,11 +46,22 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, AnalyticsActivity.class);
                 startActivity(intent);
                 return true;
-            } else {
-                // Let Navigation Component handle other items
-                return NavigationUI.onNavDestinationSelected(item, navController)
-                        || super.onOptionsItemSelected(item);
+
+            } else if (itemId == R.id.navigation_home) {
+                // Navigate to home fragment
+                navController.navigate(R.id.navigation_home);
+                return true;
+            } else if (itemId == R.id.navigation_shop) {
+                // Navigate to shop fragment
+                navController.navigate(R.id.navigation_shop);
+                return true;
+            } else if (itemId == R.id.navigation_profile) {
+                // Navigate to profile fragment
+                navController.navigate(R.id.navigation_profile);
+                return true;
             }
+
+            return false;
         });
     }
 }

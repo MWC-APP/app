@@ -24,12 +24,13 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
+            android:id="@+id/chartContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Daily Timeline Chart -->
+            <!-- Placeholder for Daily Timeline Chart -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -37,14 +38,33 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp">
 
-                <ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView
-                    android:id="@+id/dailyTimelineChart"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📊 Daily Productivity Timeline"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="100dp"
+                        android:gravity="center"
+                        android:text="Chart view will appear here\nonce you add DailyTimelineChartView"
+                        android:background="#F0F0F0"
+                        android:textColor="#666666" />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Weekly Focus Chart -->
+            <!-- Placeholder for Weekly Focus Chart -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -52,14 +72,33 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp">
 
-                <ch.inf.usi.mindbricks.ui.charts.WeeklyFocusChartView
-                    android:id="@+id/weeklyFocusChart"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📈 Weekly Focus Trends"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="100dp"
+                        android:gravity="center"
+                        android:text="Chart view will appear here\nonce you add WeeklyFocusChartView"
+                        android:background="#F0F0F0"
+                        android:textColor="#666666" />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Hourly Distribution Chart -->
+            <!-- Placeholder for Hourly Distribution Chart -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -67,10 +106,29 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp">
 
-                <ch.inf.usi.mindbricks.ui.charts.HourlyDistributionChartView
-                    android:id="@+id/hourlyDistributionChart"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🕐 Hourly Productivity Distribution"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="150dp"
+                        android:gravity="center"
+                        android:text="Chart view will appear here\nonce you add HourlyDistributionChartView"
+                        android:background="#F0F0F0"
+                        android:textColor="#666666" />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -78,7 +136,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Session History"
+                android:text="📝 Session History"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp"
@@ -94,6 +152,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Loading Indicator -->
     <ProgressBar
         android:id="@+id/loadingProgress"
         android:layout_width="wrap_content"
