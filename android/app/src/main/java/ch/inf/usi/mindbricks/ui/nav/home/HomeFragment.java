@@ -8,15 +8,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -32,7 +29,6 @@ public class HomeFragment extends Fragment {
 
     private TextView timerTextView;
     private Button startSessionButton;
-    private ImageView menuIcon;
     private TextView coinBalanceTextView;
 
     // Shared ViewModel for coin management
@@ -56,7 +52,6 @@ public class HomeFragment extends Fragment {
 
         timerTextView = view.findViewById(R.id.timer_text_view);
         startSessionButton = view.findViewById(R.id.start_stop_button);
-        menuIcon = view.findViewById(R.id.drawer_menu);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
 
         // Observe the coin balance from the ViewModel.
@@ -76,13 +71,6 @@ public class HomeFragment extends Fragment {
                 confirmEndSessionDialog();
             } else {
                 showDurationPickerDialog();
-            }
-        });
-
-        menuIcon.setOnClickListener(v -> {
-            DrawerLayout drawer = requireActivity().findViewById(R.id.drawer_layout);
-            if (drawer != null) {
-                drawer.openDrawer(GravityCompat.END);
             }
         });
     }

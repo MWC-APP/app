@@ -6,16 +6,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- 1. THIS IS THE MAIN CONTENT AREA -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- ====================================================== -->
-        <!-- THE COIN ICON AND TEXT ARE NOW MOVED *INSIDE* HERE -->
-        <!-- ====================================================== -->
 
-        <!-- Coin Icon (Smaller, Top-Left) -->
         <ImageView
             android:id="@+id/ic_coin_image"
             android:layout_width="28dp"
@@ -28,7 +23,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/coin_balance_text" />
 
-        <!-- Coin Balance TextView (Next to Icon) -->
+        <!-- Coin Balance TextView  -->
         <TextView
             android:id="@+id/coin_balance_text"
             android:layout_width="wrap_content"
@@ -41,10 +36,6 @@
             app:layout_constraintBottom_toBottomOf="@+id/ic_coin_image"
             app:layout_constraintStart_toEndOf="@+id/ic_coin_image"
             app:layout_constraintTop_toTopOf="@+id/ic_coin_image" />
-
-        <!-- ====================================================== -->
-        <!-- ALL YOUR OTHER VIEWS ARE ALSO INSIDE THIS LAYOUT -->
-        <!-- ====================================================== -->
 
         <!-- Timer TextView -->
         <TextView
@@ -87,25 +78,8 @@
             app:layout_constraintVertical_bias="0.648"
             app:srcCompat="@drawable/ic_home_black_24dp" />
 
-        <!-- Drawer Menu Icon (Top-Right) -->
-        <ImageView
-            android:id="@+id/drawer_menu"
-            android:layout_width="52dp"
-            android:layout_height="56dp"
-            android:layout_margin="16dp"
-            android:contentDescription="Menu"
-            app:srcCompat="@android:drawable/ic_menu_manage"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 2. THIS IS THE SLIDING DRAWER MENU -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/navigation_view"
-        android:layout_width="120dp"
-        android:layout_height="200dp"
-        android:layout_gravity="end"
-        app:menu="@menu/drawer_menu" />
 
 </androidx.drawerlayout.widget.DrawerLayout>
