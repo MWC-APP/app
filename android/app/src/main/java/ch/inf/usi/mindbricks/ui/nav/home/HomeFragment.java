@@ -3,7 +3,8 @@ package ch.inf.usi.mindbricks.ui.nav.home;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
-import android.os.Looper;import android.view.LayoutInflater;
+import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -40,7 +41,6 @@ public class HomeFragment extends Fragment {
     // Timer variables
     private CountDownTimer countDownTimer;
     private boolean isTimerRunning = false;
-    private long lastMinuteMark = 0;
 
     @Nullable
     @Override
@@ -132,28 +132,39 @@ public class HomeFragment extends Fragment {
         startSessionButton.setEnabled(false); // Disable to prevent conflicts
 
         long durationInMillis = TimeUnit.MINUTES.toMillis(minutes);
-        lastMinuteMark = minutes; // Initialize with the starting number of minutes
+
+        // This variable tracks the number of minutes that have successfully passed.
+        // It's an array so it can be modified from within the inner class.
+        final int[] minutesCompleted = {0};
 
         countDownTimer = new CountDownTimer(durationInMillis, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 updateTimerUI(millisUntilFinished);
 
-                // Calculate the current full minute remaining
-                long currentMinute = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished);
+                // Calculate how much time has ELAPSED from the start of the timer
+                long elapsedMillis = durationInMillis - millisUntilFinished;
+                int elapsedMinutes = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
 
-                // If the current minute is less than the last one we recorded, a full minute has passed.
-                if (currentMinute < lastMinuteMark) {
-                    lastMinuteMark = currentMinute;
-                    earnCoin();
+                // If the number of elapsed minutes is greater than the number of coins we've given,
+                // it means a new full minute has passed.
+                if (elapsedMinutes > minutesCompleted[0]) {
+                    minutesCompleted[0] = elapsedMinutes; // Update our counter
+                    earnCoin(); // Award the coin
                 }
             }
 
             @Override
             public void onFinish() {
+                updateTimerUI(0);
                 Toast.makeText(getContext(), "Session Complete!", Toast.LENGTH_LONG).show();
-                // Award the final coin for the last minute of study
-                earnCoin();
+
+                // This safeguard ensures the final coin is awarded if the timer finishes
+                // before the last onTick can process the final minute.
+                if (minutes > minutesCompleted[0]) {
+                    earnCoin();
+                }
+
                 resetTimerState();
             }
         }.start();
