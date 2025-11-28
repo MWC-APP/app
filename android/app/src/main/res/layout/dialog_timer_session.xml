@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Set Session Duration"
+        android:text="@string/set_session"
         android:textColor="@color/black"
         android:textSize="22sp"
         android:textStyle="bold" />
@@ -21,7 +21,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="24dp"
         android:layout_marginBottom="8dp"
-        android:text="30 minutes"
+        android:text="@string/default_timer"
         android:textColor="@color/black"
         android:textSize="28sp"
         android:textStyle="bold" />

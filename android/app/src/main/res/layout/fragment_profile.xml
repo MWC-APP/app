@@ -13,7 +13,7 @@
         android:id="@+id/page_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Profile"
+        android:text="@string/profile"
         android:textColor="@android:color/black"
         android:textSize="34sp"
         android:textStyle="bold"
@@ -44,7 +44,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/profile_image_view"
-        tools:text="Username" />
+        tools:text="@string/username" />
 
     <!-- Coin Balance Display -->
     <LinearLayout
@@ -71,7 +71,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-            tools:text="1,234" />
+            tools:text="@string/initial_balance" />
     </LinearLayout>
 
     <!-- Divider -->
@@ -111,7 +111,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="16dp"
-            android:text="sprint_length_label"
+            android:text="@string/sprint_length_label"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
         <TextView
@@ -120,7 +120,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
             android:textStyle="bold"
-            tools:text="25 minutes" />
+            tools:text="@string/default_sprint_length" />
     </LinearLayout>
 
     <!-- Tags Section -->
@@ -154,7 +154,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="no_tags_defined"
+            android:text="@string/no_tags_defined"
             android:visibility="gone"
             tools:visibility="visible"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"/>
