@@ -42,7 +42,10 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        dataBinding = true
+        compose = true
     }
+
 }
 
 dependencies {
@@ -68,4 +71,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.3")
     implementation("androidx.fragment:fragment-ktx:1.8.1")
     implementation("com.google.android.material:material:1.10.0")
+
+    // visualistion
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.1")
 }
