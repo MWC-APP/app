@@ -57,7 +57,6 @@ public class SessionTimerDialogFragment extends DialogFragment {
     @Override
     public void onStart() {
         super.onStart();
-        // Optional: Make the dialog wider
         if (getDialog() != null) {
             getDialog().getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         }

@@ -1,5 +1,7 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
+// ADDED: Import the Context class for onAttach
+import android.content.Context;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -23,6 +25,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 
 public class HomeFragment extends Fragment {
@@ -31,17 +34,34 @@ public class HomeFragment extends Fragment {
     private Button startSessionButton;
     private TextView coinBalanceTextView;
 
-    // Shared ViewModel for coin management
     private ProfileViewModel profileViewModel;
 
-    // Timer variables
     private CountDownTimer countDownTimer;
     private boolean isTimerRunning = false;
+
+    // ADDED: A reference to the navigation locker interface
+    private NavigationLocker navigationLocker;
+
+    /**
+     * ADDED: Get a reference to the hosting Activity as a NavigationLocker.
+     * This is called before onCreateView.
+     */
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        // This ensures the host Activity implements the interface.
+        // The app will crash with a clear message if it doesn't, which is good for debugging.
+        if (context instanceof NavigationLocker) {
+            navigationLocker = (NavigationLocker) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement NavigationLocker");
+        }
+    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Initialize the ViewModel by scoping it to the Activity.
         profileViewModel = new ViewModelProvider(requireActivity()).get(ProfileViewModel.class);
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
@@ -54,18 +74,14 @@ public class HomeFragment extends Fragment {
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
 
-        // Observe the coin balance from the ViewModel.
-        // This automatically updates the coin text view whenever the value changes.
         profileViewModel.coins.observe(getViewLifecycleOwner(), balance -> {
             if (balance != null) {
                 coinBalanceTextView.setText(String.valueOf(balance));
             }
         });
 
-        // Set initial timer text
         updateTimerUI(0);
 
-        // Button Listeners
         startSessionButton.setOnClickListener(v -> {
             if (isTimerRunning) {
                 confirmEndSessionDialog();
@@ -75,9 +91,6 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    /**
-     * Shows the dialog with a slider for picking the session duration.
-     */
     private void showDurationPickerDialog() {
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_timer_session, null);
@@ -85,15 +98,11 @@ public class HomeFragment extends Fragment {
         final Slider durationSlider = dialogView.findViewById(R.id.duration_slider);
         final TextView durationText = dialogView.findViewById(R.id.duration_text);
 
-        // Set an initial value for the duration text
         durationText.setText(String.format(Locale.getDefault(), "%d minutes", (int) durationSlider.getValue()));
-
-        // Update the duration text whenever the slider value changes
         durationSlider.addOnChangeListener((slider, value, fromUser) -> {
             durationText.setText(String.format(Locale.getDefault(), "%d minutes", (int) value));
         });
 
-        // Build and show the AlertDialog
         new AlertDialog.Builder(requireContext())
                 .setView(dialogView)
                 .setTitle("Set Session Duration")
@@ -110,19 +119,17 @@ public class HomeFragment extends Fragment {
                 .show();
     }
 
-    /**
-     * Starts the countdown timer.
-     * @param minutes The duration of the session in minutes.
-     */
     private void startTimer(int minutes) {
+        // ADDED: Disable navigation when the timer starts
+        if (navigationLocker != null) {
+            navigationLocker.setNavigationEnabled(false);
+        }
+
         isTimerRunning = true;
         startSessionButton.setText(R.string.stop_session);
-        startSessionButton.setEnabled(false); // Disable to prevent conflicts
+        startSessionButton.setEnabled(false);
 
         long durationInMillis = TimeUnit.MINUTES.toMillis(minutes);
-
-        // This variable tracks the number of minutes that have successfully passed.
-        // It's an array so it can be modified from within the inner class.
         final int[] minutesCompleted = {0};
 
         countDownTimer = new CountDownTimer(durationInMillis, 1000) {
@@ -130,34 +137,24 @@ public class HomeFragment extends Fragment {
             public void onTick(long millisUntilFinished) {
                 updateTimerUI(millisUntilFinished);
 
-                // Calculate how much time has ELAPSED from the start of the timer
                 long elapsedMillis = durationInMillis - millisUntilFinished;
                 int elapsedMinutes = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
 
-                // If the number of elapsed minutes is greater than the number of coins we've given,
-                // it means a new full minute has passed.
                 if (elapsedMinutes > minutesCompleted[0]) {
-                    minutesCompleted[0] = elapsedMinutes; // Update our counter
-                    earnCoin(); // Award the coin
+                    minutesCompleted[0] = elapsedMinutes;
+                    earnCoin(1);
                 }
             }
 
             @Override
             public void onFinish() {
-                updateTimerUI(0);
-                Toast.makeText(getContext(), "Session Complete!", Toast.LENGTH_LONG).show();
-
-                // This safeguard ensures the final coin is awarded if the timer finishes
-                // before the last onTick can process the final minute.
                 if (minutes > minutesCompleted[0]) {
-                    earnCoin();
+                    earnCoin(1);
                 }
-
-                resetTimerState();
+                showSessionCompleteDialog();
             }
         }.start();
 
-        // Re-enable the button after a short delay
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (isTimerRunning) {
                 startSessionButton.setEnabled(true);
@@ -165,9 +162,6 @@ public class HomeFragment extends Fragment {
         }, 1500);
     }
 
-    /**
-     * Shows a confirmation dialog before stopping the timer.
-     */
     private void confirmEndSessionDialog() {
         new AlertDialog.Builder(requireContext())
                 .setTitle("End Session?")
@@ -180,9 +174,19 @@ public class HomeFragment extends Fragment {
                 .show();
     }
 
-    /**
-     * Stops the timer completely without awarding coins for the unfinished minute.
-     */
+    private void showSessionCompleteDialog() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Session Complete!")
+                .setMessage("Great focus! You've earned 3 bonus coins for completing the session.")
+                .setPositiveButton("Awesome!", (dialog, which) -> {
+                    earnCoin(3);
+                    // This method now also handles re-enabling the navigation
+                    resetTimerState();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
     private void stopTimerAndReset() {
         if (countDownTimer != null) {
             countDownTimer.cancel();
@@ -191,18 +195,20 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * Resets all timer-related UI and state variables.
+     * UPDATED: Resets all timer-related UI and state variables, and re-enables navigation.
      */
     private void resetTimerState() {
+        // ADDED: Re-enable navigation whenever the timer is reset
+        if (navigationLocker != null) {
+            navigationLocker.setNavigationEnabled(true);
+        }
+
         isTimerRunning = false;
         startSessionButton.setText(R.string.start_session);
         startSessionButton.setEnabled(true);
         updateTimerUI(0);
     }
 
-    /**
-     * Updates the timer TextView with the properly formatted time from milliseconds.
-     */
     private void updateTimerUI(long millisUntilFinished) {
         long minutes = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished);
         long seconds = TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) - TimeUnit.MINUTES.toSeconds(minutes);
@@ -210,21 +216,28 @@ public class HomeFragment extends Fragment {
         timerTextView.setText(timeString);
     }
 
-    /**
-     * Adds one coin using the ViewModel and shows a brief toast message.
-     */
-    private void earnCoin() {
-        profileViewModel.addCoins(1);
-        // The LiveData observer will automatically update the coin balance text.
-        Toast.makeText(getContext(), "+1 Coin!", Toast.LENGTH_SHORT).show();
+
+
+    private void earnCoin(int amount) {
+        profileViewModel.addCoins(amount);
+        String message = (amount == 1) ? "+1 Coin!" : String.format(Locale.getDefault(), "+%d Coins!", amount);
+        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Cancel the timer to prevent memory leaks when the view is destroyed
         if (countDownTimer != null) {
             countDownTimer.cancel();
         }
+    }
+
+    /**
+     * ADDED: Clean up the reference to the activity to prevent memory leaks.
+     */
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        navigationLocker = null;
     }
 }

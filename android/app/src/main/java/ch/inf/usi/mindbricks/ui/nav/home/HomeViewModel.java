@@ -12,7 +12,7 @@ public class HomeViewModel extends ViewModel {
 
     private CountDownTimer countDownTimer;
 
-    // To hold the formatted time string (e.g., "24:59")
+    // To hold the formatted time string
     private final MutableLiveData<String> _timeString = new MutableLiveData<>("00:00");
     public LiveData<String> timeString = _timeString;
 
@@ -39,7 +39,7 @@ public class HomeViewModel extends ViewModel {
                 );
                 _timeString.setValue(formattedTime);
 
-                // Award a coin every minute (approximately)
+                // Award a coin every minute
                 if (TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) % 60 == 0 && millisUntilFinished > 1000) {
                     addCoin();
                 }
