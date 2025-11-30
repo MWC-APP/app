@@ -80,6 +80,7 @@ public class MicrophoneRecorder {
      * SOURCES:
      * - <a href="https://en.wikipedia.org/wiki/DBFS">...</a>
      *      - states that RMS is used for loudness measurement
+     *      FIXME: this reference is not used currently in the code, I should remove it later
      * - <a href="https://discourse.ardour.org/t/calculating-rms-in-digital-audio/109812">...</a>
      *      - details the RMS calculation
      *
