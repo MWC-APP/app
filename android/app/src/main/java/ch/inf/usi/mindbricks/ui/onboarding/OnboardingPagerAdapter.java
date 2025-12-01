@@ -8,6 +8,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingDoneFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingIntroFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingNotificationsFragment;
+import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingStudyPlanFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.sensors.OnboardingSensorsFragment;
 import ch.inf.usi.mindbricks.ui.onboarding.page.OnboardingUserFragment;
 
@@ -26,10 +27,12 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
             case 1:
                 return new OnboardingUserFragment();
             case 2:
-                return new OnboardingSensorsFragment();
+                return new OnboardingStudyPlanFragment();
             case 3:
-                return new OnboardingNotificationsFragment();
+                return new OnboardingSensorsFragment();
             case 4:
+                return new OnboardingNotificationsFragment();
+            case 5:
             default:
                 return new OnboardingDoneFragment();
         }
@@ -37,6 +40,6 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return 5;
+        return 6;
     }
 }

@@ -79,6 +79,24 @@
     <string name="onboarding_done_title">Ready to focus</string>
     <string name="onboarding_done_body">You have everything set. When you tap Start we\'ll open your focus dashboard.</string>
 
+    <string name="onboarding_study_plan_title">Shape your study plan</string>
+    <string name="onboarding_study_plan_body">Pick the days you want to study and how many hours you\'ll dedicate. We\'ll keep track of your weekly workload.</string>
+    <string name="onboarding_study_plan_schedule_label">Weekly rhythm</string>
+    <string name="onboarding_study_plan_schedule_helper">Toggle the days you study and slide to set total hours for each.</string>
+    <string name="onboarding_study_plan_hours_label">Hours</string>
+    <string name="onboarding_study_plan_day_monday">Monday</string>
+    <string name="onboarding_study_plan_day_tuesday">Tuesday</string>
+    <string name="onboarding_study_plan_day_wednesday">Wednesday</string>
+    <string name="onboarding_study_plan_day_thursday">Thursday</string>
+    <string name="onboarding_study_plan_day_friday">Friday</string>
+    <string name="onboarding_study_plan_day_saturday">Saturday</string>
+    <string name="onboarding_study_plan_day_sunday">Sunday</string>
+    <string name="onboarding_study_plan_error_hours_required">Set the hours for each selected day.</string>
+    <string name="onboarding_study_plan_error_hours_positive">Hours must be greater than zero.</string>
+    <string name="onboarding_study_plan_error_day_required">Pick at least one study day.</string>
+    <string name="onboarding_error_study_plan_required">Set your weekly study days and hours to continue.</string>
+    <string name="onboarding_study_plan_total_placeholder">Weekly load: %1$s</string>
+
     <string name="validation_error_name_required">Add your name so we can personalize your coaching.</string>
     <string name="validation_error_name_format">Use a real name (letters, accents, spaces, &amp; allowed).</string>
     <string name="validation_error_tag_name_format">Use letters/numbers with simple punctuation for tag names.</string>

@@ -12,6 +12,9 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import ch.inf.usi.mindbricks.MainActivity;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.util.PermissionManager;
@@ -22,7 +25,8 @@ import ch.inf.usi.mindbricks.util.validators.ProfileValidator;
 public class OnboardingActivity extends AppCompatActivity {
 
     private static final int PAGE_USER = 1;
-    private static final int PAGE_SENSORS = 2;
+    private static final int PAGE_STUDY_PLAN = 2;
+    private static final int PAGE_SENSORS = 3;
 
     private ViewPager2 viewPager;
     private MaterialButton buttonSkip;
@@ -156,6 +160,12 @@ public class OnboardingActivity extends AppCompatActivity {
             return false;
         }
 
+        if (!hasValidStudyPlan()) {
+            viewPager.setCurrentItem(PAGE_STUDY_PLAN, true);
+            Snackbar.make(viewPager, R.string.onboarding_error_study_plan_required, Snackbar.LENGTH_SHORT).show();
+            return false;
+        }
+
         // guard required sensor permission
         // FIXME: the only required sensor is the mic -> what about luminance?
         if (!PermissionManager.hasPermission(this, Manifest.permission.RECORD_AUDIO)) {
@@ -178,5 +188,19 @@ public class OnboardingActivity extends AppCompatActivity {
         Intent intent = new Intent(this, MainActivity.class);
         startActivity(intent);
         finish();
+    }
+
+    private boolean hasValidStudyPlan() {
+        String planJson = prefs.getStudyPlanJson();
+        if (planJson == null || planJson.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            JSONArray array = new JSONArray(planJson);
+            return array.length() > 0;
+        } catch (JSONException e) {
+            return false;
+        }
     }
 }

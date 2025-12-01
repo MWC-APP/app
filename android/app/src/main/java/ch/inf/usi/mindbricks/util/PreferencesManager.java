@@ -17,7 +17,9 @@ public class PreferencesManager {
         USER_FOCUS_GOAL("user_focus_goal"),
         USER_SPRINT_LENGTH_MINUTES("user_sprint_length_minutes"),
         USER_TAGS_JSON("user_tags_json"),
-        USER_AVATAR_SEED("user_avatar_seed");
+        USER_AVATAR_SEED("user_avatar_seed"),
+        STUDY_OBJECTIVE("study_objective"),
+        STUDY_PLAN_JSON("study_plan_json");
 
 
 
@@ -115,5 +117,20 @@ public class PreferencesManager {
     }
     public String getUserAvatarSeed() {
         return preferences.getString(PreferencesKey.USER_AVATAR_SEED.getName(), "");
+    }
+
+    // -- Study plan --
+    public void setStudyObjective(String objective) {
+        preferences.edit().putString(PreferencesKey.STUDY_OBJECTIVE.getName(), objective).apply();
+    }
+    public String getStudyObjective() {
+        return preferences.getString(PreferencesKey.STUDY_OBJECTIVE.getName(), "");
+    }
+
+    public void setStudyPlanJson(String studyPlanJson) {
+        preferences.edit().putString(PreferencesKey.STUDY_PLAN_JSON.getName(), studyPlanJson).apply();
+    }
+    public String getStudyPlanJson() {
+        return preferences.getString(PreferencesKey.STUDY_PLAN_JSON.getName(), "[]");
     }
 }
