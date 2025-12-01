@@ -34,7 +34,7 @@ import ch.inf.usi.mindbricks.util.MockDataGenerator;
 /**
  * Activity that displays comprehensive study analytics
  */
-public class AnalyticsActivity extends AppCompatActivity {
+public class AnalyticsFragment extends AppCompatActivity {
 
     private DailyTimelineChartView dailyTimelineChart;
     private WeeklyFocusChartView weeklyFocusChart;

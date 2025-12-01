@@ -9,7 +9,6 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.NavigationUI;
 
 import ch.inf.usi.mindbricks.databinding.ActivityMainBinding;
-import ch.inf.usi.mindbricks.ui.analytics.AnalyticsActivity;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
 
 public class MainActivity extends AppCompatActivity implements NavigationLocker {
@@ -29,7 +28,7 @@ public class MainActivity extends AppCompatActivity implements NavigationLocker 
         binding.navView.setOnItemSelectedListener(item -> {
             // Check if the selected item is the one for the AnalyticsActivity
             if (item.getItemId() == R.id.navigation_analytics) {
-                Intent intent = new Intent(this, AnalyticsActivity.class);
+                Intent intent = new Intent(this, ch.inf.usi.mindbricks.ui.analytics.AnalyticsFragment.class);
                 startActivity(intent);
                 return false;
             }
