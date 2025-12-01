@@ -47,7 +47,7 @@ public class PurchasedItemsAdapter extends RecyclerView.Adapter<PurchasedItemsAd
      */
     @Override
     public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {
-        // Get the data model (PurchasedItem) for the current row.
+        // Get the data model for the current row.
         PurchasedItem currentItem = items.get(position);
         // Bind the data to the ViewHolder.
         holder.bind(currentItem);
@@ -58,7 +58,6 @@ public class PurchasedItemsAdapter extends RecyclerView.Adapter<PurchasedItemsAd
      */
     @Override
     public int getItemCount() {
-        // The adapter needs to know the total size of the list.
         return items.size();
     }
 
@@ -69,7 +68,6 @@ public class PurchasedItemsAdapter extends RecyclerView.Adapter<PurchasedItemsAd
     static class ItemViewHolder extends RecyclerView.ViewHolder {
 
         // Using ViewBinding provides direct and null-safe access to the views
-        // defined in item_purchased_asset.xml (e.g., purchasedItemName, purchasedItemImage).
         private final ItemPurchasedAssetBinding binding;
 
         public ItemViewHolder(ItemPurchasedAssetBinding binding) {

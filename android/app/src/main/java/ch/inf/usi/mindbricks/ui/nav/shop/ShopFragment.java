@@ -40,7 +40,6 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // This part is already correct, as it accesses the public 'coins' LiveData field.
         profileViewModel.coins.observe(getViewLifecycleOwner(), balance -> {
             if (balance != null) {
                 binding.coinBalanceText.setText(String.valueOf(balance));
@@ -75,8 +74,8 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
             return;
         }
 
-        // ⭐️ CORRECTED LINE ⭐️
-        // Access the public 'coins' LiveData field, not a 'getCoins()' method.
+
+        // Access the public coins LiveData field
         Integer currentCoins = profileViewModel.coins.getValue();
 
         if (currentCoins == null || currentCoins < item.getPrice()) {
@@ -95,7 +94,6 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
     }
 
     private void completePurchase(ShopItem item) {
-        // This method was already correct
         boolean purchaseSuccessful = profileViewModel.spendCoins(item.getPrice());
 
         if (purchaseSuccessful) {

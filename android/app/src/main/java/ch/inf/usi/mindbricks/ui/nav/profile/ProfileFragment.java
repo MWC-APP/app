@@ -29,7 +29,6 @@ import java.util.Set;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.databinding.FragmentProfileBinding;
 import ch.inf.usi.mindbricks.model.Tag;
-// ADDED: Import for the PurchasedItem model
 import ch.inf.usi.mindbricks.ui.nav.profile.PurchasedItem;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
@@ -40,12 +39,8 @@ public class ProfileFragment extends Fragment {
     private ProfileViewModel profileViewModel;
     private PreferencesManager prefs;
 
-    // Base URL for the avatar API
     private static final String DICEBEAR_BASE_URL = "https://api.dicebear.com/9.x/pixel-art/png";
 
-    // ADDED: A master list of all items available in the shop.
-    // In a real-world app, this would likely come from a database, a remote server,
-    // or a more structured source file, but for now, we'll define it here.
     private final List<PurchasedItem> allShopItems = new ArrayList<>();
 
     @Override
@@ -54,9 +49,7 @@ public class ProfileFragment extends Fragment {
         prefs = new PreferencesManager(requireContext());
         binding = FragmentProfileBinding.inflate(inflater, container, false);
 
-        // ADDED: Populate the master list of all shop items.
-        // The item IDs here MUST match the IDs you use when calling `prefs.purchaseItem()` in your Shop.
-        // Make sure you have these drawables in your res/drawable folder.
+
         allShopItems.add(new PurchasedItem("avatar_cool_1", "Cool Blue Avatar", R.drawable.ic_avatar_placeholder));
         allShopItems.add(new PurchasedItem("avatar_pro_2", "Pro Red Avatar", R.drawable.ic_avatar_placeholder));
         allShopItems.add(new PurchasedItem("theme_dark_3", "Dark Theme", R.drawable.ic_chip_check));
@@ -75,7 +68,6 @@ public class ProfileFragment extends Fragment {
         });
 
         loadAndDisplayUserData();
-        // ADDED: Call the method to set up the purchased items list.
         setupPurchasedItemsList();
     }
 
@@ -116,7 +108,7 @@ public class ProfileFragment extends Fragment {
                 Tag t = Tag.fromJson(array.getJSONObject(i));
                 if (t != null) tags.add(t);
             }
-        } catch (JSONException e) { /* Ignore parsing errors */ }
+        } catch (JSONException e) {  }
 
         if (tags.isEmpty()) {
             binding.profileTagsEmptyState.setVisibility(View.VISIBLE);
@@ -137,10 +129,10 @@ public class ProfileFragment extends Fragment {
      * ⭐️ ADDED: Sets up the RecyclerView to display the items the user has purchased. ⭐️
      */
     private void setupPurchasedItemsList() {
-        // 1. Get the set of IDs for items the user has purchased.
+        // Get the set of IDs for items the user has purchased.
         Set<String> purchasedIds = prefs.getPurchasedItemIds();
 
-        // 2. Filter the master list of all shop items to get only the ones the user owns.
+        //  Filter the master list of all shop items to get only the ones the user owns.
         List<PurchasedItem> userOwnedItems = new ArrayList<>();
         for (PurchasedItem shopItem : allShopItems) {
             if (purchasedIds.contains(shopItem.getId())) {
@@ -148,9 +140,9 @@ public class ProfileFragment extends Fragment {
             }
         }
 
-        // 3. Check if the user's inventory is empty and update the UI visibility.
+        //  Check if the user's inventory is empty and update the UI visibility.
         if (userOwnedItems.isEmpty()) {
-            // If empty, hide the list and show the "empty" text.
+            // If empty, hide the list and show the "empty" text
             binding.purchasedItemsRecyclerView.setVisibility(View.GONE);
             binding.purchasedItemsEmptyState.setVisibility(View.VISIBLE);
         } else {
@@ -158,13 +150,12 @@ public class ProfileFragment extends Fragment {
             binding.purchasedItemsRecyclerView.setVisibility(View.VISIBLE);
             binding.purchasedItemsEmptyState.setVisibility(View.GONE);
 
-            // 4. Create and set the adapter for the RecyclerView.
+            // Create and set the adapter for the RecyclerView.
             PurchasedItemsAdapter adapter = new PurchasedItemsAdapter(userOwnedItems);
             binding.purchasedItemsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
             binding.purchasedItemsRecyclerView.setAdapter(adapter);
 
-            // Optional: To prevent the RecyclerView from being scrollable inside the NestedScrollView,
-            // which can feel clunky. This makes it expand to its full height.
+            //  To prevent the RecyclerView from being scrollable inside the NestedScrollView
             binding.purchasedItemsRecyclerView.setNestedScrollingEnabled(false);
         }
     }
@@ -172,6 +163,6 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // Clean up the binding to avoid memory leaks.
+        binding = null;
     }
 }
