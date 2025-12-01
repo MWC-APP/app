@@ -1,155 +1,293 @@
-package ch.inf.usi.mindbricks.ui.analytics;
+package ch.inf.usi.mindbricks.ui.nav.analytics;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.database.AppDatabase;
-import ch.inf.usi.mindbricks.database.StudySessionDao;
-import ch.inf.usi.mindbricks.model.DailyRecommendation;
 import ch.inf.usi.mindbricks.model.StudySession;
-import ch.inf.usi.mindbricks.model.TimeSlotStats;
-import ch.inf.usi.mindbricks.model.WeeklyStats;
 import ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView;
 import ch.inf.usi.mindbricks.ui.charts.HourlyDistributionChartView;
 import ch.inf.usi.mindbricks.ui.charts.SessionHistoryAdapter;
 import ch.inf.usi.mindbricks.ui.charts.WeeklyFocusChartView;
-import ch.inf.usi.mindbricks.util.DataProcessor;
-import ch.inf.usi.mindbricks.util.MockDataGenerator;
+import ch.inf.usi.mindbricks.util.TestDataGenerator;
 
 /**
- * Activity that displays comprehensive study analytics
+ * Fragment that displays analytics and visualizations of study sessions.
+ *
+ * Architecture:
+ * Fragment -> ViewModel -> Repository -> Database
  */
-public class AnalyticsActivity extends AppCompatActivity {
+public class AnalyticsFragment extends Fragment {
 
-    private DailyTimelineChartView dailyTimelineChart;
+    // ViewModel
+    private AnalyticsViewModel viewModel;
+
+    // Chart views
     private WeeklyFocusChartView weeklyFocusChart;
     private HourlyDistributionChartView hourlyDistributionChart;
+    private DailyTimelineChartView dailyTimelineChart;
+
+    // Session history
     private RecyclerView sessionHistoryRecycler;
-    private SessionHistoryAdapter sessionAdapter;
-    private ProgressBar loadingProgress;
-    private MaterialToolbar toolbar;
+    private SessionHistoryAdapter sessionHistoryAdapter;
+
+    // UI state views
+    private ProgressBar progressBar;
+    private TextView emptyStateText;
+    private View chartsContainer;
+    private SwipeRefreshLayout swipeRefreshLayout;
+
+    // Date formatters
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+    private final SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_analytics, container, false);
+    }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.fragment_analytics);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        initViews();
-        setupToolbar();
+        TestDataGenerator.addTestSessions(requireContext(), 20);
+
+        // Wait a bit, then load
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            viewModel.loadAnalyticsData(30);
+        }, 1000);
+
+
+        // Initialize ViewModel
+        // ViewModelProvider ensures same instance survives configuration changes
+        viewModel = new ViewModelProvider(this).get(AnalyticsViewModel.class);
+
+        // Initialize views
+        initializeViews(view);
+
+        // Setup RecyclerView
         setupRecyclerView();
-        loadData();
-    }
 
-    private void initViews() {
-        dailyTimelineChart = findViewById(R.id.dailyTimelineChart);
-        weeklyFocusChart = findViewById(R.id.weeklyFocusChart);
-        hourlyDistributionChart = findViewById(R.id.hourlyDistributionChart);
-        sessionHistoryRecycler = findViewById(R.id.sessionHistoryRecycler);
-        loadingProgress = findViewById(R.id.loadingProgress);
-        toolbar = findViewById(R.id.toolbar);
-    }
+        // Observe ViewModel LiveData
+        observeViewModel();
 
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
-        toolbar.setNavigationOnClickListener(v -> finish());
-    }
-
-    private void setupRecyclerView() {
-        // Handle session click - show detail view
-        sessionAdapter = new SessionHistoryAdapter(this::showSessionDetails);
-
-        sessionHistoryRecycler.setLayoutManager(new LinearLayoutManager(this));
-        sessionHistoryRecycler.setAdapter(sessionAdapter);
-    }
-
-    private void loadData() {
-        loadingProgress.setVisibility(View.VISIBLE);
-
-        // Load data in background thread
-        new Thread(() -> {
-            List<StudySession> allSessions = loadSessionsFromDatabase();
-            List<StudySession> recentSessions = DataProcessor.getRecentSessions(allSessions, 30);
-
-            DailyRecommendation dailyRec = DataProcessor.generateDailyRecommendation(recentSessions);
-            List<WeeklyStats> weeklyStats = DataProcessor.calculateWeeklyStats(recentSessions);
-            List<TimeSlotStats> hourlyStats = DataProcessor.calculateHourlyStats(recentSessions);
-
-            runOnUiThread(() -> {
-                updateCharts(dailyRec, weeklyStats, hourlyStats);
-                sessionAdapter.setData(recentSessions);
-                loadingProgress.setVisibility(View.GONE);
-            });
-        }).start();
-    }
-
-    private void updateCharts(DailyRecommendation dailyRec,
-                              List<WeeklyStats> weeklyStats,
-                              List<TimeSlotStats> hourlyStats) {
-        dailyTimelineChart.setData(dailyRec);
-        weeklyFocusChart.setData(weeklyStats);
-        hourlyDistributionChart.setData(hourlyStats);
+        // Load data (30 days by default)
+        viewModel.loadAnalyticsData(30);
     }
 
     /**
-     * Load sessions from database.
-     * Falls back to mock data if database is empty (for testing).
+     * Initialize all views from the layout.
+     *
+     * @param view Root view
      */
-    private List<StudySession> loadSessionsFromDatabase() {
-        AppDatabase db = AppDatabase.getInstance(this);
-        StudySessionDao dao = db.studySessionDao();
+    private void initializeViews(View view) {
+        // Chart views
+        weeklyFocusChart = view.findViewById(R.id.weeklyFocusChart);
+        hourlyDistributionChart = view.findViewById(R.id.hourlyDistributionChart);
+        dailyTimelineChart = view.findViewById(R.id.dailyTimelineChart);
 
-        // Get sessions from last 90 days
-        long ninetyDaysAgo = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000);
-        List<StudySession> sessions = dao.getSessionsSince(ninetyDaysAgo);
+        // RecyclerView for session history
+        sessionHistoryRecycler = view.findViewById(R.id.sessionHistoryRecycler);
 
-        // Fallback to mock data if database is empty (for testing/demo)
-        if (sessions.isEmpty()) {
-            sessions = MockDataGenerator.generateMockSessions(50);
-            // Optionally save mock data to database
-            List<StudySession> finalSessions = sessions;
-            new Thread(() -> dao.insertAll(finalSessions)).start();
+        // UI state views
+        progressBar = view.findViewById(R.id.analyticsProgressBar);
+        emptyStateText = view.findViewById(R.id.emptyStateText);
+        chartsContainer = view.findViewById(R.id.chartsContainer);
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
+
+        // Setup swipe to refresh
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            viewModel.refreshData();
+        });
+
+        FloatingActionButton fab = view.findViewById(R.id.analyticsFilterFab);
+        if (fab != null) {
+            fab.setOnClickListener(v -> showFilterDialog());
         }
-
-        return sessions;
     }
 
     /**
-     * Show detailed information about a study session
+     * Setup RecyclerView with adapter and layout manager.
+     */
+    private void setupRecyclerView() {
+        // Create adapter with click listener
+        sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
+            @Override
+            public void onSessionClick(StudySession session) {
+                showSessionDetails(session);
+            }
+
+            @Override
+            public void onSessionLongClick(StudySession session) {
+                showSessionOptionsDialog(session);
+            }
+        });
+
+        // Set layout manager
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
+        sessionHistoryRecycler.setLayoutManager(layoutManager);
+
+        // Set adapter
+        sessionHistoryRecycler.setAdapter(sessionHistoryAdapter);
+
+        sessionHistoryRecycler.addItemDecoration(
+                new androidx.recyclerview.widget.DividerItemDecoration(
+                        requireContext(),
+                        layoutManager.getOrientation()
+                )
+        );
+    }
+
+    /**
+     * Observe all LiveData from ViewModel.
+     * This is where the Fragment reacts to data changes.
+     */
+    private void observeViewModel() {
+        // Observe view state for loading/error/success
+        viewModel.getViewState().observe(getViewLifecycleOwner(), state -> {
+            updateUIState(state);
+        });
+
+        // Observe weekly stats
+        viewModel.getWeeklyStats().observe(getViewLifecycleOwner(), stats -> {
+            if (stats != null) {
+                weeklyFocusChart.setData(stats);
+            }
+        });
+
+        // Observe hourly distribution
+        viewModel.getHourlyStats().observe(getViewLifecycleOwner(), stats -> {
+            if (stats != null) {
+                hourlyDistributionChart.setData(stats);
+            }
+        });
+
+        // Observe daily recommendations
+        viewModel.getDailyRecommendation().observe(getViewLifecycleOwner(), recommendation -> {
+            if (recommendation != null) {
+                dailyTimelineChart.setData(recommendation);
+            }
+        });
+
+        // Observe session history
+        viewModel.getSessionHistory().observe(getViewLifecycleOwner(), sessions -> {
+            if (sessions != null) {
+                sessionHistoryAdapter.setData(sessions);
+            }
+        });
+
+        // Observe errors
+        viewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                showError(error);
+            }
+        });
+    }
+
+    /**
+     * Update UI based on view state.
+     * Shows/hides loading, error, empty, and content views.
+     *
+     * @param state Current view state
+     */
+    private void updateUIState(AnalyticsViewModel.ViewState state) {
+        // Stop refresh animation if running
+        swipeRefreshLayout.setRefreshing(false);
+
+        switch (state) {
+            case LOADING:
+                // Show loading indicator
+                progressBar.setVisibility(View.VISIBLE);
+                chartsContainer.setVisibility(View.GONE);
+                emptyStateText.setVisibility(View.GONE);
+                break;
+
+            case SUCCESS:
+                // Show content
+                progressBar.setVisibility(View.GONE);
+                chartsContainer.setVisibility(View.VISIBLE);
+                emptyStateText.setVisibility(View.GONE);
+                break;
+
+            case EMPTY:
+                // Show empty state
+                progressBar.setVisibility(View.GONE);
+                chartsContainer.setVisibility(View.GONE);
+                emptyStateText.setVisibility(View.VISIBLE);
+                emptyStateText.setText("No study sessions yet.\nStart studying to see your analytics!");
+                break;
+
+            case ERROR:
+                // Show error state
+                progressBar.setVisibility(View.GONE);
+                chartsContainer.setVisibility(View.GONE);
+                emptyStateText.setVisibility(View.VISIBLE);
+                emptyStateText.setText("Error loading analytics.\nPull down to retry.");
+                break;
+        }
+    }
+
+    /**
+     * Show detailed dialog for a study session.
+     *
+     * @param session Session to show
      */
     private void showSessionDetails(StudySession session) {
-        // Create a dialog view with session details
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_session_details, null);
+        // Inflate custom dialog layout
+        View dialogView = LayoutInflater.from(getContext())
+                .inflate(R.layout.dialog_session_details, null);
 
-        // Populate views
-        android.widget.TextView dateText = dialogView.findViewById(R.id.sessionDate);
-        android.widget.TextView durationText = dialogView.findViewById(R.id.sessionDuration);
-        android.widget.TextView focusScoreText = dialogView.findViewById(R.id.sessionFocusScore);
-        android.widget.TextView notesText = dialogView.findViewById(R.id.sessionNotes);
+        // Find views in dialog
+        TextView dateText = dialogView.findViewById(R.id.sessionDetailDate);
+        TextView timeText = dialogView.findViewById(R.id.sessionDetailTime);
+        TextView durationText = dialogView.findViewById(R.id.sessionDetailDuration);
+        TextView tagText = dialogView.findViewById(R.id.sessionDetailTag);
+        TextView focusScoreText = dialogView.findViewById(R.id.sessionDetailFocusScore);
+        TextView noiseText = dialogView.findViewById(R.id.sessionDetailNoise);
+        TextView lightText = dialogView.findViewById(R.id.sessionDetailLight);
+        TextView pickupsText = dialogView.findViewById(R.id.sessionDetailPickups);
+        TextView notesText = dialogView.findViewById(R.id.sessionDetailNotes);
 
-        // Format and set data
-        dateText.setText(formatDate(session.getTimestamp()));
+        // Populate with session data
+        Date date = new Date(session.getTimestamp());
+        dateText.setText(dateFormat.format(date));
+        timeText.setText(timeFormat.format(date));
         durationText.setText(formatDuration(session.getDurationMinutes()));
+        tagText.setText(session.getTagTitle());
         focusScoreText.setText(String.format(Locale.getDefault(),
                 "Focus Score: %.1f%%", session.getFocusScore()));
+        noiseText.setText(String.format(Locale.getDefault(),
+                "Noise Level: %.1f%%", session.getAvgNoiseLevel()));
+        lightText.setText(String.format(Locale.getDefault(),
+                "Light Level: %.1f%%", session.getAvgLightLevel()));
+        pickupsText.setText(String.format(Locale.getDefault(),
+                "Phone Pickups: %d", session.getPhonePickupCount()));
 
+        // Show notes if available
         if (session.getNotes() != null && !session.getNotes().isEmpty()) {
             notesText.setText(session.getNotes());
             notesText.setVisibility(View.VISIBLE);
@@ -158,47 +296,106 @@ public class AnalyticsActivity extends AppCompatActivity {
         }
 
         // Show dialog
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(requireContext())
                 .setTitle("Session Details")
                 .setView(dialogView)
                 .setPositiveButton("Close", null)
-                .setNeutralButton("Delete", (dialog, which) -> confirmDeleteSession(session))
                 .show();
     }
 
-    private void confirmDeleteSession(StudySession session) {
-        new AlertDialog.Builder(this)
-                .setTitle("Delete Session")
-                .setMessage("Are you sure you want to delete this study session?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    // Delete from database
-                    new Thread(() -> {
-                        AppDatabase db = AppDatabase.getInstance(this);
-                        db.studySessionDao().delete(session);
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "Session deleted", Toast.LENGTH_SHORT).show();
-                            loadData(); // Reload data
-                        });
-                    }).start();
+    /**
+     * Show options dialog for long-press on session.
+     *
+     * @param session Session to show options for
+     */
+    private void showSessionOptionsDialog(StudySession session) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Session Options")
+                .setItems(new String[]{"View Details", "Delete Session"}, (dialog, which) -> {
+                    if (which == 0) {
+                        showSessionDetails(session);
+                    } else if (which == 1) {
+                        confirmDeleteSession(session);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private String formatDate(long timestamp) {
-        SimpleDateFormat sdf = new SimpleDateFormat(
-                "MMM dd, yyyy 'at' HH:mm",
-                Locale.getDefault()
-        );
-        return sdf.format(new Date(timestamp));
+    /**
+     * Show confirmation dialog before deleting session.
+     *
+     * @param session Session to delete
+     */
+    private void confirmDeleteSession(StudySession session) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Delete Session")
+                .setMessage("Are you sure you want to delete this study session? This cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    viewModel.deleteSession(session);
+                    Toast.makeText(getContext(), "Session deleted", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
-    private String formatDuration(int minutes) {
-        int hours = minutes / 60;
-        int mins = minutes % 60;
+    /**
+     * Show filter dialog for date range selection.
+     * Optional feature for advanced filtering.
+     */
+    private void showFilterDialog() {
+        String[] options = {"Last 7 days", "Last 30 days", "Last 90 days", "All time"};
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Select Time Range")
+                .setItems(options, (dialog, which) -> {
+                    int days;
+                    switch (which) {
+                        case 0: days = 7; break;
+                        case 1: days = 30; break;
+                        case 2: days = 90; break;
+                        default: days = 365 * 10; break;
+                    }
+                    viewModel.loadAnalyticsData(days);
+                })
+                .show();
+    }
+
+    /**
+     * Show error message to user.
+     *
+     * @param message Error message
+     */
+    private void showError(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Format duration in human-readable format.
+     *
+     * @param totalMinutes Total minutes
+     * @return Formatted string
+     */
+    private String formatDuration(int totalMinutes) {
+        int hours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
+
         if (hours > 0) {
-            return String.format(Locale.getDefault(), "%dh %dm", hours, mins);
+            return String.format(Locale.getDefault(), "%d hour%s %d min",
+                    hours, hours == 1 ? "" : "s", minutes);
+        } else {
+            return String.format(Locale.getDefault(), "%d minutes", minutes);
         }
-        return String.format(Locale.getDefault(), "%dm", mins);
+    }
+
+    /**
+     * Lifecycle: Resume - refresh data if needed.
+     */
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        // Refresh data when returning to fragment -> ended session in between etc.
+        viewModel.refreshData();
     }
 }

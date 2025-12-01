@@ -13,13 +13,162 @@ import ch.inf.usi.mindbricks.model.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.WeeklyStats;
 
 /**
- * Utility class for processing and analyzing study session data
+ * Utility class for processing and analyzing study session data.
+ * Contains methods to transform raw session data into chart-ready statistics.
  */
 public class DataProcessor {
+    public static WeeklyStats calculateWeeklyStats(List<StudySession> sessions) {
+        WeeklyStats stats = new WeeklyStats();
 
-    /**
-     * Get sessions from the last N days
-     */
+        if (sessions == null || sessions.isEmpty()) {
+            return stats;
+        }
+
+        // Arrays to accumulate data per day
+        int[] minutesPerDay = new int[7];
+        float[] focusScoreSum = new float[7];
+        int[] sessionCountPerDay = new int[7];
+
+        Calendar calendar = Calendar.getInstance();
+
+        // Process each session
+        for (StudySession session : sessions) {
+            calendar.setTimeInMillis(session.getTimestamp());
+
+            // Get day of week (Calendar.MONDAY = 2, so adjust to 0-6)
+            int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+            int dayIndex = convertCalendarDayToIndex(dayOfWeek);
+
+            // Accumulate data
+            minutesPerDay[dayIndex] += session.getDurationMinutes();
+            focusScoreSum[dayIndex] += session.getFocusScore();
+            sessionCountPerDay[dayIndex]++;
+        }
+
+        // Calculate averages and set data
+        int totalMinutes = 0;
+        float totalFocusScore = 0;
+        int totalSessions = 0;
+        int daysWithSessions = 0;
+
+        for (int i = 0; i < 7; i++) {
+            stats.setDayMinutes(i, minutesPerDay[i]);
+            stats.setDaySessionCount(i, sessionCountPerDay[i]);
+
+            if (sessionCountPerDay[i] > 0) {
+                float avgFocusScore = focusScoreSum[i] / sessionCountPerDay[i];
+                stats.setDayFocusScore(i, avgFocusScore);
+
+                totalMinutes += minutesPerDay[i];
+                totalFocusScore += avgFocusScore;
+                totalSessions += sessionCountPerDay[i];
+                daysWithSessions++;
+            } else {
+                stats.setDayFocusScore(i, 0);
+            }
+        }
+
+        stats.setTotalMinutes(totalMinutes);
+        stats.setTotalSessions(totalSessions);
+
+        if (daysWithSessions > 0) {
+            stats.setAverageFocusScore(totalFocusScore / daysWithSessions);
+        }
+
+        return stats;
+    }
+
+    public static List<TimeSlotStats> calculateHourlyDistribution(List<StudySession> sessions) {
+        // Create 24 time slots (one for each hour)
+        List<TimeSlotStats> hourlyStats = new ArrayList<>();
+        for (int hour = 0; hour < 24; hour++) {
+            hourlyStats.add(new TimeSlotStats(hour));
+        }
+
+        if (sessions == null || sessions.isEmpty()) {
+            return hourlyStats;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+
+        // Process each session
+        for (StudySession session : sessions) {
+            calendar.setTimeInMillis(session.getTimestamp());
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+
+            // Add session data to the appropriate hour slot
+            TimeSlotStats hourSlot = hourlyStats.get(hour);
+            hourSlot.addSession(
+                    session.getDurationMinutes(),
+                    session.getFocusScore(),
+                    session.getAvgNoiseLevel(),
+                    session.getAvgLightLevel()
+            );
+        }
+
+        return hourlyStats;
+    }
+
+    public static DailyRecommendation generateDailyRecommendation(List<StudySession> sessions) {
+        DailyRecommendation recommendation = new DailyRecommendation();
+
+        if (sessions == null || sessions.isEmpty()) {
+            recommendation.setReasonSummary("Not enough data yet. Complete more sessions to get personalized recommendations.");
+            recommendation.setConfidenceScore(0);
+            recommendation.setRecommendedSlots(new ArrayList<>());
+            return recommendation;
+        }
+
+        // Calculate hourly distribution to find best times
+        List<TimeSlotStats> hourlyStats = calculateHourlyDistribution(sessions);
+
+        // Find top 3 most productive hours
+        List<TimeSlotStats> rankedHours = new ArrayList<>();
+        for (TimeSlotStats stats : hourlyStats) {
+            if (stats.getSessionCount() > 0) {
+                rankedHours.add(stats);
+            }
+        }
+
+        // Sort by focus score (descending)
+        Collections.sort(rankedHours, (a, b) ->
+                Float.compare(b.getAverageFocusScore(), a.getAverageFocusScore()));
+
+        // Create recommended time slots
+        List<DailyRecommendation.TimeSlot> recommendedSlots = new ArrayList<>();
+        int slotsToRecommend = Math.min(3, rankedHours.size());
+
+        for (int i = 0; i < slotsToRecommend; i++) {
+            TimeSlotStats hourStat = rankedHours.get(i);
+            DailyRecommendation.TimeSlot slot = new DailyRecommendation.TimeSlot();
+            slot.setStartTime(hourStat.getFormattedTime());
+            slot.setEndTime(getEndTime(hourStat.getHourOfDay()));
+            slot.setProductivityScore((int) hourStat.getAverageFocusScore());
+            slot.setReason(generateSlotReason(hourStat));
+            recommendedSlots.add(slot);
+        }
+
+        recommendation.setRecommendedSlots(recommendedSlots);
+
+        // Generate summary
+        if (!rankedHours.isEmpty()) {
+            TimeSlotStats bestHour = rankedHours.get(0);
+            String summary = String.format(
+                    "Based on %d sessions, you're most productive around %s with %.0f%% focus.",
+                    sessions.size(),
+                    bestHour.getFormattedTime(),
+                    bestHour.getAverageFocusScore()
+            );
+            recommendation.setReasonSummary(summary);
+
+            int confidence = Math.min(100, (sessions.size() * 10));
+            recommendation.setConfidenceScore(confidence);
+        }
+
+        return recommendation;
+    }
+
+
     public static List<StudySession> getRecentSessions(List<StudySession> allSessions, int days) {
         if (allSessions == null || allSessions.isEmpty()) {
             return new ArrayList<>();
@@ -37,195 +186,133 @@ public class DataProcessor {
         return recent;
     }
 
-    /**
-     * Generate daily recommendations based on historical performance
-     */
-    public static DailyRecommendation generateDailyRecommendation(List<StudySession> sessions) {
-        DailyRecommendation recommendation = new DailyRecommendation();
+    public static int calculateTotalMinutes(List<StudySession> sessions) {
+        int total = 0;
+        if (sessions != null) {
+            for (StudySession session : sessions) {
+                total += session.getDurationMinutes();
+            }
+        }
+        return total;
+    }
 
+    public static float calculateAverageFocusScore(List<StudySession> sessions) {
         if (sessions == null || sessions.isEmpty()) {
-            recommendation.setReasonSummary("Not enough data yet. Complete more sessions to get personalized recommendations.");
-            recommendation.setConfidenceScore(0);
-            return recommendation;
+            return 0;
         }
 
-        // Calculate average focus score by hour
-        Map<Integer, List<Float>> focusScoresByHour = new HashMap<>();
+        float sum = 0;
         for (StudySession session : sessions) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(session.getTimestamp());
-            int hour = cal.get(Calendar.HOUR_OF_DAY);
-
-            if (!focusScoresByHour.containsKey(hour)) {
-                focusScoresByHour.put(hour, new ArrayList<>());
-            }
-            focusScoresByHour.get(hour).add(session.getFocusScore());
+            sum += session.getFocusScore();
         }
 
-        // Find top 3 hours with best average focus
-        List<HourScore> hourScores = new ArrayList<>();
-        for (Map.Entry<Integer, List<Float>> entry : focusScoresByHour.entrySet()) {
-            int hour = entry.getKey();
-            List<Float> scores = entry.getValue();
+        return sum / sessions.size();
+    }
 
-            if (scores.size() >= 3) {
-                // Only consider hours with enough data
-                float avgScore = 0;
-                for (float score : scores) {
-                    avgScore += score;
+    public static Map<String, List<StudySession>> groupSessionsByTag(List<StudySession> sessions) {
+        Map<String, List<StudySession>> grouped = new HashMap<>();
+
+        if (sessions != null) {
+            for (StudySession session : sessions) {
+                String tag = session.getTagTitle();
+                if (!grouped.containsKey(tag)) {
+                    grouped.put(tag, new ArrayList<>());
                 }
-                avgScore /= scores.size();
-                hourScores.add(new HourScore(hour, avgScore));
+                grouped.get(tag).add(session);
             }
         }
 
-        Collections.sort(hourScores, (a, b) -> Float.compare(b.score, a.score));
+        return grouped;
+    }
 
-        // Add top 3 recommendations
-        String[] labels = {"Peak Performance", "High Focus", "Good Focus"};
-        for (int i = 0; i < Math.min(3, hourScores.size()); i++) {
-            HourScore hs = hourScores.get(i);
-            recommendation.addRecommendedSlot(
-                    new DailyRecommendation.TimeSlot(hs.hour, hs.score, labels[i])
-            );
+    public static int calculateLongestStreak(List<StudySession> sessions) {
+        if (sessions == null || sessions.isEmpty()) {
+            return 0;
         }
 
-        // Set confidence based on data amount
-        int confidence = Math.min(100, (sessions.size() * 100) / 30); // Max at 30 sessions
-        recommendation.setConfidenceScore(confidence);
+        // Sort sessions by timestamp
+        List<StudySession> sorted = new ArrayList<>(sessions);
+        Collections.sort(sorted, (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp()));
 
-        if (hourScores.size() >= 3) {
-            recommendation.setReasonSummary(
-                    String.format("Based on %d sessions, you focus best around %s",
-                            sessions.size(),
-                            formatHour(hourScores.get(0).hour))
-            );
+        Calendar calendar = Calendar.getInstance();
+        int currentStreak = 1;
+        int longestStreak = 1;
+
+        calendar.setTimeInMillis(sorted.get(0).getTimestamp());
+        int lastDayOfYear = calendar.get(Calendar.DAY_OF_YEAR);
+        int lastYear = calendar.get(Calendar.YEAR);
+
+        for (int i = 1; i < sorted.size(); i++) {
+            calendar.setTimeInMillis(sorted.get(i).getTimestamp());
+            int currentDayOfYear = calendar.get(Calendar.DAY_OF_YEAR);
+            int currentYear = calendar.get(Calendar.YEAR);
+
+            // Check if consecutive day
+            if (currentYear == lastYear && currentDayOfYear == lastDayOfYear + 1) {
+                currentStreak++;
+                longestStreak = Math.max(longestStreak, currentStreak);
+            } else if (currentYear == lastYear + 1 && currentDayOfYear == 1 && lastDayOfYear == 365) {
+                // Handle year transition
+                currentStreak++;
+                longestStreak = Math.max(longestStreak, currentStreak);
+            } else if (currentDayOfYear != lastDayOfYear) {
+                // Streak broken
+                currentStreak = 1;
+            }
+
+            lastDayOfYear = currentDayOfYear;
+            lastYear = currentYear;
+        }
+
+        return longestStreak;
+    }
+
+    // ---> Helper methods
+    private static int convertCalendarDayToIndex(int calendarDay) {
+        switch (calendarDay) {
+            case Calendar.MONDAY: return 0;
+            case Calendar.TUESDAY: return 1;
+            case Calendar.WEDNESDAY: return 2;
+            case Calendar.THURSDAY: return 3;
+            case Calendar.FRIDAY: return 4;
+            case Calendar.SATURDAY: return 5;
+            case Calendar.SUNDAY: return 6;
+            default: return 0;
+        }
+    }
+
+    private static String getEndTime(int hour) {
+        int endHour = (hour + 1) % 24;
+        if (endHour == 0) {
+            return "12:00 AM";
+        } else if (endHour < 12) {
+            return endHour + ":00 AM";
+        } else if (endHour == 12) {
+            return "12:00 PM";
         } else {
-            recommendation.setReasonSummary("Complete more sessions for better recommendations.");
+            return (endHour - 12) + ":00 PM";
         }
-
-        return recommendation;
     }
 
-    /**
-     * Calculate weekly statistics for the last 7 days
-     */
-    public static List<WeeklyStats> calculateWeeklyStats(List<StudySession> sessions) {
-        List<WeeklyStats> weeklyStats = new ArrayList<>();
+    private static String generateSlotReason(TimeSlotStats hourStat) {
+        float focusScore = hourStat.getAverageFocusScore();
+        int sessionCount = hourStat.getSessionCount();
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        String[] dayLabels = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-        for (int i = 6; i >= 0; i--) {
-            Calendar dayCal = (Calendar) cal.clone();
-            dayCal.add(Calendar.DAY_OF_MONTH, -i);
-
-            int dayOfWeek = dayCal.get(Calendar.DAY_OF_WEEK);
-            String label = dayLabels[dayOfWeek - 1];
-
-            WeeklyStats stats = new WeeklyStats(label, dayOfWeek, dayCal.getTimeInMillis());
-            weeklyStats.add(stats);
+        String productivity;
+        if (focusScore >= 80) {
+            productivity = "excellent";
+        } else if (focusScore >= 60) {
+            productivity = "good";
+        } else {
+            productivity = "moderate";
         }
 
-        // Populate stats with session data
-        if (sessions != null) {
-            for (StudySession session : sessions) {
-                Calendar sessionCal = Calendar.getInstance();
-                sessionCal.setTimeInMillis(session.getTimestamp());
-                sessionCal.set(Calendar.HOUR_OF_DAY, 0);
-                sessionCal.set(Calendar.MINUTE, 0);
-                sessionCal.set(Calendar.SECOND, 0);
-                sessionCal.set(Calendar.MILLISECOND, 0);
-
-                long sessionDate = sessionCal.getTimeInMillis();
-
-                for (WeeklyStats stats : weeklyStats) {
-                    if (stats.getDate() == sessionDate) {
-                        stats.setTotalMinutes(stats.getTotalMinutes() + session.getDurationMinutes());
-
-                        // Update average focus score
-                        float currentAvg = stats.getAvgFocusScore();
-                        int count = stats.getSessionCount();
-                        float newAvg = (currentAvg * count + session.getFocusScore()) / (count + 1);
-                        stats.setAvgFocusScore(newAvg);
-
-                        stats.setSessionCount(count + 1);
-                        break;
-                    }
-                }
-            }
-        }
-
-        return weeklyStats;
-    }
-
-    /**
-     * Calculate hourly distribution statistics
-     */
-    public static List<TimeSlotStats> calculateHourlyStats(List<StudySession> sessions) {
-        // Create stats for each hour of the day
-        Map<Integer, TimeSlotStats> hourlyStatsMap = new HashMap<>();
-        for (int hour = 0; hour < 24; hour++) {
-            hourlyStatsMap.put(hour, new TimeSlotStats(hour));
-        }
-
-        if (sessions != null) {
-            // Aggregate session data by hour
-            for (StudySession session : sessions) {
-                Calendar cal = Calendar.getInstance();
-                cal.setTimeInMillis(session.getTimestamp());
-                int hour = cal.get(Calendar.HOUR_OF_DAY);
-
-                TimeSlotStats stats = hourlyStatsMap.get(hour);
-                stats.addMinutes(session.getDurationMinutes());
-
-                // Update average focus score
-                float currentAvg = stats.getAvgFocusScore();
-                int count = stats.getSessionCount();
-                float newAvg = (currentAvg * count + session.getFocusScore()) / (count + 1);
-                stats.setAvgFocusScore(newAvg);
-
-                // Update average noise and light
-                float currentNoise = stats.getAvgNoiseLevel();
-                float newNoise = (currentNoise * count + session.getAvgNoiseLevel()) / (count + 1);
-                stats.setAvgNoiseLevel(newNoise);
-
-                float currentLight = stats.getAvgLightLevel();
-                float newLight = (currentLight * count + session.getAvgLightLevel()) / (count + 1);
-                stats.setAvgLightLevel(newLight);
-
-                stats.incrementSessionCount();
-            }
-        }
-
-        List<TimeSlotStats> statsList = new ArrayList<>(hourlyStatsMap.values());
-        Collections.sort(statsList, (a, b) -> Integer.compare(a.getHourOfDay(), b.getHourOfDay()));
-
-        return statsList;
-    }
-
-    private static String formatHour(int hour) {
-        if (hour == 0) return "midnight";
-        if (hour == 12) return "noon";
-        if (hour < 12) return hour + " AM";
-        return (hour - 12) + " PM";
-    }
-
-    /**
-     * Helper class for sorting hours by score
-     */
-    private static class HourScore {
-        int hour;
-        float score;
-
-        HourScore(int hour, float score) {
-            this.hour = hour;
-            this.score = score;
-        }
+        return String.format(
+                "Based on %d session%s with %s focus (%.0f%%)",
+                sessionCount,
+                sessionCount == 1 ? "" : "s",
+                productivity,
+                focusScore
+        );
     }
 }

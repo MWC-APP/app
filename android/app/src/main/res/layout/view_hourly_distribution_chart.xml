@@ -5,15 +5,28 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Title -->
     <TextView
         android:id="@+id/hourlyDistributionTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hourly Study Distribution"
-        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:text="Study Time by Hour"
+        android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp" />
 
+    <!-- Summary text -->
+    <TextView
+        android:id="@+id/hourlyDistributionSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your most productive hours"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Line Chart -->
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/hourlyDistributionLineChart"
         android:layout_width="match_parent"

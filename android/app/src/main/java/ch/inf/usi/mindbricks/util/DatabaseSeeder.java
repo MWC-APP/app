@@ -40,8 +40,8 @@ public class DatabaseSeeder {
                     List<StudySession> sessions = loadStudySessionsFromAssets(context);
 
                     if(!sessions.isEmpty()){
-                        database.studySessionDao();
-                        Log.d(TAG, "Sucessfully loaded database with " + sessions.size() + " sessions.");
+                        database.studySessionDao().insertAll(sessions);
+                        Log.d(TAG, "Successfully loaded database with " + sessions.size() + " sessions.");
                     }
                     else{
                         Log.w(TAG, "No sessions loaded from JSON file.");

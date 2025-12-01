@@ -1,37 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/sessionDate"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Date"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:layout_marginBottom="8dp" />
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/sessionDuration"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Duration"
-        android:layout_marginBottom="8dp" />
+        <!-- Date and time -->
+        <TextView
+            android:id="@+id/sessionDetailDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="March 15, 2024"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="4dp" />
 
-    <TextView
-        android:id="@+id/sessionFocusScore"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Focus score"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/sessionDetailTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2:30 PM"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginBottom="16dp" />
 
-    <TextView
-        android:id="@+id/sessionNotes"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Notes"
-        android:layout_marginTop="12dp" />
-</LinearLayout>
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Tag -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Subject"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mathematics"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Duration -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Duration"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1 hour 30 minutes"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Focus Score -->
+        <TextView
+            android:id="@+id/sessionDetailFocusScore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Focus Score: 85%"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Environmental metrics section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Environmental Metrics"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailNoise"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Noise Level: 40%"
+            android:textSize="14sp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailLight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Light Level: 60%"
+            android:textSize="14sp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailPickups"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phone Pickups: 2"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Notes section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Notes"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/sessionDetailNotes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Studied calculus, felt productive"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray" />
+
+    </LinearLayout>
+
+</ScrollView>

@@ -1,63 +1,67 @@
 package ch.inf.usi.mindbricks.model;
 
 /**
- * Model representing statistics for a single day in weekly view
+ * Model representing weekly study statistics.
+ * Contains aggregated data for 7 days (Monday-Sunday).
  */
 public class WeeklyStats {
 
-    /**
-     * The 3 letter abbreviation of the day of the week (e.g. "Mon", "Tue", etc.)
-     */
-    private String dayLabel;
+    // Arrays for 7 days (index 0 = Monday, 6 = Sunday)
+    private final int[] dayMinutes = new int[7];
+    private final float[] dayFocusScores = new float[7];
+    private final int[] daySessionCounts = new int[7];
 
-    /**
-     * Numeric value representing the day of the week (1 = Sunday, 2 = Monday, etc.)
-     */
-    private int dayOfWeek;
-
-    /**
-     * Total study time in minutes for the day
-     */
     private int totalMinutes;
+    private float averageFocusScore;
+    private int totalSessions;
 
     /**
-     * Average focus score for this day in range [0,100]
+     * Default constructor initializes arrays with zeros.
      */
-    private float avgFocusScore;
-
-    /**
-     * Total number of sessions for this day
-     */
-    private int sessionCount;
-
-    /**
-     * Timestamp of the first session of this day
-     */
-    private long date;
-
-    public WeeklyStats(String dayLabel, int dayOfWeek, long date) {
-        this.dayLabel = dayLabel;
-        this.dayOfWeek = dayOfWeek;
-        this.date = date;
+    public WeeklyStats() {
         this.totalMinutes = 0;
-        this.avgFocusScore = 0;
-        this.sessionCount = 0;
+        this.averageFocusScore = 0;
+        this.totalSessions = 0;
     }
 
-    public String getDayLabel() {
-        return dayLabel;
+    public void setDayMinutes(int dayIndex, int minutes) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            dayMinutes[dayIndex] = minutes;
+        }
     }
 
-    public void setDayLabel(String dayLabel) {
-        this.dayLabel = dayLabel;
+    public int getDayMinutes(int dayIndex) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            return dayMinutes[dayIndex];
+        }
+        return 0;
     }
 
-    public int getDayOfWeek() {
-        return dayOfWeek;
+
+    public void setDayFocusScore(int dayIndex, float score) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            dayFocusScores[dayIndex] = score;
+        }
     }
 
-    public void setDayOfWeek(int dayOfWeek) {
-        this.dayOfWeek = dayOfWeek;
+    public float getDayFocusScore(int dayIndex) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            return dayFocusScores[dayIndex];
+        }
+        return 0;
+    }
+
+    public void setDaySessionCount(int dayIndex, int count) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            daySessionCounts[dayIndex] = count;
+        }
+    }
+
+    public int getDaySessionCount(int dayIndex) {
+        if (dayIndex >= 0 && dayIndex < 7) {
+            return daySessionCounts[dayIndex];
+        }
+        return 0;
     }
 
     public int getTotalMinutes() {
@@ -68,34 +72,46 @@ public class WeeklyStats {
         this.totalMinutes = totalMinutes;
     }
 
-    public float getAvgFocusScore() {
-        return avgFocusScore;
+    public float getAverageFocusScore() {
+        return averageFocusScore;
     }
 
-    public void setAvgFocusScore(float avgFocusScore) {
-        this.avgFocusScore = avgFocusScore;
+    public void setAverageFocusScore(float averageFocusScore) {
+        this.averageFocusScore = averageFocusScore;
     }
 
-    public int getSessionCount() {
-        return sessionCount;
+    public int getTotalSessions() {
+        return totalSessions;
     }
 
-    public void setSessionCount(int sessionCount) {
-        this.sessionCount = sessionCount;
+    public void setTotalSessions(int totalSessions) {
+        this.totalSessions = totalSessions;
     }
 
-    public long getDate() {
-        return date;
+    public boolean isEmpty() {
+        return totalSessions == 0;
     }
 
-    public void setDate(long date) {
-        this.date = date;
+    public int getMostProductiveDay() {
+        int bestDay = 0;
+        float bestScore = dayFocusScores[0];
+
+        for (int i = 1; i < 7; i++) {
+            if (dayFocusScores[i] > bestScore) {
+                bestScore = dayFocusScores[i];
+                bestDay = i;
+            }
+        }
+
+        return bestDay;
     }
 
-    /**
-     * Get total study time in hours (formatted)
-     */
-    public float getTotalHours() {
-        return totalMinutes / 60f;
+    public static String getDayName(int dayIndex) {
+        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday",
+                "Friday", "Saturday", "Sunday"};
+        if (dayIndex >= 0 && dayIndex < 7) {
+            return days[dayIndex];
+        }
+        return "Unknown";
     }
 }

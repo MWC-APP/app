@@ -43,7 +43,7 @@
 
         <!-- Analytics activity -->
         <activity
-            android:name=".ui.analytics.AnalyticsActivity"
+            android:name=".ui.nav.analytics.AnalyticsFragment"
             android:theme="@style/Theme.MindBricks.NoActionBar"
             android:exported="false" />
 

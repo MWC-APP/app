@@ -1,122 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- App Bar with Toolbar -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"/>
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            app:title="Study Analytics"
-            app:titleTextColor="@color/white"
-            app:navigationIcon="@drawable/ic_arrow_back" />
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
+    <!-- SwipeRefreshLayout wrapping all content -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+        <!-- FrameLayout to hold loading, empty state, and content -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:layout_height="match_parent">
 
-            <!-- Daily Timeline Chart -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <!-- Loading Progress Bar -->
+            <ProgressBar
+                android:id="@+id/analyticsProgressBar"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:indeterminate="true" />
 
-                <ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView
-                    android:id="@+id/dailyTimelineChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Weekly Focus Chart -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <!-- Empty State Text -->
+            <TextView
+                android:id="@+id/emptyStateText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
+                android:layout_gravity="center"
+                android:text="No data available"
+                android:textSize="16sp"
+                android:textColor="@android:color/darker_gray"
+                android:gravity="center"
+                android:padding="24dp"
+                android:visibility="gone" />
 
-                <ch.inf.usi.mindbricks.ui.charts.WeeklyFocusChartView
-                    android:id="@+id/weeklyFocusChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Hourly Distribution Chart -->
-            <com.google.android.material.card.MaterialCardView
+            <!-- Charts Container (Main Content) -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/chartsContainer"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
-
-                <ch.inf.usi.mindbricks.ui.charts.HourlyDistributionChartView
-                    android:id="@+id/hourlyDistributionChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Session History Section -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
+                android:layout_height="match_parent"
+                android:fillViewport="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="8dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Recent Sessions"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/sessionHistoryRecycler"
+                    <!-- Daily Timeline Chart Card -->
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:nestedScrollingEnabled="false" />
+                        android:layout_margin="8dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="4dp">
+
+                        <ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView
+                            android:id="@+id/dailyTimelineChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Weekly Focus Chart Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="4dp">
+
+                        <ch.inf.usi.mindbricks.ui.charts.WeeklyFocusChartView
+                            android:id="@+id/weeklyFocusChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Hourly Distribution Chart Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="4dp">
+
+                        <ch.inf.usi.mindbricks.ui.charts.HourlyDistributionChartView
+                            android:id="@+id/hourlyDistributionChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Session History Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="4dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <!-- Section Header -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Recent Sessions"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@android:color/black"
+                                android:layout_marginBottom="12dp" />
+
+                            <!-- RecyclerView for Session History -->
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/sessionHistoryRecycler"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false"
+                                android:minHeight="200dp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
 
                 </LinearLayout>
 
-            </com.google.android.material.card.MaterialCardView>
+            </androidx.core.widget.NestedScrollView>
 
-        </LinearLayout>
+        </FrameLayout>
 
-    </androidx.core.widget.NestedScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- Loading Progress Bar -->
-    <ProgressBar
-        android:id="@+id/loadingProgress"
+    <!-- Floating Action Button for Filtering -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/analyticsFilterFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone" />
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Filter time range"
+        app:srcCompat="@android:drawable/ic_menu_search"
+        app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

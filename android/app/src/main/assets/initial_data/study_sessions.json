@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": 1701388800000,
+    "durationMinutes": 60,
+    "tagTitle": "Mathematics",
+    "tagColor": -14575885,
+    "avgNoiseLevel": 40.0,
+    "avgLightLevel": 65.0,
+    "phonePickupCount": 2,
+    "focusScore": 85.0,
+    "coinsEarned": 51,
+    "notes": "Studied calculus"
+  },
+  {
+    "timestamp": 1701302400000,
+    "durationMinutes": 45,
+    "tagTitle": "Physics",
+    "tagColor": -10902324,
+    "avgNoiseLevel": 35.0,
+    "avgLightLevel": 70.0,
+    "phonePickupCount": 1,
+    "focusScore": 90.0,
+    "coinsEarned": 41,
+    "notes": "Newton's laws review"
+  }
+]

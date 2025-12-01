@@ -1,53 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/sessionCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="8dp"
     app:cardElevation="2dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground">
+    android:foreground="?android:attr/selectableItemBackground">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-        <TextView
-            android:id="@+id/sessionDate"
-            android:layout_width="wrap_content"
+        <!-- Color indicator bar -->
+        <View
+            android:id="@+id/colorIndicator"
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="12dp"
+            android:background="@android:color/holo_blue_dark" />
+
+        <!-- Session content -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Nov 28, 14:30" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/sessionDuration"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/sessionDate"
-            tools:text="45m" />
+            <!-- Date and time row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
 
-        <TextView
-            android:id="@+id/sessionFocusScore"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/sessionDuration"
-            tools:text="85% focus" />
+                <TextView
+                    android:id="@+id/sessionDate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mar 15, 2024"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black" />
 
+                <TextView
+                    android:id="@+id/sessionTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2:30 PM"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
+
+            <!-- Tag and duration row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:id="@+id/sessionTag"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mathematics"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black" />
+
+                <TextView
+                    android:id="@+id/sessionDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1h 30m"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_blue_dark" />
+
+            </LinearLayout>
+
+            <!-- Focus score -->
+            <TextView
+                android:id="@+id/sessionFocusScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Focus: 85%"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <!-- Additional stats -->
+            <TextView
+                android:id="@+id/sessionStats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Noise: 40% • Light: 60% • 2 pickups"
+                android:textSize="11sp"
+                android:textColor="@android:color/darker_gray" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

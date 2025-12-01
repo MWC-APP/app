@@ -5,18 +5,31 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Title -->
     <TextView
         android:id="@+id/weeklyFocusTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Weekly Study Hours"
-        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:text="Weekly Focus"
+        android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp" />
 
+    <!-- Summary text -->
+    <TextView
+        android:id="@+id/weeklyFocusSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total study time and focus score"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Bar Chart -->
     <com.github.mikephil.charting.charts.BarChart
         android:id="@+id/weeklyFocusBarChart"
         android:layout_width="match_parent"
-        android:layout_height="200dp" />
+        android:layout_height="250dp" />
 
 </LinearLayout>

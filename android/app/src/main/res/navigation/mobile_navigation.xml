@@ -22,4 +22,10 @@
         android:name="ch.inf.usi.mindbricks.ui.nav.profile.ProfileFragment"
         android:label="@string/title_profile"
         tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/navigation_analytics"
+        android:name="ch.inf.usi.mindbricks.ui.nav.analytics.AnalyticsFragment"
+        android:label="Analytics"
+        tools:layout="@layout/fragment_analytics" />
 </navigation>

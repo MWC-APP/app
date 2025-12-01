@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Model representing recommended study times for a day based on historical performance
+ * Model representing daily study recommendations.
+ * Contains suggested time slots and reasoning based on historical performance.
  */
 public class DailyRecommendation {
 
@@ -18,16 +19,22 @@ public class DailyRecommendation {
         this.confidenceScore = 0;
     }
 
+    /**
+     * Full constructor.
+     */
+    public DailyRecommendation(List<TimeSlot> recommendedSlots, String reasonSummary, int confidenceScore) {
+        this.recommendedSlots = recommendedSlots;
+        this.reasonSummary = reasonSummary;
+        this.confidenceScore = confidenceScore;
+    }
+
+    // --> Getters and Setters
     public List<TimeSlot> getRecommendedSlots() {
         return recommendedSlots;
     }
 
     public void setRecommendedSlots(List<TimeSlot> recommendedSlots) {
         this.recommendedSlots = recommendedSlots;
-    }
-
-    public void addRecommendedSlot(TimeSlot slot) {
-        this.recommendedSlots.add(slot);
     }
 
     public String getReasonSummary() {
@@ -43,50 +50,89 @@ public class DailyRecommendation {
     }
 
     public void setConfidenceScore(int confidenceScore) {
-        this.confidenceScore = confidenceScore;
+        this.confidenceScore = Math.max(0, Math.min(100, confidenceScore));
     }
 
-    /**
-     * Inner class representing a recommended time slot
-     */
     public static class TimeSlot {
-        private int hourOfDay; // 0-23
-        private float expectedFocusScore; // 0-100
-        private String label; // e.g., "Morning Peak", "Afternoon Focus"
+        private String startTime;
+        private String endTime;
+        private int productivityScore; // 0-100
+        private String reason;
 
-        public TimeSlot(int hourOfDay, float expectedFocusScore, String label) {
-            this.hourOfDay = hourOfDay;
-            this.expectedFocusScore = expectedFocusScore;
-            this.label = label;
+        public TimeSlot() {
+            this.startTime = "";
+            this.endTime = "";
+            this.productivityScore = 0;
+            this.reason = "";
         }
 
-        public int getHourOfDay() {
-            return hourOfDay;
+        public TimeSlot(String startTime, String endTime, int productivityScore, String reason) {
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.productivityScore = productivityScore;
+            this.reason = reason;
         }
 
-        public void setHourOfDay(int hourOfDay) {
-            this.hourOfDay = hourOfDay;
+        // Getters and Setters
+
+        public String getStartTime() {
+            return startTime;
         }
 
-        public float getExpectedFocusScore() {
-            return expectedFocusScore;
+        public void setStartTime(String startTime) {
+            this.startTime = startTime;
         }
 
-        public void setExpectedFocusScore(float expectedFocusScore) {
-            this.expectedFocusScore = expectedFocusScore;
+        public float getExpectedFocusScore(){
+            return productivityScore;
+        }
+
+        public String getEndTime() {
+            return endTime;
         }
 
         public String getLabel() {
-            return label;
+            return getStartTime() + " - " + getEndTime();
         }
 
-        public void setLabel(String label) {
-            this.label = label;
+        public void setEndTime(String endTime) {
+            this.endTime = endTime;
+        }
+
+        public int getProductivityScore() {
+            return productivityScore;
+        }
+
+        public void setProductivityScore(int productivityScore) {
+            this.productivityScore = Math.max(0, Math.min(100, productivityScore));
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
         }
 
         public String getTimeRange() {
-            int endHour = (hourOfDay + 1) % 24;
-            return String.format("%02d:00 - %02d:00", hourOfDay, endHour);
+            return startTime + " - " + endTime;
+        }
+
+        public String getProductivityLevel() {
+            if (productivityScore >= 70) {
+                return "High";
+            } else if (productivityScore >= 40) {
+                return "Medium";
+            } else {
+                return "Low";
+            }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("TimeSlot[%s, score=%d, %s]",
+                    getTimeRange(), productivityScore, reason);
         }
     }
 }
