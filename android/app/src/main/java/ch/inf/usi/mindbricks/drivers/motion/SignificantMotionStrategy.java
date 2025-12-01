@@ -8,6 +8,7 @@ import android.hardware.TriggerEventListener;
 import android.util.Log;
 
 import ch.inf.usi.mindbricks.drivers.base.BaseSensor;
+import ch.inf.usi.mindbricks.drivers.base.MotionListener;
 
 public class SignificantMotionStrategy extends BaseSensor implements MotionSensorStrategy {
     private static final String TAG = "SignificantMotionStrategy";

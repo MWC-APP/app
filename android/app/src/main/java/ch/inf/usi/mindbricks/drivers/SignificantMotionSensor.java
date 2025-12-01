@@ -1,11 +1,10 @@
 package ch.inf.usi.mindbricks.drivers;
 
 import android.content.Context;
-import android.hardware.Sensor;
 import android.util.Log;
 
 import ch.inf.usi.mindbricks.drivers.motion.AccelerometerStrategy;
-import ch.inf.usi.mindbricks.drivers.motion.MotionListener;
+import ch.inf.usi.mindbricks.drivers.base.MotionListener;
 import ch.inf.usi.mindbricks.drivers.motion.MotionSensorStrategy;
 import ch.inf.usi.mindbricks.drivers.motion.SignificantMotionStrategy;
 

@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
 import ch.inf.usi.mindbricks.drivers.base.BaseSensor;
+import ch.inf.usi.mindbricks.drivers.base.MotionListener;
 
 public class AccelerometerStrategy extends BaseSensor implements MotionSensorStrategy, SensorEventListener {
     private final static double SIGNIFICANT_MOTION_THRESHOLD_MS = 2.0;
