@@ -3,12 +3,22 @@ package ch.inf.usi.mindbricks.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
+import ch.inf.usi.mindbricks.config.PreferencesKey;
+import ch.inf.usi.mindbricks.model.plan.DayHours;
 
 public class PreferencesManager {
 
     private static final String PREFS_NAME = "MindBricks-Preferences";
+
     private final SharedPreferences preferences;
 
     public PreferencesManager(Context context) {
@@ -128,29 +138,47 @@ public class PreferencesManager {
         return new HashSet<>(storedSet);
     }
 
-    private enum PreferencesKey {
-        ONBOARDING_COMPLETE("onboarding_complete"),
-        DARK_MODE_ENABLED("dark_mode_enabled"),
-        NOTIFICATION_ENABLED("notification_enabled"),
-        USER_NAME("user_name"),
-        USER_SURNAME("user_surname"),
-        USER_EMAIL("user_email"),
-        USER_FOCUS_GOAL("user_focus_goal"),
-        USER_SPRINT_LENGTH_MINUTES("user_sprint_length_minutes"),
-        USER_TAGS_JSON("user_tags_json"),
-        USER_AVATAR_SEED("user_avatar_seed"),
+    // -- Study plan --
+    public void setStudyObjective(String objective) {
+        preferences.edit().putString(PreferencesKey.STUDY_OBJECTIVE.getName(), objective).apply();
+    }
+    public String getStudyObjective() {
+        return preferences.getString(PreferencesKey.STUDY_OBJECTIVE.getName(), "");
+    }
 
-        // ADDED: Key for storing the set of purchased item IDs
-        USER_PURCHASED_ITEMS("user_purchased_items");
-
-        private final String name;
-
-        PreferencesKey(String name) {
-            this.name = name;
+    public void setStudyPlan(List<DayHours> plan) {
+        JSONArray array = new JSONArray();
+        for (DayHours dayHours : plan) {
+            JSONObject obj = new JSONObject();
+            try {
+                obj.put("day", dayHours.dayKey());
+                obj.put("hours", dayHours.hours());
+                array.put(obj);
+            } catch (JSONException ignored) {
+                // should not happen with valid keys
+            }
         }
+        preferences.edit().putString(PreferencesKey.STUDY_PLAN_JSON.getName(), array.toString()).apply();
+    }
 
-        public String getName() {
-            return name;
+    public List<DayHours> getStudyPlan() {
+        List<DayHours> plan = new ArrayList<>();
+        String json = preferences.getString(PreferencesKey.STUDY_PLAN_JSON.getName(), "[]");
+        if (json.isEmpty()) return plan;
+
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject entry = array.getJSONObject(i);
+                String day = entry.optString("day", "");
+                float hours = (float) entry.optDouble("hours", 0);
+                if (!day.isEmpty() && hours > 0) {
+                    plan.add(new DayHours(day, hours));
+                }
+            }
+        } catch (JSONException ignored) {
+            // ignore malformed stored data
         }
+        return plan;
     }
 }
