@@ -58,13 +58,13 @@ public class SessionTimerDialogFragment extends DialogFragment {
 
         // Set the click listener for the start button
         startTimerButton.setOnClickListener(v -> {
-            int durationInMinutes = (int) durationSlider.getValue();
-            if (durationInMinutes > 0) {
+            int studyMinutes = (int) durationSlider.getValue();
+            if (studyMinutes > 0) {
                 // Define the pause duration
-                int pauseInMinutes = 5;
+                int pauseMinutes = 5;
 
                 // Call the correct method on the ViewModel
-                homeViewModel.pomodoroTechnique(durationInMinutes, pauseInMinutes);
+                homeViewModel.pomodoroTechnique(studyMinutes, pauseMinutes);
 
                 // Close the dialog
                 dismiss();
