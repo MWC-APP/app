@@ -32,16 +32,14 @@ import ch.inf.usi.mindbricks.util.ProfileViewModel;
 
 public class HomeFragment extends Fragment {
 
-    // --- UI Elements ---
     private TextView timerTextView;
     private Button startSessionButton;
     private TextView coinBalanceTextView;
+    private TextView sessionTitleTextView;
 
-    // --- ViewModels ---
     private HomeViewModel homeViewModel;
     private ProfileViewModel profileViewModel;
 
-    // --- Utilities ---
     private PermissionRequest micPermissionRequest;
     private Integer pendingDurationMinutes = null;
     private NavigationLocker navigationLocker;
@@ -59,7 +57,6 @@ public class HomeFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Correctly initialize the AndroidViewModel using its factory
         homeViewModel = new ViewModelProvider(this,
                 ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().getApplication()))
                 .get(HomeViewModel.class);
@@ -73,22 +70,17 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Initialize UI elements
         timerTextView = view.findViewById(R.id.timer_text_view);
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
 
-        // Setup permission handling and LiveData observers
         setupPermissionManager();
         setupObservers();
 
-        // Tell the ViewModel the view is ready, in case it needs to resume after a screen rotation
         homeViewModel.activityRecreated();
 
-        // Set the main button's click listener
         startSessionButton.setOnClickListener(v -> {
-            // The fragment doesn't know the state, it asks the ViewModel
-            if (Boolean.TRUE.equals(homeViewModel.isTimerRunning.getValue())) {
+            if (homeViewModel.currentState.getValue() != HomeViewModel.PomodoroState.IDLE) {
                 confirmEndSessionDialog();
             } else {
                 showDurationPickerDialog();
@@ -113,43 +105,35 @@ public class HomeFragment extends Fragment {
         );
     }
 
-    /**
-     * Sets up all LiveData observers to connect the ViewModel to the UI.
-     */
     private void setupObservers() {
-        // Observes the timer's running state to control UI
-        homeViewModel.isTimerRunning.observe(getViewLifecycleOwner(), isRunning -> {
-            navigationLocker.setNavigationEnabled(!isRunning);
+        homeViewModel.currentState.observe(getViewLifecycleOwner(), state -> {
+            boolean isRunning = state != HomeViewModel.PomodoroState.IDLE;
             startSessionButton.setText(isRunning ? R.string.stop_session : R.string.start_session);
+            navigationLocker.setNavigationEnabled(state != HomeViewModel.PomodoroState.STUDY);
 
-            // Temporarily disable the button to prevent rapid clicks, then re-enable
             startSessionButton.setEnabled(false);
             new Handler(Looper.getMainLooper()).postDelayed(() -> startSessionButton.setEnabled(true), 1500);
 
             if (!isRunning) {
-                // When timer stops, reset the text to 00:00
                 updateTimerUI(0);
             }
         });
 
-        // Observes the countdown ticks and updates the timer text
-        homeViewModel.currentTime.observe(getViewLifecycleOwner(), this::updateTimerUI);
-
-        // Observes coin earning events
-        homeViewModel.earnedCoinsEvent.observe(getViewLifecycleOwner(), amount -> {
-            if (amount != null && amount > 0) {
-                earnCoin(amount);
-                homeViewModel.onCoinsAwarded(); // Tell ViewModel event was handled
+        homeViewModel.stateTitle.observe(getViewLifecycleOwner(), title -> {
+            if (sessionTitleTextView != null) {
+                sessionTitleTextView.setText(title);
             }
         });
 
-        // Observes the session completion event
-        homeViewModel.sessionCompleteEvent.observe(getViewLifecycleOwner(), aVoid -> {
-            showSessionCompleteDialog();
-            homeViewModel.onSessionCompleted(); // Tell ViewModel event was handled
+        homeViewModel.currentTime.observe(getViewLifecycleOwner(), this::updateTimerUI);
+
+        homeViewModel.earnedCoinsEvent.observe(getViewLifecycleOwner(), amount -> {
+            if (amount != null && amount > 0) {
+                earnCoin(amount);
+                homeViewModel.onCoinsAwarded();
+            }
         });
 
-        // Observes coin balance from the ProfileViewModel
         profileViewModel.coins.observe(getViewLifecycleOwner(), balance -> {
             if (balance != null) {
                 coinBalanceTextView.setText(String.valueOf(balance));
@@ -164,13 +148,16 @@ public class HomeFragment extends Fragment {
         final Slider durationSlider = dialogView.findViewById(R.id.duration_slider);
         final TextView durationText = dialogView.findViewById(R.id.duration_text);
 
-        durationText.setText(String.format(Locale.getDefault(), "%d minutes", 25));
+        int minValue = (int) durationSlider.getValueFrom();
+        durationSlider.setValue(minValue);
+        durationText.setText(String.format(Locale.getDefault(), "%d minutes", minValue));
+
         durationSlider.addOnChangeListener((slider, value, fromUser) ->
                 durationText.setText(String.format(Locale.getDefault(), "%d minutes", (int) value)));
 
         new AlertDialog.Builder(requireContext())
                 .setView(dialogView)
-                .setTitle("Set Session Duration")
+                .setTitle("Set Study Duration")
                 .setPositiveButton("Start", (dialog, which) -> {
                     int durationInMinutes = (int) durationSlider.getValue();
                     if (durationInMinutes > 0) {
@@ -190,28 +177,19 @@ public class HomeFragment extends Fragment {
             micPermissionRequest.launch();
             return;
         }
-        // Tell the ViewModel to start the timer
-        homeViewModel.startTimer(minutes);
+        int pauseInMinutes = 5;
+        homeViewModel.pomodoroTechnique(minutes, pauseInMinutes);
     }
 
     private void confirmEndSessionDialog() {
         new AlertDialog.Builder(requireContext())
-                .setTitle("End Session?")
-                .setMessage("Are you sure you want to end the current session early? You will not get a coin for the current minute.")
+                .setTitle("End Cycle?")
+                .setMessage("Are you sure you want to stop the current Pomodoro cycle?")
                 .setPositiveButton("Confirm", (dialog, which) -> {
-                    homeViewModel.stopTimerAndReset(); // Tell ViewModel to stop
-                    Toast.makeText(getContext(), "Session ended.", Toast.LENGTH_SHORT).show();
+                    homeViewModel.stopTimerAndReset();
+                    Toast.makeText(getContext(), "Pomodoro cycle stopped.", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showSessionCompleteDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Session Complete!")
-                .setMessage("Great focus! You've earned 3 bonus coins for completing the session.")
-                .setPositiveButton("Awesome!", (dialog, which) -> earnCoin(3))
-                .setCancelable(false)
                 .show();
     }
 

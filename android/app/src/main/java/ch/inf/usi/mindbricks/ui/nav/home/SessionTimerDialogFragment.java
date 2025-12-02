@@ -4,9 +4,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.widget.Button;
+import android.view.Window;import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,18 +15,26 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.slider.Slider;
 
+import java.util.Locale;
+
 import ch.inf.usi.mindbricks.R;
 
 public class SessionTimerDialogFragment extends DialogFragment {
 
-    public Slider durationSlider;
-    public TextView durationText;
-    public Button startTimerButton;
-    public HomeViewModel homeViewModel;
+    private Slider durationSlider;
+    private TextView durationText;
+    private Button startTimerButton;
+    private HomeViewModel homeViewModel;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Correctly initialize the AndroidViewModel using its factory
+        // NOTE: We get the ViewModel from the HOSTING FRAGMENT (this), not the activity.
+        homeViewModel = new ViewModelProvider(requireParentFragment(),
+                ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().getApplication()))
+                .get(HomeViewModel.class);
+
         return inflater.inflate(R.layout.dialog_timer_session, container, false);
     }
 
@@ -34,32 +42,44 @@ public class SessionTimerDialogFragment extends DialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        homeViewModel = new ViewModelProvider(requireActivity()).get(HomeViewModel.class);
-
+        // Initialize all the UI components from the view
         durationSlider = view.findViewById(R.id.duration_slider);
         durationText = view.findViewById(R.id.duration_text);
+        startTimerButton = view.findViewById(R.id.start_stop_button);
 
+        // Safely set the initial text based on the slider's default value
+        int initialValue = (int) durationSlider.getValue();
+        durationText.setText(String.format(Locale.getDefault(), "%d minutes", initialValue));
+
+        // Set the listener for when the slider value changes
         durationSlider.addOnChangeListener((slider, value, fromUser) -> {
-            durationText.setText((int) value + " minutes");
+            durationText.setText(String.format(Locale.getDefault(), "%d minutes", (int) value));
         });
 
+        // Set the click listener for the start button
         startTimerButton.setOnClickListener(v -> {
             int durationInMinutes = (int) durationSlider.getValue();
-            homeViewModel.startTimer(durationInMinutes);
-            dismiss();
+            if (durationInMinutes > 0) {
+                // Define the pause duration (you can make this configurable later)
+                int pauseInMinutes = 5;
+
+                // Call the correct method on the ViewModel
+                homeViewModel.pomodoroTechnique(durationInMinutes, pauseInMinutes);
+
+                // Close the dialog
+                dismiss();
+            } else {
+                Toast.makeText(getContext(), "Please select a duration greater than 0.", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        if (getDialog() != null) {
-            Window window = getDialog().getWindow();
-            if (window != null) {
-                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            } else {
-                throw new IllegalStateException("Dialog window is null");
-            }
+        // Set the dialog window dimensions
+        if (getDialog() != null && getDialog().getWindow() != null) {
+            getDialog().getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
     }
 }
