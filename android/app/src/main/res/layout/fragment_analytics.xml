@@ -5,12 +5,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- SwipeRefreshLayout wrapping all content -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -47,7 +45,6 @@
 
             </com.google.android.material.tabs.TabLayout>
 
-
             <!-- Loading / Empty / Error States Container -->
             <FrameLayout
                 android:layout_width="match_parent"
@@ -74,14 +71,14 @@
                     android:textColor="?android:textColorSecondary"
                     android:visibility="gone" />
 
-                <!-- Charts Container -->
+                <!-- Charts Container (shown when data is available) -->
                 <FrameLayout
                     android:id="@+id/chartsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:visibility="gone">
 
-                    <!-- Overviev -->
+                    <!-- OVERVIEW CONTAINER                  -->
                     <androidx.core.widget.NestedScrollView
                         android:id="@+id/overviewContainer"
                         android:layout_width="match_parent"
@@ -95,7 +92,7 @@
                             android:orientation="vertical"
                             android:padding="8dp">
 
-                            <!--
+                            <!-- Goal Rings Card (NEW) -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="650dp"
@@ -110,7 +107,8 @@
                                     android:padding="16dp" />
 
                             </com.google.android.material.card.MaterialCardView>
-                            -->
+
+                            <!-- Weekly Focus Chart Card -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -125,7 +123,8 @@
 
                             </com.google.android.material.card.MaterialCardView>
 
-                            <!-- <com.google.android.material.card.MaterialCardView
+                            <!-- Energy Curve Card  -->
+                            <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="400dp"
                                 android:layout_margin="8dp"
@@ -138,9 +137,9 @@
                                     android:layout_height="match_parent"
                                     android:padding="16dp" />
 
-                            </com.google.android.material.card.MaterialCardView> -->
+                            </com.google.android.material.card.MaterialCardView>
 
-                    <!--
+                            <!-- Streak Calendar Card -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="700dp"
@@ -155,7 +154,8 @@
                                     android:padding="16dp" />
 
                             </com.google.android.material.card.MaterialCardView>
-                        -->
+
+                            <!-- Daily Timeline Card -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -170,6 +170,7 @@
 
                             </com.google.android.material.card.MaterialCardView>
 
+                            <!-- AI Recommendations Card -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -177,8 +178,7 @@
                                 app:cardCornerRadius="12dp"
                                 app:cardElevation="4dp">
 
-
-                                <!-- <LinearLayout
+                                <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:orientation="vertical"
@@ -198,7 +198,7 @@
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content" />
 
-                                </LinearLayout> -->
+                                </LinearLayout>
 
                             </com.google.android.material.card.MaterialCardView>
 
@@ -206,7 +206,7 @@
 
                     </androidx.core.widget.NestedScrollView>
 
-                    <!-- Insight = -->
+                    <!-- INSIGHTS CONTAINER-->
                     <androidx.core.widget.NestedScrollView
                         android:id="@+id/insightsContainer"
                         android:layout_width="match_parent"
@@ -220,7 +220,8 @@
                             android:orientation="vertical"
                             android:padding="8dp">
 
-                            <!--<com.google.android.material.card.MaterialCardView
+                            <!-- Quality Heatmap Card -->
+                            <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="800dp"
                                 android:layout_margin="8dp"
@@ -233,8 +234,9 @@
                                     android:layout_height="match_parent"
                                     android:padding="16dp" />
 
-                            </com.google.android.material.card.MaterialCardView> -->
+                            </com.google.android.material.card.MaterialCardView>
 
+                            <!-- Hourly Distribution Card -->
                             <com.google.android.material.card.MaterialCardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -253,7 +255,8 @@
 
                     </androidx.core.widget.NestedScrollView>
 
-                    <!-- history -->
+                    <!-- HISTORY CONTAINER -->
+                    <!-- Session list with RecyclerView             -->
                     <androidx.core.widget.NestedScrollView
                         android:id="@+id/historyContainer"
                         android:layout_width="match_parent"
@@ -347,8 +350,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
+        android:backgroundTint="#9D83CE"
         android:src="@android:drawable/ic_menu_sort_by_size"
-        app:backgroundTint="#673AB7"
         app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
