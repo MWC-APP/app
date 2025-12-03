@@ -29,6 +29,7 @@ local.properties
 .idea/modules.xml
 .idea/scopes/scope_settings.xml
 .idea/vcs.xml
+.idea/*.migration.*.xml
 *.iml
 
 # OS-specific files
