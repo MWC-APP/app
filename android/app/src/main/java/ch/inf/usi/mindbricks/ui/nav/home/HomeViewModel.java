@@ -32,6 +32,8 @@ public class HomeViewModel extends AndroidViewModel {
     private int sessionCounter = 0;
     private int studyDurationMinutes = 0;
     private int pauseDurationMinutes = 0;
+
+    // This will track the last minute for which a coin was awarded.
     private int lastMinuteAwarded = 0;
 
     private final MutableLiveData<Long> _currentTime = new MutableLiveData<>(0L);
@@ -56,11 +58,9 @@ public class HomeViewModel extends AndroidViewModel {
         if (_currentState.getValue() != PomodoroState.IDLE) {
             return;
         }
-        // Defines the study and pause duration time
-        this.studyDurationMinutes = studyMin;
-        this.pauseDurationMinutes = pauseMin;
+        this.studyDurationMinutes = 2;
+        this.pauseDurationMinutes = 1;
         this.sessionCounter = 0;
-        this.lastMinuteAwarded = 0;
         startStudyTimer();
     }
 
@@ -70,7 +70,9 @@ public class HomeViewModel extends AndroidViewModel {
         _stateTitle.setValue("Study Session " + sessionCounter);
         startTimeInMillis = TimeUnit.MINUTES.toMillis(studyDurationMinutes);
         remainingTimeInMillis = startTimeInMillis;
-        lastMinuteAwarded = 0; // Reset for the new study session
+
+        //  Reset the award tracker to 0 at the start of a study session.
+        lastMinuteAwarded = 0;
 
         new Thread(() -> {
             currentStudySession = new StudySession(System.currentTimeMillis(), studyDurationMinutes, "Pomodoro", android.graphics.Color.CYAN);
@@ -122,11 +124,13 @@ public class HomeViewModel extends AndroidViewModel {
                 _currentTime.postValue(millisUntilFinished);
 
                 if (_currentState.getValue() == PomodoroState.STUDY) {
-                    // Calculate how many full minutes have passed.
+                    // Calculate how many milliseconds have passed.
                     long elapsedMillis = startTimeInMillis - millisUntilFinished;
+
+                    // Convert elapsed milliseconds to full minutes.
                     int minutesPassed = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
 
-                    // If a new minute has passed that we haven't awarded a coin for yet.
+                    //    This only becomes true after the first full minute is completed.
                     if (minutesPassed > 0 && minutesPassed > lastMinuteAwarded) {
                         lastMinuteAwarded = minutesPassed;
                         _earnedCoinsEvent.postValue(1);
@@ -139,26 +143,21 @@ public class HomeViewModel extends AndroidViewModel {
                 PomodoroState finishedState = _currentState.getValue();
 
                 if (finishedState == PomodoroState.STUDY) {
-                    // Stop recording the session.
                     if (currentStudySession != null) {
                         sessionRecordingManager.stopSession(currentStudySession);
                         currentStudySession = null;
                     }
 
-                    // Award bonus coins for completing the study block.
-                    // The per-minute coin is handled by onTick, so we only give the bonus here.
+                    // The last minute coin is awarded by onTick when it passes the 1:00 mark.
+                    // So we only need to add the bonus coins here.
                     _earnedCoinsEvent.postValue(3);
 
-                    // Now, decide the next state (break).
                     boolean isLongBreakTime = (sessionCounter >= 3);
                     startPause(isLongBreakTime);
 
                 } else if (finishedState == PomodoroState.PAUSE) {
-                    // A short pause finished. Start the next study block.
                     startStudyTimer();
-
                 } else if (finishedState == PomodoroState.LONG_PAUSE) {
-                    // The long pause finished. The entire cycle is complete.
                     stopTimerAndReset();
                 }
             }

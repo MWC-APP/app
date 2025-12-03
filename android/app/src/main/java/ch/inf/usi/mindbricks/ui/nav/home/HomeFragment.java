@@ -109,20 +109,18 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        homeViewModel.stateTitle.observe(getViewLifecycleOwner(), title -> {
-            if (sessionTitleTextView != null) {
-                sessionTitleTextView.setText(title);
+        // It listens for coin earning events from the ViewModel
+        homeViewModel.earnedCoinsEvent.observe(getViewLifecycleOwner(), amount -> {
+            // Check that the amount is not null and is greater than 0.
+            if (amount != null && amount > 0) {
+                // Add the coins and show a toast message.
+                earnCoin(amount);
+                // Tell the ViewModel the coin has been awarded to prevent re-awarding on rotation.
+                homeViewModel.onCoinsAwarded();
             }
         });
 
         homeViewModel.currentTime.observe(getViewLifecycleOwner(), this::updateTimerUI);
-
-        homeViewModel.earnedCoinsEvent.observe(getViewLifecycleOwner(), amount -> {
-            if (amount != null && amount > 0) {
-                earnCoin(amount);
-                homeViewModel.onCoinsAwarded();
-            }
-        });
 
         profileViewModel.coins.observe(getViewLifecycleOwner(), balance -> {
             if (balance != null) {
