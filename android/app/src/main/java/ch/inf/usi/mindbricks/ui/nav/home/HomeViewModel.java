@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 public class HomeViewModel extends AndroidViewModel {
 
-        // Pomodoro states
+    // Pomodoro states
     public enum PomodoroState {
         IDLE,
         STUDY,
@@ -59,7 +59,7 @@ public class HomeViewModel extends AndroidViewModel {
                 if (lastMinute > currentMinute) {
                     earnedCoinsEvent.postValue(1);
                 }
-                lastMinute = currentMinute; // Update the last minute tracker.
+                lastMinute = currentMinute; // Update the last minute tracker
             }
 
             @Override
@@ -101,7 +101,7 @@ public class HomeViewModel extends AndroidViewModel {
                 if (isLongPause) {
                     stopTimerAndReset();
                 } else {
-                    // Otherwise, continue to the next study session.
+                    //  continue to the next study session.
                     startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes);
                 }
             }
@@ -110,7 +110,6 @@ public class HomeViewModel extends AndroidViewModel {
 
     // Stops the timer and resets the state to IDLE.
     public void stopTimerAndReset() {
-        // Cancel the current timer if it exists.
         if (timer != null) {
             timer.cancel();
         }

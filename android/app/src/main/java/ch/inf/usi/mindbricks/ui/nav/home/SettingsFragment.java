@@ -68,7 +68,7 @@ public class SettingsFragment extends DialogFragment {
         saveButton = view.findViewById(R.id.save_settings_button);
         closeButton = view.findViewById(R.id.close_button);
 
-        // Load previously saved settings into the UI.
+        // Load saved settings into the UI
         loadSettings();
 
         // Add a listeners
@@ -84,14 +84,14 @@ public class SettingsFragment extends DialogFragment {
         saveButton.setOnClickListener(v -> {
             saveSettings();
             Toast.makeText(getContext(), "Settings saved!", Toast.LENGTH_SHORT).show();
-            dismiss(); // Close the dialog.
+            dismiss(); // Close the dialog.\
         });
 
         // Set a click listener for the close button to dismiss the dialog without saving
         closeButton.setOnClickListener(v -> dismiss());
     }
 
-    // Loads the timer values from SharedPreferences and updates the sliders.
+    // Loads the timer values from SharedPreferences and updates the sliders
     private void loadSettings() {
         // Load study duration, defaulting to 25 minutes
         float studyValue = sharedPreferences.getFloat(KEY_STUDY_DURATION, 25.0f);
