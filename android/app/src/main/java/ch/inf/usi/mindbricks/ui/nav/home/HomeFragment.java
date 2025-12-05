@@ -16,8 +16,10 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.constraintlayout.widget.ConstraintLayout; // Import this
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.transition.TransitionManager; // Import this
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,7 @@ public class HomeFragment extends Fragment {
     private NavigationLocker navigationLocker;
 
     private List<ImageView> sessionDots;
+    private ConstraintLayout sessionDotsLayout; // Add this for the container
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -74,6 +77,9 @@ public class HomeFragment extends Fragment {
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
         settingsIcon = view.findViewById(R.id.settings_icon);
+
+        // Find the container for the dots
+        sessionDotsLayout = view.findViewById(R.id.session_dots_layout);
 
         // Initialize the list of session dot ImageViews
         sessionDots = new ArrayList<>();
@@ -158,32 +164,47 @@ public class HomeFragment extends Fragment {
         int shortPauseDuration = (int) prefs.getFloat(SettingsFragment.KEY_PAUSE_DURATION, 5.0f);
         int longPauseDuration = (int) prefs.getFloat(SettingsFragment.KEY_LONG_PAUSE_DURATION, 15.0f);
 
-        // Tell the ViewModel to start the cycle with these settings.
+        // Tell the ViewModel to start the cycle with these settings
         homeViewModel.pomodoroTechnique(studyDuration, shortPauseDuration, longPauseDuration);
     }
 
-    // Updates the color of the session indicator dots based on the current state
+
+    // Updates the color and width of the session indicator dots based on the current state
     private void updateSessionDots() {
         // Perform a safety check to avoid null pointer exceptions
-        if (homeViewModel == null || sessionDots == null) return;
+        if (homeViewModel == null || sessionDots == null || sessionDotsLayout == null) return;
+
+        // Tell TransitionManager to watch the container and animate any layout changes
+        TransitionManager.beginDelayedTransition(sessionDotsLayout);
 
         int currentSession = homeViewModel.getSessionCounter();
         HomeViewModel.PomodoroState currentState = homeViewModel.currentState.getValue();
 
-        // Iterate through each of the four dots
-        for (int i = 0; i < sessionDots.size(); i++) {
-            ImageView dot = sessionDots.get(i);
-            int sessionNumber = i + 1;
+        //  Reset all dots to their default inactive state
+        for (ImageView dot : sessionDots) {
+            dot.setImageResource(R.drawable.dot_inactive);
 
-            // A dot is active only if it's the current session and the state is STUDY
-            if (currentState == HomeViewModel.PomodoroState.STUDY && sessionNumber == currentSession) {
-                dot.setImageResource(R.drawable.dot_active);
-            } else {
-                // In all other cases the dot is inactive
-                dot.setImageResource(R.drawable.dot_inactive);
-            }
+            // Reset layout parameters to be a small 12dp circle
+            ViewGroup.LayoutParams params = dot.getLayoutParams();
+            params.width = (int) (12 * getResources().getDisplayMetrics().density);
+            dot.setLayoutParams(params);
+        }
+
+        // If a study session is active, modify the corresponding dot
+        if (currentState == HomeViewModel.PomodoroState.STUDY && currentSession > 0 && currentSession <= sessionDots.size()) {
+            // Get the currently active dot
+            ImageView activeDot = sessionDots.get(currentSession - 1);
+
+            // Change its drawable to the pill shape
+            activeDot.setImageResource(R.drawable.dot_active);
+
+            // Change dot width
+            ViewGroup.LayoutParams params = activeDot.getLayoutParams();
+            params.width = (int) (32 * getResources().getDisplayMetrics().density);
+            activeDot.setLayoutParams(params);
         }
     }
+
 
     // Shows a confirmation dialog before stopping an active session
     private void confirmEndSessionDialog() {
