@@ -1,5 +1,6 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
+import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 
 public class HomeFragment extends Fragment {
@@ -45,6 +47,8 @@ public class HomeFragment extends Fragment {
     private List<ImageView> sessionDots;
     private ConstraintLayout sessionDotsLayout; // Add this for the container
 
+    private PermissionManager.PermissionRequest audioPermissionRequest;
+
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -54,6 +58,18 @@ public class HomeFragment extends Fragment {
         } else {
             throw new RuntimeException(context + " must implement NavigationLocker");
         }
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Register permission request callback
+        audioPermissionRequest = PermissionManager.registerSinglePermission(
+                this,
+                Manifest.permission.RECORD_AUDIO,
+                this::startDefaultSession,
+                () -> Toast.makeText(getContext(), "Microphone permission is required for focus sessions.", Toast.LENGTH_LONG).show()
+        );
     }
 
     @Nullable
@@ -105,8 +121,12 @@ public class HomeFragment extends Fragment {
             if (homeViewModel.currentState.getValue() != HomeViewModel.PomodoroState.IDLE) {
                 confirmEndSessionDialog();
             } else {
-                //start a new session with the saved settings.
-                startDefaultSession();
+                // Check for permission before starting
+                if (PermissionManager.hasPermission(requireContext(), Manifest.permission.RECORD_AUDIO)) {
+                    startDefaultSession();
+                } else {
+                    audioPermissionRequest.launch();
+                }
             }
         });
     }

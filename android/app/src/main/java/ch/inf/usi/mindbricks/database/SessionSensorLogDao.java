@@ -19,8 +19,25 @@ public interface SessionSensorLogDao {
     void insertAll(List<SessionSensorLog> logs);
 
     /**
+     * Insert a single sensor log.
+     */
+    @Insert
+    void insert(SessionSensorLog log);
+
+    /**
      * Load all logs for a session, ordered by timestamp (noise returned as RMS amplitude).
      */
     @Query("SELECT * FROM session_sensor_logs WHERE sessionId = :sessionId ORDER BY timestamp ASC")
     LiveData<List<SessionSensorLog>> getLogsForSession(long sessionId);
+
+    // Queries for study session metrics
+
+    @Query("SELECT AVG(noiseLevel) FROM session_sensor_logs WHERE sessionId = :sessionId")
+    float getAverageNoise(long sessionId);
+
+    @Query("SELECT AVG(lightLevel) FROM session_sensor_logs WHERE sessionId = :sessionId")
+    float getAverageLight(long sessionId);
+
+    @Query("SELECT COUNT(*) FROM session_sensor_logs WHERE sessionId = :sessionId AND motionDetected = 1")
+    int getMotionCount(long sessionId);
 }

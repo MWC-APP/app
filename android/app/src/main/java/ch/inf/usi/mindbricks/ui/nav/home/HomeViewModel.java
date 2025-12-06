@@ -1,11 +1,19 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
 import android.app.Application;
+import android.content.Intent;
+import android.graphics.Color;
 import android.os.CountDownTimer;
 import androidx.lifecycle.AndroidViewModel;
-import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.service.SensorService;
 
 public class HomeViewModel extends AndroidViewModel {
 
@@ -24,6 +32,8 @@ public class HomeViewModel extends AndroidViewModel {
     public final MutableLiveData<Integer> earnedCoinsEvent = new MutableLiveData<>();
 
     private int sessionCounter = 0;
+    private long currentSessionId = -1;
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     public HomeViewModel(Application application) {
         super(application);
@@ -47,6 +57,21 @@ public class HomeViewModel extends AndroidViewModel {
         currentState.setValue(PomodoroState.STUDY); // Set the state to STUDY
         long studyDurationMillis = TimeUnit.MINUTES.toMillis(studyDurationMinutes);
 
+        // Save new session (to get its id) + start foreground service
+        long startTime = System.currentTimeMillis();
+        StudySession session = new StudySession(startTime, studyDurationMinutes, "General", Color.GRAY);
+        
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            currentSessionId = db.studySessionDao().insert(session);
+            android.util.Log.d("HomeViewModel", "Session inserted with ID: " + currentSessionId);
+
+            Intent serviceIntent = new Intent(getApplication(), SensorService.class);
+            serviceIntent.setAction(SensorService.ACTION_START_SESSION);
+            serviceIntent.putExtra(SensorService.EXTRA_SESSION_ID, currentSessionId);
+            getApplication().startForegroundService(serviceIntent);
+        });
+
         timer = new CountDownTimer(studyDurationMillis, 1000) {
             private long lastMinute;
 
@@ -64,6 +89,9 @@ public class HomeViewModel extends AndroidViewModel {
 
             @Override
             public void onFinish() {
+                // Stop Service and complete Session
+                completeSessionAndStopService();
+
                 // Award 3 bonus coins at the successful end of the session
                 earnedCoinsEvent.postValue(3);
 
@@ -97,7 +125,7 @@ public class HomeViewModel extends AndroidViewModel {
 
             @Override
             public void onFinish() {
-                // end the cycle if longpause
+                // end the cycle if long pause
                 if (isLongPause) {
                     stopTimerAndReset();
                 } else {
@@ -113,9 +141,33 @@ public class HomeViewModel extends AndroidViewModel {
         if (timer != null) {
             timer.cancel();
         }
+        completeSessionAndStopService();
         this.sessionCounter = 0;
         currentState.setValue(PomodoroState.IDLE);
         currentTime.setValue(0L);
+    }
+
+    private void completeSessionAndStopService() {
+        // Stop service
+        Intent serviceIntent = new Intent(getApplication(), SensorService.class);
+        serviceIntent.setAction(SensorService.ACTION_STOP_SESSION);
+        getApplication().startService(serviceIntent);
+
+        // Store data in DB
+        if (currentSessionId != -1) {
+            long sessionIdToUpdate = currentSessionId;
+            dbExecutor.execute(() -> {
+                AppDatabase db = AppDatabase.getInstance(getApplication());
+                // Get aggregation
+                float avgNoise = db.sessionSensorLogDao().getAverageNoise(sessionIdToUpdate);
+                float avgLight = db.sessionSensorLogDao().getAverageLight(sessionIdToUpdate);
+                int motionCount = db.sessionSensorLogDao().getMotionCount(sessionIdToUpdate);
+
+                android.util.Log.d("HomeViewModel", "Completing session " + sessionIdToUpdate + ". Stats: Noise=" + avgNoise + ", Light=" + avgLight + ", Motion=" + motionCount);
+                // TODO: Implement actual DB update for stats
+            });
+            currentSessionId = -1;
+        }
     }
 
     // Resets the coin event LiveData to prevent it from re-firing
@@ -132,5 +184,11 @@ public class HomeViewModel extends AndroidViewModel {
 
     public int getSessionCounter() {
         return sessionCounter;
+    }
+    
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        dbExecutor.shutdown();
     }
 }
