@@ -1,10 +1,10 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
+import android.Manifest;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,6 +19,7 @@ import com.google.android.material.slider.Slider;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.util.PermissionManager;
 
 public class SessionTimerDialogFragment extends DialogFragment {
 
@@ -26,6 +27,19 @@ public class SessionTimerDialogFragment extends DialogFragment {
     private TextView durationText;
     private Button startTimerButton;
     private HomeViewModel homeViewModel;
+    private PermissionManager.PermissionRequest audioPermissionRequest;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Register permission request callback
+        audioPermissionRequest = PermissionManager.registerSinglePermission(
+                this,
+                Manifest.permission.RECORD_AUDIO,
+                this::startPomodoroSession,
+                () -> Toast.makeText(getContext(), "Microphone permission is required for focus sessions.", Toast.LENGTH_LONG).show()
+        );
+    }
 
     @Nullable
     @Override
@@ -64,10 +78,28 @@ public class SessionTimerDialogFragment extends DialogFragment {
                 homeViewModel.pomodoroTechnique(studyMinutes, pauseMinutes, longPauseMinutes);
 
                 dismiss();
+                 // Check for permission before starting
+                if (PermissionManager.hasPermission(requireContext(), Manifest.permission.RECORD_AUDIO)) {
+                    startPomodoroSession();
+                } else {
+                    audioPermissionRequest.launch();
+                }
             } else {
                 Toast.makeText(getContext(), "Please select a duration greater than 0.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void startPomodoroSession() {
+        int studyMinutes = (int) durationSlider.getValue();
+        // FIXME: We need to use the configured long/short pause lengths (Luca is implementing this)
+        int pauseMinutes = 5;
+        int longPauseMinutes = 15;
+
+        // Call the ViewModel method with all three required arguments
+        homeViewModel.pomodoroTechnique(studyMinutes, pauseMinutes, longPauseMinutes);
+
+        dismiss();
     }
 
     @Override

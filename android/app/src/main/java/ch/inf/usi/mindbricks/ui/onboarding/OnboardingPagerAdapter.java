@@ -24,8 +24,7 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
         return switch (position) {
             case 0 -> new OnboardingIntroFragment();
             case 1 -> new OnboardingUserFragment();
-            case 2 -> new OnboardingStudyPlanFragment();
-            case 4 -> new OnboardingSensorsFragment();
+            case 2 -> new OnboardingSensorsFragment();
             case 3 -> new OnboardingNotificationsFragment();
             default -> new OnboardingDoneFragment();
         };
@@ -33,6 +32,6 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return 6;
+        return 5;
     }
 }

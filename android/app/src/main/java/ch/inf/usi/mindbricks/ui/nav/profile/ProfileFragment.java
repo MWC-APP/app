@@ -16,9 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.chip.Chip;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -61,8 +58,18 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        loadAndDisplayUserData();
+        binding.buttonSettings.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(requireContext(), ch.inf.usi.mindbricks.ui.settings.SettingsActivity.class);
+            startActivity(intent);
+        });
+
         setupPurchasedItemsList();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadAndDisplayUserData();
     }
 
     private void loadAndDisplayUserData() {
@@ -95,16 +102,7 @@ public class ProfileFragment extends Fragment {
     // help source: https://stackoverflow.com/questions/3876680/is-it-possible-to-add-an-array-or-object-to-sharedpreferences-on-android?
     private void loadAndRenderTags() {
         binding.profileTagsChipGroup.removeAllViews();
-        List<Tag> tags = new ArrayList<>();
-        try {
-            JSONArray array = new JSONArray(prefs.getUserTagsJson());
-            for (int i = 0; i < array.length(); i++) {
-                Tag t = Tag.fromJson(array.getJSONObject(i));
-                if (t != null) tags.add(t);
-            }
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
+        List<Tag> tags = prefs.getUserTags();
 
         if (tags.isEmpty()) {
             binding.profileTagsEmptyState.setVisibility(View.VISIBLE);

@@ -28,7 +28,7 @@ import java.util.Date;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.ui.charts.AIRecommendationCardView;
 import ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView;
 import ch.inf.usi.mindbricks.ui.charts.EnergyCurveChartView;
@@ -239,12 +239,12 @@ public class AnalyticsFragment extends Fragment {
         // Create adapter with click listener
         sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
             @Override
-            public void onSessionClick(StudySession session) {
+            public void onSessionClick(StudySessionWithStats session) {
                 showSessionDetails(session);
             }
 
             @Override
-            public void onSessionLongClick(StudySession session) {
+            public void onSessionLongClick(StudySessionWithStats session) {
                 showSessionOptionsDialog(session);
             }
         });
@@ -368,7 +368,7 @@ public class AnalyticsFragment extends Fragment {
      *
      * @param session Session to show
      */
-    private void showSessionDetails(StudySession session) {
+    private void showSessionDetails(StudySessionWithStats session) {
         // Inflate custom dialog layout
         View dialogView = LayoutInflater.from(getContext())
                 .inflate(R.layout.dialog_session_details, null);
@@ -393,7 +393,7 @@ public class AnalyticsFragment extends Fragment {
         focusScoreText.setText(String.format(Locale.getDefault(),
                 "Focus Score: %.1f%%", session.getFocusScore()));
         noiseText.setText(String.format(Locale.getDefault(),
-                "Noise Level: %.1f%%", session.getAvgNoiseLevel()));
+                "Noise (RMS): %.1f", session.getAvgNoiseLevel()));
         lightText.setText(String.format(Locale.getDefault(),
                 "Light Level: %.1f%%", session.getAvgLightLevel()));
         pickupsText.setText(String.format(Locale.getDefault(),
@@ -420,7 +420,7 @@ public class AnalyticsFragment extends Fragment {
      *
      * @param session Session to show options for
      */
-    private void showSessionOptionsDialog(StudySession session) {
+    private void showSessionOptionsDialog(StudySessionWithStats session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Session Options")
                 .setItems(new String[]{"View Details", "Delete Session"}, (dialog, which) -> {
@@ -439,7 +439,7 @@ public class AnalyticsFragment extends Fragment {
      *
      * @param session Session to delete
      */
-    private void confirmDeleteSession(StudySession session) {
+    private void confirmDeleteSession(StudySessionWithStats session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Session")
                 .setMessage("Are you sure you want to delete this study session? This cannot be undone.")
@@ -460,13 +460,12 @@ public class AnalyticsFragment extends Fragment {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Select Time Range")
                 .setItems(options, (dialog, which) -> {
-                    int days;
-                    switch (which) {
-                        case 0: days = 7; break;
-                        case 1: days = 30; break;
-                        case 2: days = 90; break;
-                        default: days = 365 * 10; break;
-                    }
+                    int days = switch (which) {
+                        case 0 -> 7;
+                        case 1 -> 30;
+                        case 2 -> 90;
+                        default -> 365 * 10;
+                    };
                     viewModel.loadAnalyticsData(days);
                 })
                 .show();
@@ -499,9 +498,6 @@ public class AnalyticsFragment extends Fragment {
         }
     }
 
-    /**
-     * Lifecycle: Resume - refresh data if needed.
-     */
     @Override
     public void onResume() {
         super.onResume();
