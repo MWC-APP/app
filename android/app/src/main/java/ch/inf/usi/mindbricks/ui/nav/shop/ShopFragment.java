@@ -20,6 +20,7 @@ import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.databinding.FragmentShopBinding;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
+import ch.inf.usi.mindbricks.util.SoundPlayer;
 
 public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyClickListener {
 
@@ -92,6 +93,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
                 .setMessage("Buy \"" + item.name() + "\" for " + item.price() + " coins?")
                 .setPositiveButton("Buy", (dialog, which) -> {
                     completePurchase(item);
+                    SoundPlayer.playSound(getContext(), R.raw.purchase);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
