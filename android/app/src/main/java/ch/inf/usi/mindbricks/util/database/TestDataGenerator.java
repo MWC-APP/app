@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Random;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 
 /**
@@ -23,9 +24,6 @@ public class TestDataGenerator {
     /**
      * Add test sessions to the database.
      * Call this from your Activity/Fragment to populate test data.
-     *
-     * Usage in AnalyticsFragment or HomeFragment:
-     * TestDataGenerator.addTestSessions(requireContext(), 20);
      */
     public static void addTestSessions(Context context, int numberOfSessions) {
         AppDatabase db = AppDatabase.getInstance(context);
@@ -36,15 +34,49 @@ public class TestDataGenerator {
 
                 List<StudySession> sessions = generateTestSessions(numberOfSessions);
 
-                // Insert all at once
-                List<Long> ids = db.studySessionDao().insertAll(sessions);
+                // Insert each session and generate fake logs for it
+                for (StudySession session : sessions) {
+                    long sessionId = db.studySessionDao().insert(session);
+                    generateAndInsertLogs(db, sessionId, session);
+                }
 
-                Log.d(TAG, "Successfully inserted " + ids.size() + " test sessions");
+                Log.d(TAG, "Successfully inserted " + sessions.size() + " test sessions with logs");
 
             } catch (Exception e) {
                 Log.e(TAG, "Error adding test sessions", e);
             }
         }).start();
+    }
+
+    private static void generateAndInsertLogs(AppDatabase db, long sessionId, StudySession session) {
+        Random random = new Random();
+        List<SessionSensorLog> logs = new ArrayList<>();
+        
+        // Generate fake stats that match what we want to see
+        // We'll generate 10 logs per session to get an average
+        float targetNoise = 200 + random.nextInt(1001);
+        float targetLight = 30 + random.nextInt(60);
+        int targetPickups = random.nextInt(6);
+        
+        for (int i = 0; i < 10; i++) {
+            // Variate slightly around target
+            float noise = Math.max(0, targetNoise + (random.nextInt(100) - 50));
+            float light = Math.max(0, Math.min(100, targetLight + (random.nextInt(20) - 10)));
+            
+            // Distribute pickups randomly across logs
+            boolean motion = i < targetPickups; 
+            
+            logs.add(new SessionSensorLog(
+                sessionId,
+                session.getTimestamp() + (i * 60000), // spread out by minutes
+                noise,
+                light,
+                motion,
+                true // face up
+            ));
+        }
+        
+        db.sessionSensorLogDao().insertAll(logs);
     }
 
     /**
@@ -108,18 +140,6 @@ public class TestDataGenerator {
             }
             session.setFocusScore(focusScore);
 
-            // Noise level: generally low (20-60)
-            float noiseLevel = 20 + random.nextInt(40);
-            session.setAvgNoiseLevel(noiseLevel);
-
-            // Light level: varies more (30-90)
-            float lightLevel = 30 + random.nextInt(60);
-            session.setAvgLightLevel(lightLevel);
-
-            // Phone pickups: 0-5, fewer is better
-            int pickups = random.nextInt(6);
-            session.setPhonePickupCount(pickups);
-
             // Coins earned proportional to duration and focus
             int coins = (int) (duration * focusScore / 100);
             session.setCoinsEarned(coins);
@@ -144,8 +164,8 @@ public class TestDataGenerator {
 
     /**
      * Clear all sessions from database.
-     * Use with caution!
      */
+    @SuppressWarnings("unused")
     public static void clearAllSessions(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
 
@@ -155,22 +175,6 @@ public class TestDataGenerator {
                 Log.d(TAG, "All sessions cleared");
             } catch (Exception e) {
                 Log.e(TAG, "Error clearing sessions", e);
-            }
-        }).start();
-    }
-
-    /**
-     * Get count of current sessions in database.
-     */
-    public static void logSessionCount(Context context) {
-        AppDatabase db = AppDatabase.getInstance(context);
-
-        new Thread(() -> {
-            try {
-                List<StudySession> sessions = db.studySessionDao().getAllSessions();
-                Log.d(TAG, "Current session count: " + (sessions != null ? sessions.size() : 0));
-            } catch (Exception e) {
-                Log.e(TAG, "Error getting session count", e);
             }
         }).start();
     }

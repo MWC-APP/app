@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
@@ -53,7 +54,7 @@ import ch.inf.usi.mindbricks.util.database.TestDataGenerator;
 
 /**
  * Fragment that displays analytics and visualizations of study sessions.
- * Uses Material 3 color theming for consistent visual design.
+ *
  */
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = "AnalyticsFragment";
@@ -85,7 +86,7 @@ public class AnalyticsFragment extends Fragment {
     private SwipeRefreshLayout swipeRefreshLayout;
     private ExtendedFloatingActionButton filterFab;
 
-    // Tab navigation
+    // Tab nav
     private TabLayout tabLayout;
     private View overviewContainer;
     private View insightsContainer;
@@ -106,19 +107,36 @@ public class AnalyticsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // ViewModelProvider ensures same instance survives configuration changes
         viewModel = new ViewModelProvider(this).get(AnalyticsViewModel.class);
 
+        // Initialize all views
         initializeViews(view);
+
+        // Setup tab navigation
         setupTabs();
+
+        // Setup RecyclerView for session history
         setupRecyclerView();
+
+        // Observe ViewModel LiveData
         observeViewModel();
+
+        // Generate test data if database is empty
         generateTestDataIfNeeded();
 
         Log.d(TAG, "All setup complete, now loading initial data");
         viewModel.loadLastNDays(30);
     }
 
+    /**
+     * Initialize all views from the layout.
+     *
+     * @param view Root view
+     */
     private void initializeViews(View view) {
+        Log.d(TAG, "Initializing views...");
+
         // Tab navigation
         tabLayout = view.findViewById(R.id.analyticsTabLayout);
         overviewContainer = view.findViewById(R.id.overviewContainer);
@@ -158,6 +176,9 @@ public class AnalyticsFragment extends Fragment {
         Log.d(TAG, "Views initialized successfully");
     }
 
+    /**
+     * Setup tab navigation
+     */
     private void setupTabs() {
         Log.d(TAG, "Setting up tabs...");
 
@@ -169,12 +190,12 @@ public class AnalyticsFragment extends Fragment {
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-                // No action needed
+                // Nothing so far
             }
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-                // No action needed
+                // Nothing as well
             }
         });
 
@@ -182,6 +203,9 @@ public class AnalyticsFragment extends Fragment {
         switchContent(0);
     }
 
+    /**
+     * Switch between different tab content
+     */
     private void switchContent(int position) {
         Log.d(TAG, "Switching to tab position: " + position);
 
@@ -209,16 +233,19 @@ public class AnalyticsFragment extends Fragment {
         }
     }
 
+    /**
+     * Setup RecyclerView with adapter and layout manager.
+     */
     private void setupRecyclerView() {
         // Create adapter with click listener
         sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
             @Override
-            public void onSessionClick(StudySession session) {
+            public void onSessionClick(StudySessionWithStats session) {
                 showSessionDetails(session);
             }
 
             @Override
-            public void onSessionLongClick(StudySession session) {
+            public void onSessionLongClick(StudySessionWithStats session) {
                 showSessionOptionsDialog(session);
             }
         });
@@ -230,7 +257,7 @@ public class AnalyticsFragment extends Fragment {
         // Set adapter
         sessionHistoryRecycler.setAdapter(sessionHistoryAdapter);
 
-        // Add divider decoration
+        // Add divider
         sessionHistoryRecycler.addItemDecoration(
                 new androidx.recyclerview.widget.DividerItemDecoration(
                         requireContext(),
@@ -241,6 +268,10 @@ public class AnalyticsFragment extends Fragment {
         Log.d(TAG, "RecyclerView setup complete");
     }
 
+    /**
+     * Observe all LiveData from ViewModel.
+     * This is where the Fragment reacts to data changes.
+     */
     private void observeViewModel() {
         Log.d(TAG, "=== Setting up observers ===");
 
@@ -259,6 +290,7 @@ public class AnalyticsFragment extends Fragment {
 
         // Observe view state for loading/error/success
         viewModel.getViewState().observe(getViewLifecycleOwner(), state -> {
+            Log.d("Fragment", "*** ViewState changed to: " + state + " ***");
             updateUIState(state);
         });
 
@@ -432,62 +464,17 @@ public class AnalyticsFragment extends Fragment {
             aiLegendContainer.addView(summaryView);
         }
 
-        Log.d(TAG, "Legend update complete");
+        Log.d("Fragment", "=== All observers registered ===");
     }
 
     /**
-     * Creates a single legend item with color box and label
+     * Update UI based on view state.
+     * Shows/hides loading, error, empty, and content views.
+     *
+     * @param state Current view state
      */
-    private View createAILegendItem(AIRecommendationCardView.LegendItem item) {
-        LinearLayout layout = new LinearLayout(requireContext());
-        layout.setOrientation(LinearLayout.HORIZONTAL);
-        layout.setGravity(Gravity.CENTER_VERTICAL);
-        layout.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
-
-        // Create rounded color box
-        View colorBox = new View(requireContext());
-
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(Color.parseColor(item.colorHex));
-        drawable.setCornerRadius(dpToPx(4));
-        colorBox.setBackground(drawable);
-
-        LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(
-                dpToPx(16), dpToPx(16)
-        );
-        boxParams.setMargins(0, 0, dpToPx(8), 0);
-        colorBox.setLayoutParams(boxParams);
-        layout.addView(colorBox);
-
-        // Create label with themed text color
-        TextView label = new TextView(requireContext());
-        label.setText(item.name);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        label.setTextColor(ContextCompat.getColor(requireContext(), R.color.analytics_text_primary));
-        layout.addView(label);
-
-        return layout;
-    }
-
-    private void showSessionsForDay(StreakDay day) {
-        // TODO: Query database for sessions on this date
-
-        String message = String.format(Locale.getDefault(),
-                "Day: %d/%d/%d\nStatus: %s\nMinutes: %d",
-                day.getDayOfMonth(), day.getMonth() + 1, day.getYear(),
-                day.getStatus().toString(),
-                day.getTotalMinutes()
-        );
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Study Sessions")
-                .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show();
-    }
-
     private void updateUIState(AnalyticsViewModel.ViewState state) {
-        Log.d(TAG, "=== updateUIState called with: " + state + " ===");
+        Log.d("Fragment", "=== updateUIState called with: " + state + " ===");
 
         // Stop refresh animation if running
         swipeRefreshLayout.setRefreshing(false);
@@ -513,7 +500,6 @@ public class AnalyticsFragment extends Fragment {
                 chartsContainer.setVisibility(View.GONE);
                 emptyStateText.setVisibility(View.VISIBLE);
 
-                // Set themed text color for empty state
                 emptyStateText.setTextColor(ContextCompat.getColor(requireContext(), R.color.empty_state_text));
 
                 // Show message based on current range
@@ -590,7 +576,12 @@ public class AnalyticsFragment extends Fragment {
         builder.show();
     }
 
-    private void showSessionDetails(StudySession session) {
+    /**
+     * Show detailed dialog for a study session.
+     *
+     * @param session Session to show
+     */
+    private void showSessionDetails(StudySessionWithStats session) {
         // Inflate custom dialog layout
         View dialogView = LayoutInflater.from(getContext())
                 .inflate(R.layout.dialog_session_details, null);
@@ -615,7 +606,7 @@ public class AnalyticsFragment extends Fragment {
         focusScoreText.setText(String.format(Locale.getDefault(),
                 "Focus Score: %.1f%%", session.getFocusScore()));
         noiseText.setText(String.format(Locale.getDefault(),
-                "Noise Level: %.1f%%", session.getAvgNoiseLevel()));
+                "Noise (RMS): %.1f", session.getAvgNoiseLevel()));
         lightText.setText(String.format(Locale.getDefault(),
                 "Light Level: %.1f%%", session.getAvgLightLevel()));
         pickupsText.setText(String.format(Locale.getDefault(),
@@ -637,6 +628,11 @@ public class AnalyticsFragment extends Fragment {
                 .show();
     }
 
+    /**
+     * Show options dialog for long-press on session.
+     *
+     * @param session Session to show options for
+     */
     private void showSessionOptionsDialog(StudySession session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Session Options")
@@ -651,7 +647,12 @@ public class AnalyticsFragment extends Fragment {
                 .show();
     }
 
-    private void confirmDeleteSession(StudySession session) {
+    /**
+     * Show confirmation dialog before deleting session.
+     *
+     * @param session Session to delete
+     */
+    private void confirmDeleteSession(StudySessionWithStats session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Session")
                 .setMessage("Are you sure you want to delete this study session? This cannot be undone.")
@@ -669,14 +670,26 @@ public class AnalyticsFragment extends Fragment {
                 Log.d(TAG, "No sessions found, generating test data...");
                 TestDataGenerator.addTestSessions(requireContext(), TEST_DATA_COUNT);
 
-                // Wait for insertion, then reload
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    viewModel.refreshData();
-                }, 2000);  // Give it time to insert
-            }
-        });
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Select Time Range")
+                .setItems(options, (dialog, which) -> {
+                    int days = switch (which) {
+                        case 0 -> 7;
+                        case 1 -> 30;
+                        case 2 -> 90;
+                        default -> 365 * 10;
+                    };
+                    viewModel.loadAnalyticsData(days);
+                })
+                .show();
     }
 
+    /**
+     * Format duration in human-readable format.
+     *
+     * @param totalMinutes Total minutes
+     * @return Formatted string
+     */
     private String formatDuration(int totalMinutes) {
         int hours = totalMinutes / 60;
         int minutes = totalMinutes % 60;
@@ -720,13 +733,14 @@ public class AnalyticsFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        Log.d(TAG, "Fragment resumed");
+
+        // Refresh data when returning to fragment -> ended session in between etc.
         viewModel.refreshData();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        Log.d(TAG, "Fragment view destroyed");
+        Log.d(TAG, "onDestroyView");
     }
 }

@@ -46,7 +46,7 @@ public class PurchasedItemsAdapter extends RecyclerView.Adapter<ItemViewHolder> 
 
     /**
      * Called by RecyclerView to display the data at the specified position.
-     * This method updates the contents of the ViewHolder to reflect the item at the given position.
+     * This method updates the contents of the ViewHolder to the item at the given position.
      */
     @Override
     public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {

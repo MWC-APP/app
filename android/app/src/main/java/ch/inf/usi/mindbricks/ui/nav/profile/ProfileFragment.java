@@ -16,9 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.chip.Chip;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +23,7 @@ import java.util.Set;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.databinding.FragmentProfileBinding;
 import ch.inf.usi.mindbricks.model.Tag;
+import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 
@@ -61,8 +59,18 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        loadAndDisplayUserData();
+        binding.buttonSettings.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(requireContext(), SettingsActivity.class);
+            startActivity(intent);
+        });
+
         setupPurchasedItemsList();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadAndDisplayUserData();
     }
 
     private void loadAndDisplayUserData() {
@@ -94,17 +102,7 @@ public class ProfileFragment extends Fragment {
 
     private void loadAndRenderTags() {
         binding.profileTagsChipGroup.removeAllViews();
-        List<Tag> tags = new ArrayList<>();
-        try {
-            JSONArray array = new JSONArray(prefs.getUserTagsJson());
-            for (int i = 0; i < array.length(); i++) {
-                Tag t = Tag.fromJson(array.getJSONObject(i));
-                if (t != null) tags.add(t);
-            }
-        } catch (JSONException e) {
-            // this should never happen
-            throw new RuntimeException(e);
-        }
+        List<Tag> tags = prefs.getUserTags();
 
         if (tags.isEmpty()) {
             binding.profileTagsEmptyState.setVisibility(View.VISIBLE);
@@ -122,10 +120,10 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupPurchasedItemsList() {
-        // Get the set of IDs for items the user has purchased.
+        // Get the set of IDs for items the user has purchased
         Set<String> purchasedIds = prefs.getPurchasedItemIds();
 
-        //  Filter the master list of all shop items to get only the ones the user owns.
+        // Filter the list of all shop items to get only the ones the user owns
         List<PurchasedItem> userOwnedItems = new ArrayList<>();
         for (PurchasedItem shopItem : allShopItems) {
             if (purchasedIds.contains(shopItem.id())) {
@@ -133,13 +131,13 @@ public class ProfileFragment extends Fragment {
             }
         }
 
-        //  Check if the user's inventory is empty and update the UI visibility.
+        //  Check if the user's inventory is empty and update the UI visibility
         if (userOwnedItems.isEmpty()) {
             // If empty, hide the list and show the "empty" text
             binding.purchasedItemsRecyclerView.setVisibility(View.GONE);
             binding.purchasedItemsEmptyState.setVisibility(View.VISIBLE);
         } else {
-            // If not empty, show the list and hide the "empty" text.
+            // If not empty, show the list and hide the "empty" text
             binding.purchasedItemsRecyclerView.setVisibility(View.VISIBLE);
             binding.purchasedItemsEmptyState.setVisibility(View.GONE);
 

@@ -3,16 +3,17 @@ package ch.inf.usi.mindbricks.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import ch.inf.usi.mindbricks.config.PreferencesKey;
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.plan.DayHours;
 
 public class PreferencesManager {
@@ -20,9 +21,11 @@ public class PreferencesManager {
     private static final String PREFS_NAME = "MindBricks-Preferences";
 
     private final SharedPreferences preferences;
+    private final Gson gson;
 
     public PreferencesManager(Context context) {
         preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        gson = new Gson();
     }
 
     // -- Onboarding flag --
@@ -97,13 +100,16 @@ public class PreferencesManager {
         preferences.edit().putString(PreferencesKey.USER_SPRINT_LENGTH_MINUTES.getName(), minutes).apply();
     }
 
-    public String getUserTagsJson() {
-        return preferences.getString(PreferencesKey.USER_TAGS_JSON.getName(), "[]");
+    public List<Tag> getUserTags() {
+        String json = preferences.getString(PreferencesKey.USER_TAGS_JSON.getName(), "[]");
+        Type type = new TypeToken<List<Tag>>() {}.getType();
+        List<Tag> tags = gson.fromJson(json, type);
+        return tags != null ? tags : new ArrayList<>();
     }
 
     // -- User tags --
-    public void setUserTagsJson(String tagsJson) {
-        preferences.edit().putString(PreferencesKey.USER_TAGS_JSON.getName(), tagsJson).apply();
+    public void setUserTags(List<Tag> tags) {
+        preferences.edit().putString(PreferencesKey.USER_TAGS_JSON.getName(), gson.toJson(tags)).apply();
     }
 
     public String getUserAvatarSeed() {
@@ -128,13 +134,12 @@ public class PreferencesManager {
 
     /**
      * Retrieves the set of IDs for all items the user has purchased.
-     *
-     * @return A new Set of Strings containing the IDs of purchased items. Never null.
+     * @return A new Set of Strings containing the IDs of purchased items
      */
     public Set<String> getPurchasedItemIds() {
-        // Retrieve the stored set. The second argument is the default value if the key is not found.
+        // Retrieve the stored set. The second argument is the default value if the key is not found
         Set<String> storedSet = preferences.getStringSet(PreferencesKey.USER_PURCHASED_ITEMS.getName(), new HashSet<>());
-        // Return a new HashSet to prevent external modification of the set stored in SharedPreferences.
+        // Return a new HashSet to prevent modification of the set stored in SharedPreferences.
         return new HashSet<>(storedSet);
     }
 
@@ -147,38 +152,47 @@ public class PreferencesManager {
     }
 
     public void setStudyPlan(List<DayHours> plan) {
-        JSONArray array = new JSONArray();
-        for (DayHours dayHours : plan) {
-            JSONObject obj = new JSONObject();
-            try {
-                obj.put("day", dayHours.dayKey());
-                obj.put("hours", dayHours.hours());
-                array.put(obj);
-            } catch (JSONException ignored) {
-                // should not happen with valid keys
-            }
-        }
-        preferences.edit().putString(PreferencesKey.STUDY_PLAN_JSON.getName(), array.toString()).apply();
+        preferences.edit().putString(PreferencesKey.STUDY_PLAN_JSON.getName(), gson.toJson(plan)).apply();
+    }
+
+    public boolean isStudyGoalSet() {
+        return preferences.getBoolean(PreferencesKey.STUDY_GOAL_SET.getName(), false);
+    }
+
+    public void setStudyGoalSet(boolean isSet) {
+        preferences.edit().putBoolean(PreferencesKey.STUDY_GOAL_SET.getName(), isSet).apply();
     }
 
     public List<DayHours> getStudyPlan() {
-        List<DayHours> plan = new ArrayList<>();
         String json = preferences.getString(PreferencesKey.STUDY_PLAN_JSON.getName(), "[]");
-        if (json.isEmpty()) return plan;
+        Type type = new TypeToken<List<DayHours>>() {}.getType();
+        List<DayHours> plan = gson.fromJson(json, type);
+        return plan != null ? plan : new ArrayList<>();
+    }
 
-        try {
-            JSONArray array = new JSONArray(json);
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject entry = array.getJSONObject(i);
-                String day = entry.optString("day", "");
-                float hours = (float) entry.optDouble("hours", 0);
-                if (!day.isEmpty() && hours > 0) {
-                    plan.add(new DayHours(day, hours));
-                }
-            }
-        } catch (JSONException ignored) {
-            // ignore malformed stored data
-        }
-        return plan;
+    // -- Timer Settings --
+    public int getTimerStudyDuration() {
+        return preferences.getInt(PreferencesKey.TIMER_STUDY_DURATION.getName(), 25);
+    }
+
+    public void setTimerStudyDuration(int minutes) {
+        preferences.edit().putInt(PreferencesKey.TIMER_STUDY_DURATION.getName(), minutes).apply();
+    }
+
+    public int getTimerShortPauseDuration() {
+        return preferences.getInt(PreferencesKey.TIMER_SHORT_PAUSE_DURATION.getName(), 5);
+    }
+
+    public void setTimerShortPauseDuration(int minutes) {
+        preferences.edit().putInt(PreferencesKey.TIMER_SHORT_PAUSE_DURATION.getName(), minutes).apply();
+    }
+
+    public int getTimerLongPauseDuration() {
+        return preferences.getInt(PreferencesKey.TIMER_LONG_PAUSE_DURATION.getName(), 15);
+    }
+
+    public void setTimerLongPauseDuration(int minutes) {
+        preferences.edit().putInt(PreferencesKey.TIMER_LONG_PAUSE_DURATION.getName(), minutes).apply();
     }
 }
+

@@ -7,7 +7,6 @@ import ch.inf.usi.mindbricks.ui.nav.profile.PurchasedItem;
 
 public class ItemViewHolder extends RecyclerView.ViewHolder {
 
-    // Using ViewBinding provides direct and null-safe access to the views
     private final ItemPurchasedAssetBinding binding;
 
     public ItemViewHolder(ItemPurchasedAssetBinding binding) {
@@ -16,7 +15,7 @@ public class ItemViewHolder extends RecyclerView.ViewHolder {
     }
 
     /**
-     * A helper method to populate the views in the ViewHolder with data from a PurchasedItem object.
+     * A method to use the views in the ViewHolder with data from a PurchasedItem object.
      *
      * @param item The PurchasedItem object containing the data for this view.
      */

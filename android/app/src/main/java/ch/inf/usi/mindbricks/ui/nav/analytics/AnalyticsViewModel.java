@@ -24,11 +24,12 @@ import ch.inf.usi.mindbricks.model.visual.GoalRing;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
-import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.repository.StudySessionRepository;
 import ch.inf.usi.mindbricks.util.database.DataProcessor;
+
 /**
  * ViewModel for Analytics screen.
  */
@@ -43,12 +44,10 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private final MutableLiveData<DateRange> dateRangeLiveData = new MutableLiveData<>();
 
     // LiveData for different chart types
-    // MutableLiveData allows us to update values internally
-    // External classes only see LiveData (read-only)
     private final MutableLiveData<WeeklyStats> weeklyStats = new MutableLiveData<>();
     private final MutableLiveData<List<TimeSlotStats>> hourlyStats = new MutableLiveData<>();
     private final MutableLiveData<DailyRecommendation> dailyRecommendation = new MutableLiveData<>();
-    private final MutableLiveData<List<StudySession>> sessionHistory = new MutableLiveData<>();
+    private final MutableLiveData<List<StudySessionWithStats>> sessionHistory = new MutableLiveData<>();
     private final MutableLiveData<List<HourlyQuality>> energyCurveData = new MutableLiveData<>();
     private final MutableLiveData<List<HeatmapCell>> heatmapData = new MutableLiveData<>();
     private final MutableLiveData<List<StreakDay>> streakData = new MutableLiveData<>();
@@ -60,17 +59,17 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
 
     // Cache for processed data to avoid reprocessing
-    private List<StudySession> cachedSessions;
+    private List<StudySessionWithStats> cachedSessions;
     private long lastLoadTime = 0;
     private static final long CACHE_VALIDITY_MS = 5 * 60 * 1000; // 5 minutes
-
-    // database handling
-    private LiveData<List<StudySession>> sessionsSource;
-    private final Observer<List<StudySession>> sessionsObserver = this::handleSessionsUpdate;
+    private LiveData<List<StudySessionWithStats>> sessionsSource;
+    private final Observer<List<StudySessionWithStats>> sessionsObserver = this::handleSessionsUpdate;
 
     public AnalyticsViewModel(@NonNull Application application) {
         super(application);
         this.repository = new StudySessionRepository(application);
+
+        // Separate executor for data processing to avoid blocking database operations
         this.processingExecutor = Executors.newSingleThreadExecutor();
 
         // Initialize with default range: Last 30 days
@@ -123,6 +122,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
 
         viewState.setValue(ViewState.LOADING);
 
+        long startTime = System.currentTimeMillis() - (daysToLoad * 24L * 60 * 60 * 1000);
         long queryStartTime = calculateQueryStartTime(dateRange);
 
         Log.d(TAG, "Database query start time: " + queryStartTime);
@@ -131,6 +131,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
             sessionsSource.removeObserver(sessionsObserver);
         }
 
+        sessionsSource = repository.getSessionsSince(startTime);
         sessionsSource = repository.getSessionsSince(queryStartTime);
         sessionsSource.observeForever(sessionsObserver);
     }
@@ -143,7 +144,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
             return 0L;
         }
 
-        // For specific ranges, add a buffer but ensure we include the entire range
         long bufferMs = 7L * 24 * 60 * 60 * 1000;
         long queryStart = range.getStartTimestamp() - bufferMs;
 
@@ -178,13 +178,19 @@ public class AnalyticsViewModel extends AndroidViewModel {
         loadDataForRange(nextMonth);
     }
 
-    private void handleSessionsUpdate(List<StudySession> sessions) {
+    private void handleSessionsUpdate(List<StudySessionWithStats> sessions) {
         Log.d(TAG, "Sessions updated from database: " +
                 (sessions != null ? sessions.size() + " sessions" : "null"));
 
         if (sessions == null) {
             errorMessage.setValue("Error loading sessions from database");
             viewState.setValue(ViewState.ERROR);
+            return;
+        }
+
+        if (sessions.isEmpty()) {
+            sessionHistory.setValue(sessions);
+            viewState.setValue(ViewState.EMPTY);
             return;
         }
 
@@ -202,14 +208,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
             return;
         }
 
-        Log.d(TAG, String.format("Processing %d sessions (filtered from %d) for range: %s",
-                filteredSessions.size(), sessions.size(),
-                currentDateRange.getDisplayName()));
-
-        processAllData(sessions, currentDateRange);
-    }
-
-    private void processAllData(List<StudySession> allSessions, DateRange dateRange) {
+    private void processAllData(List<StudySessionWithStats> sessions, DateRange dateRange) {
         Log.d(TAG, "=== processAllData START ===");
         Log.d(TAG, "All sessions count: " + (allSessions != null ? allSessions.size() : "null"));
         Log.d(TAG, "Date range: " + dateRange.getDisplayName());
@@ -336,61 +335,20 @@ public class AnalyticsViewModel extends AndroidViewModel {
 
     public LiveData<DailyRecommendation> getDailyRecommendation() {
         return dailyRecommendation;
+    public void deleteSession(StudySessionWithStats session) {
+        repository.deleteSession(session.session, this::refreshData);
     }
 
-    public LiveData<List<StudySession>> getSessionHistory() {
-        return sessionHistory;
-    }
-
-    public LiveData<ViewState> getViewState() {
-        return viewState;
-    }
-
-    public LiveData<List<HourlyQuality>> getEnergyCurveData() {
-        return energyCurveData;
-    }
-
-    public LiveData<List<HeatmapCell>> getHeatmapData() {
-        return heatmapData;
-    }
-
-    public LiveData<List<StreakDay>> getStreakData() {
-        return streakData;
-    }
-
-    public LiveData<List<GoalRing>> getGoalRingsData() {
-        return goalRingsData;
-    }
-
-    public LiveData<List<AIRecommendation>> getAiRecommendations() {
-        return aiRecommendations;
-    }
-
-
-    private boolean isCacheValid() {
-        return cachedSessions != null &&
-                (System.currentTimeMillis() - lastLoadTime) < CACHE_VALIDITY_MS;
-    }
-
-    private <T> void observeOnce(LiveData<T> liveData, OnDataCallback<T> callback) {
-        liveData.observeForever(new Observer<T>() {
-            @Override
-            public void onChanged(T data) {
-                liveData.removeObserver(this);
-                callback.onData(data);
-            }
-        });
-    }
-
-    private interface OnDataCallback<T> {
-        void onData(T data);
-    }
+    // Getters for LiveData
+    public LiveData<WeeklyStats> getWeeklyStats() { return weeklyStats; }
+    public LiveData<List<TimeSlotStats>> getHourlyStats() { return hourlyStats; }
+    public LiveData<DailyRecommendation> getDailyRecommendation() { return dailyRecommendation; }
+    public LiveData<List<StudySessionWithStats>> getSessionHistory() { return sessionHistory; }
+    public LiveData<ViewState> getViewState() { return viewState; }
+    public LiveData<String> getErrorMessage() { return errorMessage; }
 
     public enum ViewState {
-        LOADING,
-        SUCCESS,
-        ERROR,
-        EMPTY
+        LOADING, SUCCESS, ERROR, EMPTY
     }
 
     @Override
@@ -401,10 +359,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
 
         if (sessionsSource != null) {
             sessionsSource.removeObserver(sessionsObserver);
-        }
-
-        if (processingExecutor instanceof java.util.concurrent.ExecutorService) {
-            ((java.util.concurrent.ExecutorService) processingExecutor).shutdown();
         }
     }
 }

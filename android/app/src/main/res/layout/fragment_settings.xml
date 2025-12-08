@@ -3,98 +3,130 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="?android:colorBackground"
+    android:padding="24dp">
 
-    android:paddingStart="32dp"
-    android:paddingEnd="32dp"
-    android:paddingTop="32dp"
-    android:paddingBottom="32dp">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp">
 
-    <!-- Main Title -->
-    <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
-    android:text="Timer Settings"
-    android:textSize="22sp"
-    android:textStyle="bold"
-    android:textColor="?android:attr/textColorPrimary"
-    android:layout_marginBottom="32dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Timer Settings"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"/>
+
+
+    </FrameLayout>
 
     <!-- Study Session Settings -->
     <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Study Duration"
-    android:textSize="16sp"
-    android:textColor="?android:attr/textColorSecondary"/>
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Study Duration"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorSecondary"/>
 
     <TextView
-    android:id="@+id/study_duration_text"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
-    android:text="25 min"
-    android:textColor="?attr/colorPrimary"
-    android:textSize="28sp"
-    android:textStyle="bold"
-    android:layout_marginTop="20dp"
-    android:layout_marginBottom="4dp" />
+        android:id="@+id/study_duration_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"
+        android:text="25 min"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="28sp"
+        android:textStyle="bold" />
 
     <com.google.android.material.slider.Slider
-    android:id="@+id/study_duration_slider"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:valueFrom="15.0"
-    android:valueTo="60.0"
-    android:stepSize="5.0"
-    android:value="25.0" />
+        android:id="@+id/study_duration_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="15.0"
+        android:valueTo="60.0"
+        android:stepSize="5.0"
+        android:value="25.0" />
 
-    <!-- Divider -->
-    <View
-    android:layout_width="match_parent"
-    android:layout_height="1dp"
-    android:background="?android:attr/listDivider"
-    android:layout_marginTop="32dp"
-    android:layout_marginBottom="32dp"/>
-
-    <!-- Pause Session Settings -->
+    <!-- Short Pause Settings -->
     <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Pause Duration"
-    android:textSize="16sp"
-    android:textColor="?android:attr/textColorSecondary"/>
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Short Pause Duration"
+        android:layout_marginTop="24dp"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorSecondary"/>
 
     <TextView
-    android:id="@+id/pause_duration_text"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
-    android:text="5 min"
-    android:textColor="?attr/colorPrimary"
-    android:textSize="28sp"
-    android:textStyle="bold"
-    android:layout_marginTop="20dp"
-    android:layout_marginBottom="4dp" />
+        android:id="@+id/pause_duration_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"
+        android:text="5 min"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="28sp"
+        android:textStyle="bold" />
 
     <com.google.android.material.slider.Slider
-    android:id="@+id/pause_duration_slider"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:valueFrom="5.0"
-    android:valueTo="30.0"
-    android:stepSize="5.0"
-    android:value="5.0" />
+        android:id="@+id/pause_duration_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="5.0"
+        android:valueTo="30.0"
+        android:stepSize="5.0"
+        android:value="5.0" />
 
+    <!-- Long Pause Settings -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Long Pause Duration"
+        android:layout_marginTop="24dp"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorSecondary"/>
+
+    <TextView
+        android:id="@+id/long_pause_duration_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp"
+        android:text="15 min"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/long_pause_duration_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="10.0"
+        android:valueTo="45.0"
+        android:stepSize="5.0"
+        android:value="15.0" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Save Button -->
     <Button
-    android:id="@+id/save_settings_button"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
-    android:text="Save Settings"
-     android:layout_marginTop="40dp" />
+        android:id="@+id/save_settings_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Save and Close"
+        android:padding="16dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="32dp"/>
 
-    </LinearLayout>
+</LinearLayout>

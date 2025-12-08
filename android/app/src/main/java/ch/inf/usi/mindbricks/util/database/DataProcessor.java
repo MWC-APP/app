@@ -13,7 +13,7 @@ import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
-import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
@@ -25,9 +25,7 @@ import ch.inf.usi.mindbricks.model.visual.GoalRing;
  * Contains methods to transform raw session data into chart-ready statistics.
  */
 public class DataProcessor {
-    private static final String TAG = "DataProcessor";
-
-    public static WeeklyStats calculateWeeklyStats(List<StudySession> allSessions, DateRange dateRange) {
+    public static WeeklyStats calculateWeeklyStats(List<StudySessionWithStats> sessions) {
         WeeklyStats stats = new WeeklyStats();
         List<StudySession> sessions = filterSessionsInRange(allSessions, dateRange);
 
@@ -42,17 +40,21 @@ public class DataProcessor {
 
         Calendar calendar = Calendar.getInstance();
 
-        for (StudySession session : sessions) {
+        // Process each session
+        for (StudySessionWithStats session : sessions) {
             calendar.setTimeInMillis(session.getTimestamp());
 
+            // Get day of week (Calendar.MONDAY = 2, so adjust to 0-6)
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
             int dayIndex = convertCalendarDayToIndex(dayOfWeek);
 
+            // Accumulate data
             minutesPerDay[dayIndex] += session.getDurationMinutes();
             focusScoreSum[dayIndex] += session.getFocusScore();
             sessionCountPerDay[dayIndex]++;
         }
 
+        // Calculate averages and set data
         int totalMinutes = 0;
         float totalFocusScore = 0;
         int totalSessions = 0;
@@ -85,7 +87,8 @@ public class DataProcessor {
         return stats;
     }
 
-    public static List<TimeSlotStats> calculateHourlyDistribution(List<StudySession> allSessions, DateRange dateRange) {
+    public static List<TimeSlotStats> calculateHourlyDistribution(List<StudySessionWithStats> sessions, DateRange dateRange) {
+        // Create 24 time slots (one for each hour)
         List<TimeSlotStats> hourlyStats = new ArrayList<>();
         for (int hour = 0; hour < 24; hour++) {
             hourlyStats.add(new TimeSlotStats(hour));
@@ -100,7 +103,8 @@ public class DataProcessor {
 
         Calendar calendar = Calendar.getInstance();
 
-        for (StudySession session : sessions) {
+        // Process each session
+        for (StudySessionWithStats session : sessions) {
             calendar.setTimeInMillis(session.getTimestamp());
             int hour = calendar.get(Calendar.HOUR_OF_DAY);
 
@@ -124,8 +128,7 @@ public class DataProcessor {
         return hourlyStats;
     }
 
-    public static DailyRecommendation generateDailyRecommendation(List<StudySession> allSessions,
-                                                                  DateRange dateRange) {
+    public static DailyRecommendation generateDailyRecommendation(List<StudySessionWithStats> sessions, DateRange dateRange) {
         DailyRecommendation recommendation = new DailyRecommendation();
 
         List<StudySession> sessions = filterSessionsInRange(allSessions, dateRange);
@@ -169,6 +172,7 @@ public class DataProcessor {
 
         recommendation.setRecommendedSlots(recommendedSlots);
 
+        // Generate summary
         if (!rankedHours.isEmpty()) {
             TimeSlotStats bestHour = rankedHours.get(0);
             String summary = String.format(
@@ -314,7 +318,6 @@ public class DataProcessor {
             result.add(day);
         }
 
-        // Sort by date
         Collections.sort(result, (a, b) -> {
             if (a.getYear() != b.getYear()) return a.getYear() - b.getYear();
             if (a.getMonth() != b.getMonth()) return a.getMonth() - b.getMonth();
@@ -682,7 +685,7 @@ public class DataProcessor {
         List<StudySession> sessions = filterSessionsInRange(allSessions, dateRange);
         Map<String, List<StudySession>> grouped = new HashMap<>();
 
-        for (StudySession session : sessions) {
+        for (StudySessionWithStats session : sessions) {
             String tag = session.getTagTitle();
             if (tag == null || tag.isEmpty()) {
                 tag = "Untagged";
@@ -697,14 +700,14 @@ public class DataProcessor {
         return grouped;
     }
 
-    public static int calculateLongestStreak(List<StudySession> allSessions, DateRange dateRange) {
+    public static int calculateLongestStreak(List<StudySessionWithStats> allSessions, DateRange dateRange) {
         List<StudySession> sessions = filterSessionsInRange(allSessions, dateRange);
 
         if (sessions.isEmpty()) {
             return 0;
         }
 
-        List<StudySession> sortedSessions = new ArrayList<>(sessions);
+        List<StudySessionWithStats> sortedSessions = new ArrayList<>(sessions);
         Collections.sort(sortedSessions, (a, b) ->
                 Long.compare(a.getTimestamp(), b.getTimestamp()));
 
@@ -741,6 +744,7 @@ public class DataProcessor {
         return longestStreak;
     }
 
+    // ---> Helper methods
     private static int convertCalendarDayToIndex(int calendarDay) {
         switch (calendarDay) {
             case Calendar.MONDAY: return 0;

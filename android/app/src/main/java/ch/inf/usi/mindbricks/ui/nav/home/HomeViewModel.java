@@ -1,6 +1,8 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
 import android.app.Application;
+import android.content.Intent;
+import android.graphics.Color;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,11 +10,16 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import ch.inf.usi.mindbricks.util.NotificationHelper;
+
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
-import ch.inf.usi.mindbricks.util.SessionRecordingManager;
+import ch.inf.usi.mindbricks.service.SensorService;
 
 public class HomeViewModel extends AndroidViewModel {
 
@@ -23,161 +30,139 @@ public class HomeViewModel extends AndroidViewModel {
         LONG_PAUSE
     }
 
-    private final AppDatabase db;
-    private final SessionRecordingManager sessionRecordingManager;
-    private CountDownTimer countDownTimer;
-    private StudySession currentStudySession;
+    private CountDownTimer timer;
 
-    private long startTimeInMillis = 0;
-    private long remainingTimeInMillis = 0;
+    public final MutableLiveData<Long> currentTime = new MutableLiveData<>(0L);
+    public final MutableLiveData<PomodoroState> currentState = new MutableLiveData<>(PomodoroState.IDLE);
+    public final MutableLiveData<Integer> earnedCoinsEvent = new MutableLiveData<>();
+
     private int sessionCounter = 0;
-    private int studyDurationMinutes = 0;
-    private int pauseDurationMinutes = 0;
-
-    // This will track the last minute for which a coin was awarded.
-    private int lastMinuteAwarded = 0;
-
-    private final MutableLiveData<Long> _currentTime = new MutableLiveData<>(0L);
-    public final LiveData<Long> currentTime = _currentTime;
-
-    private final MutableLiveData<PomodoroState> _currentState = new MutableLiveData<>(PomodoroState.IDLE);
-    public final LiveData<PomodoroState> currentState = _currentState;
-
-    private final MutableLiveData<String> _stateTitle = new MutableLiveData<>("Ready to start?");
-    public final LiveData<String> stateTitle = _stateTitle;
-
-    private final MutableLiveData<Integer> _earnedCoinsEvent = new MutableLiveData<>();
-    public final LiveData<Integer> earnedCoinsEvent = _earnedCoinsEvent;
+    private final NotificationHelper notificationHelper;
+    private long currentSessionId = -1;
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     public final MutableLiveData<Long> showQuestionnaireEvent = new MutableLiveData<>();
 
-    public HomeViewModel(@NonNull Application application) {
+    public HomeViewModel(Application application) {
         super(application);
-        db = AppDatabase.getInstance(application.getApplicationContext());
-        sessionRecordingManager = new SessionRecordingManager(application.getApplicationContext());
+        this.notificationHelper = new NotificationHelper(application);
     }
 
-    public void pomodoroTechnique(int studyMin, int pauseMin) {
-        if (_currentState.getValue() != PomodoroState.IDLE) {
+    // The main entry point to start a new Pomodoro cycle
+    // help source: https://stackoverflow.com/questions/39215947/stuck-on-trying-to-resume-paused-stopped-function-pomodoro-timer
+    public void pomodoroTechnique(int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
+        // Prevent starting a new timer if one is already running.
+        if (currentState.getValue() != PomodoroState.IDLE) {
             return;
         }
-        this.studyDurationMinutes = studyMin;
-        this.pauseDurationMinutes = pauseMin;
+        // Reset the session counter at the beginning of a new cycle
         this.sessionCounter = 0;
-        startStudyTimer();
+        // Start the first study session
+        startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes);
     }
 
-    private void startStudyTimer() {
-        sessionCounter++;
-        _currentState.setValue(PomodoroState.STUDY);
-        _stateTitle.setValue("Study Session " + sessionCounter);
-        startTimeInMillis = TimeUnit.MINUTES.toMillis(studyDurationMinutes);
-        remainingTimeInMillis = startTimeInMillis;
+    // Starts a study session
+    private void startStudySession(int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
+        this.sessionCounter++;
+        currentState.setValue(PomodoroState.STUDY); // Set the state to STUDY
+        long studyDurationMillis = TimeUnit.MINUTES.toMillis(studyDurationMinutes);
 
-        //  Reset the award tracker to 0 at the start of a study session.
-        lastMinuteAwarded = 0;
+        // Save new session (to get its id) + start foreground service
+        long startTime = System.currentTimeMillis();
+        StudySession session = new StudySession(startTime, studyDurationMinutes, "General", Color.GRAY);
 
-        new Thread(() -> {
-            currentStudySession = new StudySession(System.currentTimeMillis(), studyDurationMinutes, "Pomodoro", android.graphics.Color.CYAN);
-            long newId = db.studySessionDao().insert(currentStudySession);
-            currentStudySession.setId(newId);
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            currentSessionId = db.studySessionDao().insert(session);
+            android.util.Log.d("HomeViewModel", "Session inserted with ID: " + currentSessionId);
 
-            new Handler(Looper.getMainLooper()).post(() -> {
-                sessionRecordingManager.startSession(newId);
-                startCountdown(remainingTimeInMillis);
-            });
-        }).start();
-    }
+            Intent serviceIntent = new Intent(getApplication(), SensorService.class);
+            serviceIntent.setAction(SensorService.ACTION_START_SESSION);
+            serviceIntent.putExtra(SensorService.EXTRA_SESSION_ID, currentSessionId);
+            getApplication().startForegroundService(serviceIntent);
+        });
 
-    public void startPause(boolean isLongPause) {
-        _currentState.setValue(isLongPause ? PomodoroState.LONG_PAUSE : PomodoroState.PAUSE);
-        _stateTitle.setValue(isLongPause ? "Long Break" : "Short Break");
+        timer = new CountDownTimer(studyDurationMillis, 1000) {
+            private long lastMinute;
 
-        int duration = isLongPause ? (pauseDurationMinutes * 3) : pauseDurationMinutes;
-        startTimeInMillis = TimeUnit.MINUTES.toMillis(duration);
-        remainingTimeInMillis = startTimeInMillis;
-        startCountdown(remainingTimeInMillis);
-    }
+            @Override
+            public void onTick(long millisUntilFinished) {
+                currentTime.postValue(millisUntilFinished);
 
-    public void stopTimerAndReset() {
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-            countDownTimer = null;
-        }
+                // Award 1 coin for each completed minute of studying.
+                long currentMinute = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished);
+                if (lastMinute > currentMinute) {
+                    earnedCoinsEvent.postValue(1);
+                }
+                lastMinute = currentMinute; // Update the last minute tracker
+            }
 
-        if (currentStudySession != null) {
-            sessionRecordingManager.stopSession(currentStudySession);
-            completeSession(currentStudySession.getId());
+            @Override
+            public void onFinish() {
+                // Stop Service and complete Session
+                completeSessionAndStopService();
+                notificationHelper.showNotification("Study Complete!", "Time for a well-deserved break.", 1);
 
-            currentStudySession = null;
-        }
+                // Award 3 bonus coins at the successful end of the session
+                earnedCoinsEvent.postValue(3);
 
-        _currentState.setValue(PomodoroState.IDLE);
-        _stateTitle.setValue("Ready to start?");
-        _currentTime.setValue(0L);
+                // Decide whether to start a short pause or a long pause
+                if (sessionCounter < 4) {
+                    startPauseSession(false, studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes);
+                } else {
+                    startPauseSession(true, studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes);
+                }
+            }
+        }.start();
     }
 
     private void completeSession(long sessionID){
         showQuestionnaireEvent.postValue(sessionID);
     }
 
-    private void startCountdown(long duration) {
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
+    // Starts a pause session
+    // help source: https://www.reddit.com/r/developersIndia/comments/v5b06t/i_built_a_pomodoro_timer_to_demonstrate_how_a/
+    private void startPauseSession(boolean isLongPause, int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
+        long pauseDurationMillis;
+        if (isLongPause) {
+            currentState.setValue(PomodoroState.LONG_PAUSE);
+            pauseDurationMillis = TimeUnit.MINUTES.toMillis(longPauseDurationMinutes);
+        } else {
+            currentState.setValue(PomodoroState.PAUSE);
+            pauseDurationMillis = TimeUnit.MINUTES.toMillis(pauseDurationMinutes);
         }
 
-        countDownTimer = new CountDownTimer(duration, 1000) {
+        // Create and start a new countdown timer for the pause
+        timer = new CountDownTimer(pauseDurationMillis, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
-                remainingTimeInMillis = millisUntilFinished;
-                _currentTime.postValue(millisUntilFinished);
-
-                if (_currentState.getValue() == PomodoroState.STUDY) {
-                    // Calculate how many milliseconds have passed.
-                    long elapsedMillis = startTimeInMillis - millisUntilFinished;
-
-                    // Convert elapsed milliseconds to full minutes.
-                    int minutesPassed = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
-
-                    //    This only becomes true after the first full minute is completed
-                    if (minutesPassed > 0 && minutesPassed > lastMinuteAwarded) {
-                        lastMinuteAwarded = minutesPassed;
-                        _earnedCoinsEvent.postValue(1);
-                    }
-                }
+                currentTime.postValue(millisUntilFinished); // Update the UI with  remaining time
             }
 
             @Override
             public void onFinish() {
-                PomodoroState finishedState = _currentState.getValue();
-
-                if (finishedState == PomodoroState.STUDY) {
-                    if (currentStudySession != null) {
-                        sessionRecordingManager.stopSession(currentStudySession);
-                        currentStudySession = null;
-                    }
-
-                    // add the bonus coins here.
-                    _earnedCoinsEvent.postValue(3);
-
-                    boolean isLongBreakTime = (sessionCounter >= 3);
-                    startPause(isLongBreakTime);
-
-                } else if (finishedState == PomodoroState.PAUSE) {
-                    startStudyTimer();
-                } else if (finishedState == PomodoroState.LONG_PAUSE) {
+                // end the cycle if long pause
+                if (isLongPause) {
+                    notificationHelper.showNotification("Cycle Complete!", "Great work. Ready for the next round?", 2);
                     stopTimerAndReset();
+                } else {
+                    //  continue to the next study session.
+                    notificationHelper.showNotification("Break's Over!", "Time to get back to studying.", 3);
+                    startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes);
                 }
             }
         }.start();
     }
 
-    public void activityRecreated() {
-        if (_currentState.getValue() != PomodoroState.IDLE && remainingTimeInMillis > 0) {
-            _currentState.setValue(_currentState.getValue());
-            _stateTitle.setValue(_stateTitle.getValue());
-            startCountdown(remainingTimeInMillis);
+    // Stops the timer and resets the state to IDLE
+    public void stopTimerAndReset() {
+        if (timer != null) {
+            timer.cancel();
         }
+        completeSessionAndStopService();
+        this.sessionCounter = 0;
+        currentState.setValue(PomodoroState.IDLE);
+        currentTime.setValue(0L);
     }
 
     public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire) {
@@ -188,18 +173,48 @@ public class HomeViewModel extends AndroidViewModel {
         });
     }
 
+    private void completeSessionAndStopService() {
+        // Stop service
+        Intent serviceIntent = new Intent(getApplication(), SensorService.class);
+        serviceIntent.setAction(SensorService.ACTION_STOP_SESSION);
+        getApplication().startService(serviceIntent);
+
+        // Store data in DB
+        if (currentSessionId != -1) {
+            long sessionIdToUpdate = currentSessionId;
+            dbExecutor.execute(() -> {
+                AppDatabase db = AppDatabase.getInstance(getApplication());
+                // Get aggregation
+                float avgNoise = db.sessionSensorLogDao().getAverageNoise(sessionIdToUpdate);
+                float avgLight = db.sessionSensorLogDao().getAverageLight(sessionIdToUpdate);
+                int motionCount = db.sessionSensorLogDao().getMotionCount(sessionIdToUpdate);
+
+                android.util.Log.d("HomeViewModel", "Completing session " + sessionIdToUpdate + ". Stats: Noise=" + avgNoise + ", Light=" + avgLight + ", Motion=" + motionCount);
+                // TODO: Implement actual DB update for stats
+            });
+            currentSessionId = -1;
+        }
+    }
+
+    // Resets the coin event LiveData to prevent it from re-firing
     public void onCoinsAwarded() {
-        _earnedCoinsEvent.setValue(null);
+        earnedCoinsEvent.setValue(null);
+    }
+
+    // Resets the timer display if the activity is recreated while the timer is idle
+    public void activityRecreated() {
+        if (currentState.getValue() == PomodoroState.IDLE) {
+            currentTime.setValue(0L);
+        }
+    }
+
+    public int getSessionCounter() {
+        return sessionCounter;
     }
 
     @Override
     protected void onCleared() {
         super.onCleared();
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-        if (currentStudySession != null) {
-            sessionRecordingManager.stopSession(currentStudySession);
-        }
+        dbExecutor.shutdown();
     }
 }

@@ -1,10 +1,11 @@
 package ch.inf.usi.mindbricks.ui.nav.home;
 
+import android.Manifest;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;import android.widget.Button;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,6 +19,7 @@ import com.google.android.material.slider.Slider;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.util.PermissionManager;
 
 public class SessionTimerDialogFragment extends DialogFragment {
 
@@ -25,12 +27,23 @@ public class SessionTimerDialogFragment extends DialogFragment {
     private TextView durationText;
     private Button startTimerButton;
     private HomeViewModel homeViewModel;
+    private PermissionManager.PermissionRequest audioPermissionRequest;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Register permission request callback
+        audioPermissionRequest = PermissionManager.registerSinglePermission(
+                this,
+                Manifest.permission.RECORD_AUDIO,
+                this::startPomodoroSession,
+                () -> Toast.makeText(getContext(), "Microphone permission is required for focus sessions.", Toast.LENGTH_LONG).show()
+        );
+    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Correctly initialize the AndroidViewModel using its factory
-        // NOTE: We get the ViewModel from the HOSTING FRAGMENT (this), not the activity.
         homeViewModel = new ViewModelProvider(requireParentFragment(),
                 ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().getApplication()))
                 .get(HomeViewModel.class);
@@ -42,42 +55,47 @@ public class SessionTimerDialogFragment extends DialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Initialize all the UI components from the view
         durationSlider = view.findViewById(R.id.duration_slider);
         durationText = view.findViewById(R.id.duration_text);
         startTimerButton = view.findViewById(R.id.start_stop_button);
 
-        // Safely set the initial text based on the slider's default value
         int initialValue = (int) durationSlider.getValue();
         durationText.setText(String.format(Locale.getDefault(), "%d minutes", initialValue));
 
-        // Set the listener for when the slider value changes
         durationSlider.addOnChangeListener((slider, value, fromUser) -> {
             durationText.setText(String.format(Locale.getDefault(), "%d minutes", (int) value));
         });
 
-        // Set the click listener for the start button
         startTimerButton.setOnClickListener(v -> {
             int studyMinutes = (int) durationSlider.getValue();
             if (studyMinutes > 0) {
-                // Define the pause duration
-                int pauseMinutes = 5;
-
-                // Call the correct method on the ViewModel
-                homeViewModel.pomodoroTechnique(studyMinutes, pauseMinutes);
-
-                // Close the dialog
-                dismiss();
+                 // Check for permission before starting
+                if (PermissionManager.hasPermission(requireContext(), Manifest.permission.RECORD_AUDIO)) {
+                    startPomodoroSession();
+                } else {
+                    audioPermissionRequest.launch();
+                }
             } else {
                 Toast.makeText(getContext(), "Please select a duration greater than 0.", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    private void startPomodoroSession() {
+        int studyMinutes = (int) durationSlider.getValue();
+        // FIXME: We need to use the configured long/short pause lengths (Luca is implementing this)
+        int pauseMinutes = 5;
+        int longPauseMinutes = 15;
+
+        // Call the ViewModel method with all three required arguments
+        homeViewModel.pomodoroTechnique(studyMinutes, pauseMinutes, longPauseMinutes);
+
+        dismiss();
+    }
+
     @Override
     public void onStart() {
         super.onStart();
-        // Set the dialog window dimensions
         if (getDialog() != null && getDialog().getWindow() != null) {
             getDialog().getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
