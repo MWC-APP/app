@@ -11,10 +11,12 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 import java.util.Locale;
 
+import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
 
 /**
@@ -37,6 +39,14 @@ public class EnergyCurveChartView extends View {
     private float padding = 80;
     private float topPadding = 100;
 
+    // Theme colors
+    private int colorGreen;
+    private int colorGreenDark;
+    private int colorGreenLight;
+    private int colorGrid;
+    private int colorTextPrimary;
+    private int colorTextSecondary;
+
     public EnergyCurveChartView(Context context) {
         super(context);
         init();
@@ -48,13 +58,22 @@ public class EnergyCurveChartView extends View {
     }
 
     private void init() {
+        // Load theme colors
+        Context context = getContext();
+        colorGreen = ContextCompat.getColor(context, R.color.analytics_accent_green);
+        colorGreenDark = ContextCompat.getColor(context, R.color.chart_scale_7);
+        colorGreenLight = ContextCompat.getColor(context, R.color.chart_scale_1);
+        colorGrid = ContextCompat.getColor(context, R.color.analytics_grid_line);
+        colorTextPrimary = ContextCompat.getColor(context, R.color.analytics_text_primary);
+        colorTextSecondary = ContextCompat.getColor(context, R.color.analytics_text_secondary);
+
         // Line paint
         linePaint = new Paint();
-        linePaint.setColor(Color.parseColor("#4CAF50"));
+        linePaint.setColor(colorGreen);
         linePaint.setStrokeWidth(8f);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setAntiAlias(true);
-        linePaint.setShadowLayer(4f, 0, 2f, Color.parseColor("#40000000"));
+        linePaint.setShadowLayer(4f, 0, 2f, Color.argb(64, 0, 0, 0));
 
         // Fill paint (gradient under curve)
         fillPaint = new Paint();
@@ -63,27 +82,27 @@ public class EnergyCurveChartView extends View {
 
         // Point paint
         pointPaint = new Paint();
-        pointPaint.setColor(Color.parseColor("#2E7D32"));
+        pointPaint.setColor(colorGreenDark);
         pointPaint.setStyle(Paint.Style.FILL);
         pointPaint.setAntiAlias(true);
-        pointPaint.setShadowLayer(4f, 0, 2f, Color.parseColor("#40000000"));
+        pointPaint.setShadowLayer(4f, 0, 2f, Color.argb(64, 0, 0, 0));
 
         // Grid paint
         gridPaint = new Paint();
-        gridPaint.setColor(Color.parseColor("#E0E0E0"));
+        gridPaint.setColor(colorGrid);
         gridPaint.setStrokeWidth(2f);
         gridPaint.setStyle(Paint.Style.STROKE);
         gridPaint.setAntiAlias(true);
 
         // Text paint
         textPaint = new Paint();
-        textPaint.setColor(Color.parseColor("#757575"));
+        textPaint.setColor(colorTextSecondary);
         textPaint.setTextSize(32f);
         textPaint.setAntiAlias(true);
 
         // Title paint
         titlePaint = new Paint();
-        titlePaint.setColor(Color.parseColor("#212121"));
+        titlePaint.setColor(colorTextPrimary);
         titlePaint.setTextSize(48f);
         titlePaint.setAntiAlias(true);
         titlePaint.setFakeBoldText(true);
@@ -98,9 +117,6 @@ public class EnergyCurveChartView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // Draw title
-        canvas.drawText("Energy Curve", padding, 60, titlePaint);
-
         if (dataPoints == null || dataPoints.isEmpty()) {
             drawEmptyState(canvas);
             return;
@@ -109,12 +125,12 @@ public class EnergyCurveChartView extends View {
         chartWidth = getWidth() - (2 * padding);
         chartHeight = getHeight() - topPadding - padding;
 
-        // Setup gradient for fill
+        // Setup gradient for fill using theme colors
         LinearGradient gradient = new LinearGradient(
                 0, topPadding,
                 0, topPadding + chartHeight,
-                Color.parseColor("#804CAF50"),
-                Color.parseColor("#004CAF50"),
+                Color.argb(128, Color.red(colorGreen), Color.green(colorGreen), Color.blue(colorGreen)),
+                Color.argb(0, Color.red(colorGreen), Color.green(colorGreen), Color.blue(colorGreen)),
                 Shader.TileMode.CLAMP
         );
         fillPaint.setShader(gradient);
@@ -244,20 +260,22 @@ public class EnergyCurveChartView extends View {
 
             // Draw inner circle (highlight)
             Paint innerPaint = new Paint(pointPaint);
-            innerPaint.setColor(Color.parseColor("#81C784"));
+            innerPaint.setColor(colorGreenLight);
             canvas.drawCircle(x, y, 6f, innerPaint);
         }
     }
 
     private void drawEmptyState(Canvas canvas) {
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setTextSize(40f);
-        String text = "No data available";
-        canvas.drawText(text, getWidth() / 2f, getHeight() / 2f, textPaint);
+        Paint emptyTextPaint = new Paint(textPaint);
+        emptyTextPaint.setColor(ContextCompat.getColor(getContext(), R.color.empty_state_text));
+        emptyTextPaint.setTextAlign(Paint.Align.CENTER);
+        emptyTextPaint.setTextSize(40f);
 
-        textPaint.setTextSize(32f);
-        textPaint.setColor(Color.parseColor("#9E9E9E"));
+        String text = "No data available";
+        canvas.drawText(text, getWidth() / 2f, getHeight() / 2f, emptyTextPaint);
+
+        emptyTextPaint.setTextSize(32f);
         canvas.drawText("Complete study sessions to see your energy curve",
-                getWidth() / 2f, getHeight() / 2f + 50, textPaint);
+                getWidth() / 2f, getHeight() / 2f + 50, emptyTextPaint);
     }
 }

@@ -1,12 +1,17 @@
 package ch.inf.usi.mindbricks.ui.nav.analytics;
 
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,20 +19,25 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.model.visual.DateRange;
+import ch.inf.usi.mindbricks.model.visual.StreakDay;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 import ch.inf.usi.mindbricks.ui.charts.AIRecommendationCardView;
 import ch.inf.usi.mindbricks.ui.charts.DailyTimelineChartView;
@@ -38,14 +48,16 @@ import ch.inf.usi.mindbricks.ui.charts.QualityHeatmapChartView;
 import ch.inf.usi.mindbricks.ui.charts.SessionHistoryAdapter;
 import ch.inf.usi.mindbricks.ui.charts.StreakCalendarView;
 import ch.inf.usi.mindbricks.ui.charts.WeeklyFocusChartView;
+import ch.inf.usi.mindbricks.util.database.DataProcessor;
 import ch.inf.usi.mindbricks.util.database.TestDataGenerator;
 
 /**
  * Fragment that displays analytics and visualizations of study sessions.
- *
+ * Uses Material 3 color theming for consistent visual design.
  */
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = "AnalyticsFragment";
+    private static final int TEST_DATA_COUNT = 20;
 
     // ViewModel
     private AnalyticsViewModel viewModel;
@@ -54,11 +66,12 @@ public class AnalyticsFragment extends Fragment {
     private WeeklyFocusChartView weeklyFocusChart;
     private HourlyDistributionChartView hourlyDistributionChart;
     private DailyTimelineChartView dailyTimelineChart;
-    private EnergyCurveChartView energyCurveChart;
     private QualityHeatmapChartView qualityHeatmapChart;
     private StreakCalendarView streakCalendarView;
     private GoalRingsView goalRingsView;
+    private EnergyCurveChartView energyCurveChart;
     private AIRecommendationCardView aiRecommendationView;
+    private LinearLayout aiLegendContainer;
 
     // Session history
     private RecyclerView sessionHistoryRecycler;
@@ -70,8 +83,9 @@ public class AnalyticsFragment extends Fragment {
     private TextView emptyStateText;
     private View chartsContainer;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private ExtendedFloatingActionButton filterFab;
 
-    // Tab nav
+    // Tab navigation
     private TabLayout tabLayout;
     private View overviewContainer;
     private View insightsContainer;
@@ -92,50 +106,19 @@ public class AnalyticsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // ViewModelProvider ensures same instance survives configuration changes
         viewModel = new ViewModelProvider(this).get(AnalyticsViewModel.class);
 
-        // Initialize all views
         initializeViews(view);
-
-        // Setup tab navigation
         setupTabs();
-
-        // Setup RecyclerView for session history
         setupRecyclerView();
-
-        // Observe ViewModel LiveData
         observeViewModel();
-
-        // Generate test data if database is empty
         generateTestDataIfNeeded();
 
-        // Load data (30 days by default)
-        viewModel.loadAnalyticsData(30);
+        Log.d(TAG, "All setup complete, now loading initial data");
+        viewModel.loadLastNDays(30);
     }
 
-    private void generateTestDataIfNeeded() {
-        viewModel.getSessionHistory().observe(getViewLifecycleOwner(), sessions -> {
-            if (sessions != null && sessions.isEmpty()) {
-                // Only generate if truly empty
-                TestDataGenerator.addTestSessions(requireContext(), 20);
-
-                // Wait for insertion, then reload
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    viewModel.refreshData();
-                }, 2000);  // Give it time to insert
-            }
-        });
-    }
-
-    /**
-     * Initialize all views from the layout.
-     *
-     * @param view Root view
-     */
     private void initializeViews(View view) {
-        Log.d(TAG, "Initializing views...");
-
         // Tab navigation
         tabLayout = view.findViewById(R.id.analyticsTabLayout);
         overviewContainer = view.findViewById(R.id.overviewContainer);
@@ -146,11 +129,12 @@ public class AnalyticsFragment extends Fragment {
         weeklyFocusChart = view.findViewById(R.id.weeklyFocusChart);
         hourlyDistributionChart = view.findViewById(R.id.hourlyDistributionChart);
         dailyTimelineChart = view.findViewById(R.id.dailyTimelineChart);
-        //energyCurveChart = view.findViewById(R.id.energyCurveChart);
-        //qualityHeatmapChart = view.findViewById(R.id.qualityHeatmapChart);
-        //streakCalendarView = view.findViewById(R.id.streakCalendarView);
-        //goalRingsView = view.findViewById(R.id.goalRingsView);
-        //aiRecommendationView = view.findViewById(R.id.aiRecommendationView);
+        energyCurveChart = view.findViewById(R.id.energyCurveChart);
+        qualityHeatmapChart = view.findViewById(R.id.qualityHeatmapChart);
+        streakCalendarView = view.findViewById(R.id.streakCalendarView);
+        goalRingsView = view.findViewById(R.id.goalRingsView);
+        aiRecommendationView = view.findViewById(R.id.aiRecommendationView);
+        aiLegendContainer = view.findViewById(R.id.legendContainer);
 
         // History
         sessionHistoryRecycler = view.findViewById(R.id.sessionHistoryRecycler);
@@ -163,21 +147,17 @@ public class AnalyticsFragment extends Fragment {
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
 
         // Setup swipe to refresh
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            viewModel.refreshData();
-        });
+        swipeRefreshLayout.setOnRefreshListener(() -> viewModel.refreshData());
 
-        FloatingActionButton fab = view.findViewById(R.id.analyticsFilterFab);
-        if (fab != null) {
-            fab.setOnClickListener(v -> showFilterDialog());
+        // Setup filter FAB
+        filterFab = view.findViewById(R.id.analyticsFilterFab);
+        if (filterFab != null) {
+            filterFab.setOnClickListener(v -> showFilterDialog());
         }
 
-        Log.d(TAG, "All views initialized successfully");
+        Log.d(TAG, "Views initialized successfully");
     }
 
-    /**
-     * Setup tab navigation
-     */
     private void setupTabs() {
         Log.d(TAG, "Setting up tabs...");
 
@@ -189,12 +169,12 @@ public class AnalyticsFragment extends Fragment {
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-                // Nothing so far
+                // No action needed
             }
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-                // Nothing as well
+                // No action needed
             }
         });
 
@@ -202,9 +182,6 @@ public class AnalyticsFragment extends Fragment {
         switchContent(0);
     }
 
-    /**
-     * Switch between different tab content
-     */
     private void switchContent(int position) {
         Log.d(TAG, "Switching to tab position: " + position);
 
@@ -232,9 +209,6 @@ public class AnalyticsFragment extends Fragment {
         }
     }
 
-    /**
-     * Setup RecyclerView with adapter and layout manager.
-     */
     private void setupRecyclerView() {
         // Create adapter with click listener
         sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
@@ -256,6 +230,7 @@ public class AnalyticsFragment extends Fragment {
         // Set adapter
         sessionHistoryRecycler.setAdapter(sessionHistoryAdapter);
 
+        // Add divider decoration
         sessionHistoryRecycler.addItemDecoration(
                 new androidx.recyclerview.widget.DividerItemDecoration(
                         requireContext(),
@@ -266,63 +241,253 @@ public class AnalyticsFragment extends Fragment {
         Log.d(TAG, "RecyclerView setup complete");
     }
 
-    /**
-     * Observe all LiveData from ViewModel.
-     * This is where the Fragment reacts to data changes.
-     */
     private void observeViewModel() {
-        Log.d("Fragment", "=== Setting up observers ===");
+        Log.d(TAG, "=== Setting up observers ===");
+
+        // Observe date range changes
+        viewModel.getDateRange().observe(getViewLifecycleOwner(), dateRange -> {
+            if (dateRange != null) {
+                String displayText = dateRange.getDisplayName();
+                Log.d(TAG, "Current range: " + dateRange.getDisplayName());
+
+                // Update FAB text
+                if (filterFab != null) {
+                    filterFab.setText(displayText);
+                }
+            }
+        });
 
         // Observe view state for loading/error/success
         viewModel.getViewState().observe(getViewLifecycleOwner(), state -> {
-            Log.d("Fragment", "*** ViewState changed to: " + state + " ***");
             updateUIState(state);
         });
 
         // Observe weekly stats
         viewModel.getWeeklyStats().observe(getViewLifecycleOwner(), stats -> {
-            Log.d("Fragment", "Weekly stats received: " + (stats != null ? "Yes" : "null"));
-            if (stats != null) {
+            Log.d(TAG, "Weekly stats received: " + (stats != null ? "Yes" : "null"));
+            if (stats != null && weeklyFocusChart != null) {
                 weeklyFocusChart.setData(stats);
             }
         });
 
         // Observe hourly distribution
         viewModel.getHourlyStats().observe(getViewLifecycleOwner(), stats -> {
-            Log.d("Fragment", "Hourly stats received: " + (stats != null ? stats.size() + " items" : "null"));
-            if (stats != null) {
+            Log.d(TAG, "Hourly stats received: " + (stats != null ? stats.size() + " items" : "null"));
+            if (stats != null && hourlyDistributionChart != null) {
                 hourlyDistributionChart.setData(stats);
             }
         });
 
         // Observe daily recommendations
         viewModel.getDailyRecommendation().observe(getViewLifecycleOwner(), recommendation -> {
-            Log.d("Fragment", "Recommendation received: " + (recommendation != null ? "Yes" : "null"));
-            if (recommendation != null) {
+            Log.d(TAG, "Recommendation received: " + (recommendation != null ? "Yes" : "null"));
+            if (recommendation != null && dailyTimelineChart != null) {
                 dailyTimelineChart.setData(recommendation);
+            }
+        });
+
+        // Observe energy curve
+        viewModel.getEnergyCurveData().observe(getViewLifecycleOwner(), data -> {
+            Log.d(TAG, "Energy curve data received: " + (data != null ? data.size() + " items" : "null"));
+            if (data != null && energyCurveChart != null) {
+                energyCurveChart.setData(data);
+            }
+        });
+
+        // Observe heatmap
+        viewModel.getHeatmapData().observe(getViewLifecycleOwner(), data -> {
+            Log.d(TAG, "Heatmap data received: " + (data != null ? data.size() + " items" : "null"));
+            if (data != null && qualityHeatmapChart != null) {
+                qualityHeatmapChart.setData(data);
+            }
+        });
+
+        // Observe streak calendar
+        viewModel.getStreakData().observe(getViewLifecycleOwner(), data -> {
+            Log.d(TAG, "Streak data: " + (data != null ? data.size() : "null"));
+            if (data != null && streakCalendarView != null) {
+                // Initial data load
+                streakCalendarView.setData(data);
+
+                // Set click listener
+                streakCalendarView.setOnDayClickListener(this::showSessionsForDay);
+            }
+        });
+
+        // Observe goal rings
+        viewModel.getGoalRingsData().observe(getViewLifecycleOwner(), rings -> {
+            Log.d(TAG, "Goal rings received: " + (rings != null ? rings.size() + " items" : "null"));
+            if (rings != null && goalRingsView != null) {
+                goalRingsView.setData(rings);
+            }
+        });
+
+        // Observe AI Recommendations
+        viewModel.getAiRecommendations().observe(getViewLifecycleOwner(), recommendation -> {
+            Log.d(TAG, "AI Recommendations received: " +
+                    (recommendation != null ? recommendation.size() + " items" : "null"));
+
+            if (recommendation != null && !recommendation.isEmpty() && aiRecommendationView != null) {
+                Log.d(TAG, "Setting data on aiRecommendationView");
+                aiRecommendationView.setData(recommendation.get(0));
+
+                // Post to ensure view has been laid out
+                aiRecommendationView.post(() -> {
+                    Log.d(TAG, "Updating AI legend");
+                    updateAILegend();
+                });
+            } else {
+                Log.w(TAG, "Cannot update AI recommendation: recommendation=" +
+                        (recommendation != null) + ", view=" + (aiRecommendationView != null));
             }
         });
 
         // Observe session history
         viewModel.getSessionHistory().observe(getViewLifecycleOwner(), sessions -> {
-            Log.d("Fragment", "Session history received: " + (sessions != null ? sessions.size() + " items" : "null"));
+            Log.d(TAG, "Session history received: " + (sessions != null ? sessions.size() + " items" : "null"));
             if (sessions != null) {
                 sessionHistoryAdapter.setData(sessions);
+
+                // Update session count display
+                if (sessionCountText != null) {
+                    String countText = sessions.size() + " session" + (sessions.size() == 1 ? "" : "s");
+                    sessionCountText.setText(countText);
+                }
             }
         });
 
-
-        Log.d("Fragment", "=== All observers registered ===");
+        Log.d(TAG, "=== All observers registered ===");
     }
 
     /**
-     * Update UI based on view state.
-     * Shows/hides loading, error, empty, and content views.
-     *
-     * @param state Current view state
+     * Updates the AI recommendation legend with themed colors and styling
      */
+    private void updateAILegend() {
+        if (aiLegendContainer == null || aiRecommendationView == null) {
+            Log.w(TAG, "Legend container or chart view is null");
+            return;
+        }
+
+        aiLegendContainer.removeAllViews();
+
+        List<AIRecommendationCardView.LegendItem> items = aiRecommendationView.getLegendItems();
+
+        if (items.isEmpty()) {
+            Log.d(TAG, "No legend items to display");
+            return;
+        }
+
+        Log.d(TAG, "Updating legend with " + items.size() + " items");
+
+        // Add legend title with themed color
+        TextView legendTitle = new TextView(requireContext());
+        legendTitle.setText("Activity Types");
+        legendTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        legendTitle.setTextColor(ContextCompat.getColor(requireContext(), R.color.analytics_text_primary));
+        legendTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        titleParams.setMargins(0, 0, 0, dpToPx(8));
+        legendTitle.setLayoutParams(titleParams);
+        aiLegendContainer.addView(legendTitle);
+
+        // Create rows for legend items
+        LinearLayout row = null;
+        int itemsPerRow = 3;
+
+        for (int i = 0; i < items.size(); i++) {
+            if (i % itemsPerRow == 0) {
+                row = new LinearLayout(requireContext());
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                ));
+                aiLegendContainer.addView(row);
+            }
+
+            View legendItem = createAILegendItem(items.get(i));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1.0f  // Equal weight
+            );
+            params.setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+            legendItem.setLayoutParams(params);
+            row.addView(legendItem);
+        }
+
+        // Add summary message with themed color
+        String summary = aiRecommendationView.getSummaryMessage();
+        if (summary != null && !summary.isEmpty()) {
+            TextView summaryView = new TextView(requireContext());
+            summaryView.setText(summary);
+            summaryView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            summaryView.setTextColor(ContextCompat.getColor(requireContext(), R.color.analytics_text_secondary));
+            summaryView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            summaryView.setPadding(dpToPx(8), dpToPx(16), dpToPx(8), 0);
+            aiLegendContainer.addView(summaryView);
+        }
+
+        Log.d(TAG, "Legend update complete");
+    }
+
+    /**
+     * Creates a single legend item with color box and label
+     */
+    private View createAILegendItem(AIRecommendationCardView.LegendItem item) {
+        LinearLayout layout = new LinearLayout(requireContext());
+        layout.setOrientation(LinearLayout.HORIZONTAL);
+        layout.setGravity(Gravity.CENTER_VERTICAL);
+        layout.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+
+        // Create rounded color box
+        View colorBox = new View(requireContext());
+
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(Color.parseColor(item.colorHex));
+        drawable.setCornerRadius(dpToPx(4));
+        colorBox.setBackground(drawable);
+
+        LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(
+                dpToPx(16), dpToPx(16)
+        );
+        boxParams.setMargins(0, 0, dpToPx(8), 0);
+        colorBox.setLayoutParams(boxParams);
+        layout.addView(colorBox);
+
+        // Create label with themed text color
+        TextView label = new TextView(requireContext());
+        label.setText(item.name);
+        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        label.setTextColor(ContextCompat.getColor(requireContext(), R.color.analytics_text_primary));
+        layout.addView(label);
+
+        return layout;
+    }
+
+    private void showSessionsForDay(StreakDay day) {
+        // TODO: Query database for sessions on this date
+
+        String message = String.format(Locale.getDefault(),
+                "Day: %d/%d/%d\nStatus: %s\nMinutes: %d",
+                day.getDayOfMonth(), day.getMonth() + 1, day.getYear(),
+                day.getStatus().toString(),
+                day.getTotalMinutes()
+        );
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Study Sessions")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
     private void updateUIState(AnalyticsViewModel.ViewState state) {
-        Log.d("Fragment", "=== updateUIState called with: " + state + " ===");
+        Log.d(TAG, "=== updateUIState called with: " + state + " ===");
 
         // Stop refresh animation if running
         swipeRefreshLayout.setRefreshing(false);
@@ -347,7 +512,19 @@ public class AnalyticsFragment extends Fragment {
                 progressBar.setVisibility(View.GONE);
                 chartsContainer.setVisibility(View.GONE);
                 emptyStateText.setVisibility(View.VISIBLE);
-                emptyStateText.setText("No study sessions yet.\nStart studying to see your analytics!");
+
+                // Set themed text color for empty state
+                emptyStateText.setTextColor(ContextCompat.getColor(requireContext(), R.color.empty_state_text));
+
+                // Show message based on current range
+                DateRange currentRange = viewModel.getCurrentDateRange();
+                if (currentRange != null) {
+                    String message = "No sessions found for " + currentRange.getDisplayName() +
+                            ".\n\nTry a different time range or start studying!";
+                    emptyStateText.setText(message);
+                } else {
+                    emptyStateText.setText("No study sessions yet.\nStart studying to see your analytics!");
+                }
                 break;
 
             case ERROR:
@@ -355,19 +532,64 @@ public class AnalyticsFragment extends Fragment {
                 progressBar.setVisibility(View.GONE);
                 chartsContainer.setVisibility(View.GONE);
                 emptyStateText.setVisibility(View.VISIBLE);
+                emptyStateText.setTextColor(ContextCompat.getColor(requireContext(), R.color.md_theme_error));
                 emptyStateText.setText("Error loading analytics");
                 Toast.makeText(getContext(), "Error loading analytics data", Toast.LENGTH_SHORT).show();
                 break;
         }
 
-        Log.d("Fragment", "UI state update complete");
+        Log.d(TAG, "UI state update complete");
     }
 
-    /**
-     * Show detailed dialog for a study session.
-     *
-     * @param session Session to show
-     */
+    private void showFilterDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Select Time Range");
+
+        String[] options = {
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Month",
+                "Last Month",
+                "All Time"
+        };
+
+        builder.setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    viewModel.loadLastNDays(7);
+                    break;
+
+                case 1:
+                    viewModel.loadLastNDays(30);
+                    break;
+
+                case 2:
+                    viewModel.loadLastNDays(90);
+                    break;
+
+                case 3:
+                    viewModel.loadCurrentMonth();
+                    break;
+
+                case 4:
+                    Calendar cal = Calendar.getInstance();
+                    cal.add(Calendar.MONTH, -1);
+                    int lastMonth = cal.get(Calendar.MONTH);
+                    int lastMonthYear = cal.get(Calendar.YEAR);
+                    viewModel.loadMonth(lastMonthYear, lastMonth);
+                    break;
+
+                case 5:
+                    viewModel.loadAllTime();
+                    break;
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
     private void showSessionDetails(StudySession session) {
         // Inflate custom dialog layout
         View dialogView = LayoutInflater.from(getContext())
@@ -415,11 +637,6 @@ public class AnalyticsFragment extends Fragment {
                 .show();
     }
 
-    /**
-     * Show options dialog for long-press on session.
-     *
-     * @param session Session to show options for
-     */
     private void showSessionOptionsDialog(StudySession session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Session Options")
@@ -434,11 +651,6 @@ public class AnalyticsFragment extends Fragment {
                 .show();
     }
 
-    /**
-     * Show confirmation dialog before deleting session.
-     *
-     * @param session Session to delete
-     */
     private void confirmDeleteSession(StudySession session) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Session")
@@ -451,42 +663,20 @@ public class AnalyticsFragment extends Fragment {
                 .show();
     }
 
-    /**
-     * Show filter dialog for date range selection.
-     */
-    private void showFilterDialog() {
-        String[] options = {"Last 7 days", "Last 30 days", "Last 90 days", "All time"};
+    private void generateTestDataIfNeeded() {
+        viewModel.getSessionHistory().observe(getViewLifecycleOwner(), sessions -> {
+            if (sessions != null && sessions.isEmpty()) {
+                Log.d(TAG, "No sessions found, generating test data...");
+                TestDataGenerator.addTestSessions(requireContext(), TEST_DATA_COUNT);
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Select Time Range")
-                .setItems(options, (dialog, which) -> {
-                    int days;
-                    switch (which) {
-                        case 0: days = 7; break;
-                        case 1: days = 30; break;
-                        case 2: days = 90; break;
-                        default: days = 365 * 10; break;
-                    }
-                    viewModel.loadAnalyticsData(days);
-                })
-                .show();
+                // Wait for insertion, then reload
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    viewModel.refreshData();
+                }, 2000);  // Give it time to insert
+            }
+        });
     }
 
-    /**
-     * Show error message to user.
-     *
-     * @param message Error message
-     */
-    private void showError(String message) {
-        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
-    }
-
-    /**
-     * Format duration in human-readable format.
-     *
-     * @param totalMinutes Total minutes
-     * @return Formatted string
-     */
     private String formatDuration(int totalMinutes) {
         int hours = totalMinutes / 60;
         int minutes = totalMinutes % 60;
@@ -499,20 +689,44 @@ public class AnalyticsFragment extends Fragment {
         }
     }
 
-    /**
-     * Lifecycle: Resume - refresh data if needed.
-     */
+    private void loadStreakDataForMonth(int month, int year) {
+        List<StudySession> allSessions = viewModel.getSessionHistory().getValue();
+
+        if (allSessions == null) {
+            Log.w(TAG, "No sessions available for streak calendar");
+            return;
+        }
+
+        List<StreakDay> monthData = DataProcessor.calculateStreakCalendar(
+                allSessions,
+                60,
+                month,
+                year
+        );
+
+        if (streakCalendarView != null) {
+            streakCalendarView.setData(monthData);
+        }
+    }
+
+    private int dpToPx(int dp) {
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                dp,
+                getResources().getDisplayMetrics()
+        );
+    }
+
     @Override
     public void onResume() {
         super.onResume();
-
-        // Refresh data when returning to fragment -> ended session in between etc.
+        Log.d(TAG, "Fragment resumed");
         viewModel.refreshData();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        Log.d(TAG, "onDestroyView");
+        Log.d(TAG, "Fragment view destroyed");
     }
 }

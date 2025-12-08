@@ -28,64 +28,6 @@ public class ChartStyleUtil {
     public static final int PROD_MEDIUM = COLOR_WARNING;
     public static final int PROD_HIGH = COLOR_SUCCESS;
 
-    // Chart text sizes
-    private static final float TEXT_SIZE_LABEL = 10f;
-    private static final float TEXT_SIZE_VALUE = 12f;
-    private static final float TEXT_SIZE_LEGEND = 11f;
-
-    /**
-     * Applies standard styling to any chart
-     */
-    public static void applyStandardStyle(Chart<?> chart, Context context) {
-        chart.setNoDataText("No data available");
-        chart.setNoDataTextColor(Color.GRAY);
-        chart.setBackgroundColor(Color.TRANSPARENT);
-        chart.animateY(800);
-
-        // Description
-        chart.getDescription().setEnabled(false);
-
-        // Legend
-        Legend legend = chart.getLegend();
-        legend.setTextSize(TEXT_SIZE_LEGEND);
-        legend.setForm(Legend.LegendForm.CIRCLE);
-        legend.setFormSize(8f);
-        legend.setXEntrySpace(10f);
-        legend.setYEntrySpace(5f);
-    }
-
-    /**
-     * Styles X-axis with standard settings
-     */
-    public static void styleXAxis(XAxis xAxis) {
-        xAxis.setTextSize(TEXT_SIZE_LABEL);
-        xAxis.setDrawGridLines(false);
-        xAxis.setDrawAxisLine(true);
-        xAxis.setAxisLineWidth(1f);
-        xAxis.setAxisLineColor(Color.LTGRAY);
-        xAxis.setTextColor(Color.DKGRAY);
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setGranularity(1f);
-        xAxis.setAvoidFirstLastClipping(true);
-    }
-
-    /**
-     * Styles Y-axis with standard settings
-     */
-    public static void styleYAxis(YAxis yAxis, boolean isLeft) {
-        yAxis.setTextSize(TEXT_SIZE_LABEL);
-        yAxis.setDrawGridLines(true);
-        yAxis.setGridLineWidth(0.5f);
-        yAxis.setGridColor(Color.LTGRAY);
-        yAxis.setDrawAxisLine(false);
-        yAxis.setTextColor(Color.DKGRAY);
-        yAxis.setGranularity(1f);
-
-        if (!isLeft) {
-            yAxis.setEnabled(false);
-        }
-    }
-
     /**
      * Gets color for productivity level
      *

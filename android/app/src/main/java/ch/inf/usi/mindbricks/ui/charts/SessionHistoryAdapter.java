@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
@@ -44,12 +45,10 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
 
     public void setData(List<StudySession> sessions) {
         this.sessions = sessions != null ? new ArrayList<>(sessions) : new ArrayList<>();
-        // Refresh entire list
         notifyDataSetChanged();
     }
 
     public void addSession(StudySession session) {
-        // Add at beginning -> sorted list
         sessions.add(0, session);
         notifyItemInserted(0);
     }
@@ -68,7 +67,6 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
     @NonNull
     @Override
     public SessionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Inflate the item layout
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_session_history, parent, false);
         return new SessionViewHolder(view);
@@ -85,7 +83,6 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
         return sessions.size();
     }
 
-
     class SessionViewHolder extends RecyclerView.ViewHolder {
 
         private final MaterialCardView cardView;
@@ -100,7 +97,6 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
         SessionViewHolder(@NonNull View itemView) {
             super(itemView);
 
-            // Find all views once during ViewHolder creation
             cardView = itemView.findViewById(R.id.sessionCard);
             colorIndicator = itemView.findViewById(R.id.colorIndicator);
             dateText = itemView.findViewById(R.id.sessionDate);
@@ -131,7 +127,7 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
             focusScoreText.setText(String.format(Locale.getDefault(), "%.0f%%", focusScore));
             focusScoreText.setTextColor(getFocusScoreColor(focusScore));
 
-            // Set additional stats (noise, light, pickups)
+            // Set additional stats
             String stats = formatStats(session);
             statsText.setText(stats);
 
@@ -150,7 +146,6 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
                 return false;
             });
 
-            // Add ripple effect feedback
             cardView.setClickable(true);
             cardView.setFocusable(true);
         }
@@ -166,29 +161,24 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
             }
         }
 
-
         private String formatStats(StudySession session) {
             List<String> stats = new ArrayList<>();
 
-            // Add noise level if available
             if (session.getAvgNoiseLevel() > 0) {
                 stats.add(String.format(Locale.getDefault(),
                         "Noise: %.0f%%", session.getAvgNoiseLevel()));
             }
 
-            // Add light level if available
             if (session.getAvgLightLevel() > 0) {
                 stats.add(String.format(Locale.getDefault(),
                         "Light: %.0f%%", session.getAvgLightLevel()));
             }
 
-            // Add phone pickups
             if (session.getPhonePickupCount() > 0) {
                 stats.add(String.format(Locale.getDefault(),
                         "%d pickups", session.getPhonePickupCount()));
             }
 
-            // Join with separator
             if (stats.isEmpty()) {
                 return "No additional stats";
             }
@@ -198,11 +188,11 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
 
         private int getFocusScoreColor(float score) {
             if (score >= 70) {
-                return Color.rgb(76, 175, 80); // Green
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_green);
             } else if (score >= 40) {
-                return Color.rgb(255, 152, 0); // Orange
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_orange);
             } else {
-                return Color.rgb(244, 67, 54); // Red
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_red);
             }
         }
     }
