@@ -9,10 +9,12 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 import java.util.Locale;
 
+import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 
 /**
@@ -34,6 +36,11 @@ public class QualityHeatmapChartView extends View {
     private float padding = 80f;
     private float topPadding = 100f;
 
+    // Theme colors
+    private int colorGrid;
+    private int colorTextPrimary;
+    private int colorTextSecondary;
+
     public QualityHeatmapChartView(Context context) {
         super(context);
         init();
@@ -45,23 +52,28 @@ public class QualityHeatmapChartView extends View {
     }
 
     private void init() {
+        Context context = getContext();
+        colorGrid = ContextCompat.getColor(context, R.color.analytics_grid_line_major);
+        colorTextPrimary = ContextCompat.getColor(context, R.color.analytics_text_primary);
+        colorTextSecondary = ContextCompat.getColor(context, R.color.analytics_text_secondary);
+
         cellPaint = new Paint();
         cellPaint.setStyle(Paint.Style.FILL);
         cellPaint.setAntiAlias(true);
 
         borderPaint = new Paint();
-        borderPaint.setColor(Color.parseColor("#E0E0E0"));
+        borderPaint.setColor(colorGrid);
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(1f);
         borderPaint.setAntiAlias(true);
 
         textPaint = new Paint();
-        textPaint.setColor(Color.parseColor("#757575"));
+        textPaint.setColor(colorTextSecondary);
         textPaint.setTextSize(28f);
         textPaint.setAntiAlias(true);
 
         titlePaint = new Paint();
-        titlePaint.setColor(Color.parseColor("#212121"));
+        titlePaint.setColor(colorTextPrimary);
         titlePaint.setTextSize(48f);
         titlePaint.setAntiAlias(true);
         titlePaint.setFakeBoldText(true);
@@ -75,8 +87,6 @@ public class QualityHeatmapChartView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
-        canvas.drawText("Quality Heatmap", padding, 60, titlePaint);
 
         if (cells == null || cells.isEmpty()) {
             drawEmptyState(canvas);
@@ -124,7 +134,6 @@ public class QualityHeatmapChartView extends View {
         for (HeatmapCell cell : cells) {
             if (cell.getSessionCount() == 0) continue;
 
-            // Calculate position
             int dayIndex = cell.getDayOfMonth() - getMinDay();
             int hourIndex = cell.getHour();
 
@@ -148,6 +157,7 @@ public class QualityHeatmapChartView extends View {
 
         textPaint.setTextAlign(Paint.Align.LEFT);
         textPaint.setTextSize(28f);
+        textPaint.setColor(colorTextSecondary);
         canvas.drawText("Quality: ", legendX, legendY + 25, textPaint);
 
         legendX += 120;
@@ -171,20 +181,22 @@ public class QualityHeatmapChartView extends View {
     }
 
     private int getColorForQuality(float quality) {
+        Context context = getContext();
+
         if (quality >= 85) {
-            return Color.parseColor("#1B5E20"); // Dark green (excellent)
+            return ContextCompat.getColor(context, R.color.chart_scale_7);
         }
         else if (quality >= 70) {
-            return Color.parseColor("#4CAF50"); // Green (high)
+            return ContextCompat.getColor(context, R.color.chart_scale_5);
         }
         else if (quality >= 50) {
-            return Color.parseColor("#FDD835"); // Yellow (medium)
+            return ContextCompat.getColor(context, R.color.chart_scale_3);
         }
         else if (quality >= 30) {
-            return Color.parseColor("#FF9800"); // Orange (low)
+            return ContextCompat.getColor(context, R.color.chart_scale_2);
         }
         else {
-            return Color.parseColor("#F44336"); // Red (very low)
+            return ContextCompat.getColor(context, R.color.chart_scale_0);
         }
     }
 
@@ -201,9 +213,12 @@ public class QualityHeatmapChartView extends View {
     }
 
     private void drawEmptyState(Canvas canvas) {
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setTextSize(40f);
+        Paint emptyPaint = new Paint(textPaint);
+        emptyPaint.setColor(ContextCompat.getColor(getContext(), R.color.empty_state_text));
+        emptyPaint.setTextAlign(Paint.Align.CENTER);
+        emptyPaint.setTextSize(40f);
+
         String text = "No heatmap data";
-        canvas.drawText(text, getWidth() / 2f, getHeight() / 2f, textPaint);
+        canvas.drawText(text, getWidth() / 2f, getHeight() / 2f, emptyPaint);
     }
 }

@@ -5,9 +5,9 @@ package ch.inf.usi.mindbricks.model.visual;
  */
 public class GoalRing {
     private String title;
-    private float current;          // Current value
-    private float target;           // Target value
-    private int color;              // Ring color
+    private float current;
+    private float target;
+    private int color;
     private String unit;
 
     public GoalRing(String title, float current, float target, int color, String unit) {

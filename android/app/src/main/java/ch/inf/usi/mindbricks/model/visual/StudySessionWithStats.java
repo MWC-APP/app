@@ -17,7 +17,7 @@ public class StudySessionWithStats {
         this.avgLightLevel = avgLightLevel;
         this.phonePickupCount = phonePickupCount;
     }
-    
+
     // getters delegating to session
     public long getId() { return session.getId(); }
     public long getTimestamp() { return session.getTimestamp(); }
@@ -27,7 +27,7 @@ public class StudySessionWithStats {
     public float getFocusScore() { return session.getFocusScore(); }
     public int getCoinsEarned() { return session.getCoinsEarned(); }
     public String getNotes() { return session.getNotes(); }
-    
+
     // getters for metrics
     public float getAvgNoiseLevel() { return avgNoiseLevel; }
     public float getAvgLightLevel() { return avgLightLevel; }

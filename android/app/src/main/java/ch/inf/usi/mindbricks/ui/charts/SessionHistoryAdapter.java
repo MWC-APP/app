@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
@@ -131,7 +132,7 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
             focusScoreText.setText(String.format(Locale.getDefault(), "%.0f%%", focusScore));
             focusScoreText.setTextColor(getFocusScoreColor(focusScore));
 
-            // Set additional stats (noise, light, pickups)
+            // Set additional stats
             String stats = formatStats(session);
             statsText.setText(stats);
 
@@ -166,7 +167,6 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
             }
         }
 
-
         private String formatStats(StudySessionWithStats session) {
             List<String> stats = new ArrayList<>();
 
@@ -198,11 +198,11 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
 
         private int getFocusScoreColor(float score) {
             if (score >= 70) {
-                return Color.rgb(76, 175, 80); // Green
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_green);
             } else if (score >= 40) {
-                return Color.rgb(255, 152, 0); // Orange
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_orange);
             } else {
-                return Color.rgb(244, 67, 54); // Red
+                return ContextCompat.getColor(itemView.getContext(), R.color.analytics_accent_red);
             }
         }
     }

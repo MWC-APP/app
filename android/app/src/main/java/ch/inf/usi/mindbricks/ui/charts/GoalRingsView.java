@@ -9,10 +9,12 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 import java.util.Locale;
 
+import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.visual.GoalRing;
 
 /**
@@ -33,6 +35,11 @@ public class GoalRingsView extends View {
     private float ringStrokeWidth = 35f;
     private float ringSpacing = 15f;
 
+    // Theme colors
+    private int colorBackground;
+    private int colorTextPrimary;
+    private int colorTextSecondary;
+
     public GoalRingsView(Context context) {
         super(context);
         init();
@@ -44,6 +51,11 @@ public class GoalRingsView extends View {
     }
 
     private void init() {
+        Context context = getContext();
+        colorBackground = ContextCompat.getColor(context, R.color.goal_ring_background);
+        colorTextPrimary = ContextCompat.getColor(context, R.color.analytics_text_primary);
+        colorTextSecondary = ContextCompat.getColor(context, R.color.analytics_text_secondary);
+
         ringPaint = new Paint();
         ringPaint.setStyle(Paint.Style.STROKE);
         ringPaint.setStrokeWidth(ringStrokeWidth);
@@ -53,25 +65,25 @@ public class GoalRingsView extends View {
         backgroundPaint = new Paint();
         backgroundPaint.setStyle(Paint.Style.STROKE);
         backgroundPaint.setStrokeWidth(ringStrokeWidth);
-        backgroundPaint.setColor(Color.parseColor("#E0E0E0"));
+        backgroundPaint.setColor(colorBackground);
         backgroundPaint.setAntiAlias(true);
 
         textPaint = new Paint();
-        textPaint.setColor(Color.parseColor("#212121"));
-        textPaint.setTextSize(48f);
+        textPaint.setColor(colorTextPrimary);
+        textPaint.setTextSize(45f);
         textPaint.setAntiAlias(true);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setFakeBoldText(true);
 
         titlePaint = new Paint();
-        titlePaint.setColor(Color.parseColor("#212121"));
-        titlePaint.setTextSize(48f);
+        titlePaint.setColor(colorTextSecondary);
+        titlePaint.setTextSize(40f);
         titlePaint.setAntiAlias(true);
         titlePaint.setFakeBoldText(true);
 
         labelPaint = new Paint();
-        labelPaint.setColor(Color.parseColor("#757575"));
-        labelPaint.setTextSize(28f);
+        labelPaint.setColor(colorTextSecondary);
+        labelPaint.setTextSize(35f);
         labelPaint.setAntiAlias(true);
         labelPaint.setTextAlign(Paint.Align.LEFT);
     }
@@ -87,7 +99,7 @@ public class GoalRingsView extends View {
 
         // Draw title
         titlePaint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("Today's Goals", 60, 60, titlePaint);
+        canvas.drawText("How did you do today:", 50, 30, titlePaint);
 
         if (rings == null || rings.isEmpty()) {
             drawEmptyState(canvas);
@@ -95,7 +107,7 @@ public class GoalRingsView extends View {
         }
 
         centerX = getWidth() / 2f;
-        centerY = (getHeight() / 2f) + 50;
+        centerY = (getHeight() / 2f) - 110.f;
 
         drawRings(canvas);
         drawCenterText(canvas);
@@ -103,7 +115,7 @@ public class GoalRingsView extends View {
     }
 
     private void drawRings(Canvas canvas) {
-        float baseRadius = 180f;
+        float baseRadius = 250f;
 
         for (int i = 0; i < rings.size(); i++) {
             GoalRing ring = rings.get(i);
@@ -141,17 +153,18 @@ public class GoalRingsView extends View {
         // Draw percentage
         String percentText = String.format(Locale.getDefault(), "%.0f%%", avgProgress);
         textPaint.setTextSize(72f);
+        textPaint.setColor(colorTextPrimary);
         canvas.drawText(percentText, centerX, centerY + 20, textPaint);
 
         // Draw subtitle
         Paint subtitlePaint = new Paint(textPaint);
         subtitlePaint.setTextSize(28f);
-        subtitlePaint.setColor(Color.parseColor("#757575"));
+        subtitlePaint.setColor(colorTextSecondary);
         canvas.drawText("Complete", centerX, centerY + 60, subtitlePaint);
     }
 
     private void drawLabels(Canvas canvas) {
-        float startY = centerY + 250;
+        float startY = centerY + 350f;
         float lineHeight = 70f;
 
         for (int i = 0; i < rings.size(); i++) {
@@ -168,14 +181,14 @@ public class GoalRingsView extends View {
             String label = ring.getTitle();
             labelPaint.setTextAlign(Paint.Align.LEFT);
             labelPaint.setTextSize(32f);
-            labelPaint.setColor(Color.parseColor("#212121"));
+            labelPaint.setColor(colorTextPrimary);
             canvas.drawText(label, 120, y - 10, labelPaint);
 
             // Draw progress text
             String progressText = String.format(Locale.getDefault(),
                     "%.0f / %.0f %s", ring.getCurrent(), ring.getTarget(), ring.getUnit());
             labelPaint.setTextSize(28f);
-            labelPaint.setColor(Color.parseColor("#757575"));
+            labelPaint.setColor(colorTextSecondary);
             canvas.drawText(progressText, 120, y + 25, labelPaint);
 
             // Draw achievement icon
@@ -191,9 +204,9 @@ public class GoalRingsView extends View {
 
     private void drawEmptyState(Canvas canvas) {
         Paint emptyPaint = new Paint(textPaint);
-        emptyPaint.setColor(Color.parseColor("#757575"));
+        emptyPaint.setColor(ContextCompat.getColor(getContext(), R.color.empty_state_text));
         emptyPaint.setTextSize(36f);
 
-        canvas.drawText("No goals to display", centerX, getHeight() / 2f, emptyPaint);
+        canvas.drawText("No goals to display", getWidth() / 2f, getHeight() / 2f, emptyPaint);
     }
 }

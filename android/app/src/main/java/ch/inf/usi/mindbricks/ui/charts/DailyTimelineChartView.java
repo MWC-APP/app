@@ -8,6 +8,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
@@ -50,13 +51,16 @@ public class DailyTimelineChartView extends LinearLayout {
     public void setData(DailyRecommendation recommendation) {
         if (recommendation == null) {
             summaryText.setText("No recommendations available");
+            summaryText.setTextColor(ContextCompat.getColor(getContext(), R.color.empty_state_text));
             slotsContainer.removeAllViews();
             confidenceText.setText("");
             return;
         }
 
         summaryText.setText(recommendation.getReasonSummary());
+        summaryText.setTextColor(ContextCompat.getColor(getContext(), R.color.analytics_text_secondary));
         confidenceText.setText(String.format("Confidence: %d%%", recommendation.getConfidenceScore()));
+        confidenceText.setTextColor(ContextCompat.getColor(getContext(), R.color.analytics_text_tertiary));
 
         // Clear previous slots
         slotsContainer.removeAllViews();
@@ -79,15 +83,17 @@ public class DailyTimelineChartView extends LinearLayout {
         timeText.setText(slot.getTimeRange());
         scoreText.setText(String.format("%.0f%% focus expected", slot.getExpectedFocusScore()));
 
-        // Color code by score
+        // Color code by score using theme colors
         int color;
         if (slot.getExpectedFocusScore() >= 80) {
-            color = Color.parseColor("#4CAF50"); // Green
+            color = ContextCompat.getColor(getContext(), R.color.analytics_accent_green);
         } else if (slot.getExpectedFocusScore() >= 60) {
-            color = Color.parseColor("#FBC02D"); // Yellow
+            color = ContextCompat.getColor(getContext(), R.color.analytics_accent_yellow);
         } else {
-            color = Color.parseColor("#FB8C00"); // Orange
+            color = ContextCompat.getColor(getContext(), R.color.analytics_accent_orange);
         }
+
+        // Apply semi-transparent background
         slotView.setBackgroundColor(Color.argb(30, Color.red(color), Color.green(color), Color.blue(color)));
 
         slotsContainer.addView(slotView);

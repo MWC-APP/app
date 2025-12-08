@@ -69,7 +69,7 @@ public class HourlyDistributionChartView extends LinearLayout {
         lineChart.setPinchZoom(true);
         lineChart.setScaleEnabled(true);
         lineChart.setDoubleTapToZoomEnabled(true);
-        lineChart.setTouchEnabled(true); // Allow touch to see values
+        lineChart.setTouchEnabled(true);
 
         // Configure legend
         Legend legend = lineChart.getLegend();
@@ -116,7 +116,6 @@ public class HourlyDistributionChartView extends LinearLayout {
         rightAxis.setEnabled(false);
 
         // Apply standard styling
-        ChartStyleUtil.applyStandardStyle(lineChart, getContext());
     }
 
     public void setData(List<TimeSlotStats> hourlyStats) {
@@ -177,15 +176,14 @@ public class HourlyDistributionChartView extends LinearLayout {
         dataSet.setDrawCircleHole(false);
         dataSet.setValueTextSize(9f);
         dataSet.setValueTextColor(Color.DKGRAY);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER); // Smooth curves
+        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         dataSet.setCubicIntensity(0.2f);
 
         // Fill under line
         dataSet.setDrawFilled(true);
         dataSet.setFillColor(ChartStyleUtil.COLOR_PRIMARY);
-        dataSet.setFillAlpha(30); // Semi-transparent
+        dataSet.setFillAlpha(30);
 
-        // Format values
         dataSet.setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {

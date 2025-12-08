@@ -76,19 +76,7 @@ public class WeeklyFocusChartView extends LinearLayout {
      * This is called once during initialization.
      */
     private void setupChart() {
-        // Basic chart settings
-        barChart.getDescription().setEnabled(true);
-        barChart.setDrawGridBackground(false);
-        barChart.setDrawBarShadow(false);
-        barChart.setHighlightFullBarEnabled(true);
-        barChart.setPinchZoom(true);
-        barChart.setScaleEnabled(true);
-        barChart.setDoubleTapToZoomEnabled(true);
-        barChart.getLegend().setEnabled(false);
 
-        // Add some padding for better appearance
-        barChart.setExtraTopOffset(10f);
-        barChart.setExtraBottomOffset(10f);
 
         // Configure X axis (days of week)
         XAxis xAxis = barChart.getXAxis();
@@ -125,7 +113,6 @@ public class WeeklyFocusChartView extends LinearLayout {
         rightAxis.setEnabled(false);
 
         // Apply standard styling
-        ChartStyleUtil.applyStandardStyle(barChart, getContext());
     }
 
     /**
@@ -209,11 +196,11 @@ public class WeeklyFocusChartView extends LinearLayout {
 
     private int getColorForFocusScore(float focusScore) {
         if (focusScore >= 70) {
-            return ChartStyleUtil.PROD_HIGH; // Green for high productivity
+            return ChartStyleUtil.PROD_HIGH;
         } else if (focusScore >= 40) {
-            return ChartStyleUtil.PROD_MEDIUM; // Orange for medium
+            return ChartStyleUtil.PROD_MEDIUM;
         } else if (focusScore > 0) {
-            return ChartStyleUtil.PROD_LOW; // Red for low
+            return ChartStyleUtil.PROD_LOW;
         } else {
             return Color.LTGRAY; // Gray for no data
         }

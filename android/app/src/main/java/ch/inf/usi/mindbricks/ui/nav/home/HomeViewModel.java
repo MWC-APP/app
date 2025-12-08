@@ -4,7 +4,11 @@ import android.app.Application;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import java.util.concurrent.ExecutorService;
@@ -16,6 +20,7 @@ import ch.inf.usi.mindbricks.util.NotificationHelper;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 import ch.inf.usi.mindbricks.service.SensorService;
 
@@ -38,6 +43,8 @@ public class HomeViewModel extends AndroidViewModel {
     private final NotificationHelper notificationHelper;
     private long currentSessionId = -1;
     private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
+
+    public final MutableLiveData<Long> showQuestionnaireEvent = new MutableLiveData<>();
 
     public HomeViewModel(Application application) {
         super(application);
@@ -115,6 +122,10 @@ public class HomeViewModel extends AndroidViewModel {
         }.start();
     }
 
+    private void completeSession(long sessionID){
+        showQuestionnaireEvent.postValue(sessionID);
+    }
+
     // Starts a pause session
     // help source: https://www.reddit.com/r/developersIndia/comments/v5b06t/i_built_a_pomodoro_timer_to_demonstrate_how_a/
     private void startPauseSession(boolean isLongPause, int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
@@ -162,6 +173,14 @@ public class HomeViewModel extends AndroidViewModel {
         this.sessionCounter = 0;
         currentState.setValue(PomodoroState.IDLE);
         currentTime.setValue(0L);
+    }
+
+    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire) {
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            long id = db.sessionQuestionnaireDao().insert(questionnaire);
+            android.util.Log.d("HomeViewModel", "Questionnaire saved with ID: " + id);
+        });
     }
 
     private void completeSessionAndStopService() {
