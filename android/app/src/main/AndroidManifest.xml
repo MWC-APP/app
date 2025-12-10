@@ -4,11 +4,9 @@
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Audio: needed to record background noise during focus sessions -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <!-- Internet: needed to download the generated avatar from the APIs -->
     <uses-permission android:name="android.permission.INTERNET" />
-    
+
     <!-- Service Permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
@@ -29,7 +27,8 @@
         <activity
             android:name=".LauncherActivity"
             android:exported="true"
-            android:theme="@style/Theme.MindBricks">
+            android:theme="@style/Theme.MindBricks"
+            android:screenOrientation="portrait"> <!-- FIXED -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -39,17 +38,20 @@
         <!-- Remove ActionBar -->
         <activity
             android:name=".MainActivity"
-            android:theme="@style/Theme.MindBricks.NoActionBar" />
+            android:theme="@style/Theme.MindBricks.NoActionBar"
+            android:screenOrientation="portrait" />
 
         <!-- Onboarding activity without ActionBar -->
         <activity
             android:name=".ui.onboarding.OnboardingActivity"
-            android:theme="@style/Theme.MindBricks.NoActionBar" />
+            android:theme="@style/Theme.MindBricks.NoActionBar"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:label="@string/settings_title"
-            android:theme="@style/Theme.MindBricks.NoActionBar" />
+            android:theme="@style/Theme.MindBricks.NoActionBar"
+            android:screenOrientation="portrait" />
 
         <service
             android:name=".service.SensorService"
