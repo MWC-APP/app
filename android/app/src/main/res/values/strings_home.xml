@@ -1,0 +1,8 @@
+<resources>
+    <string name="set_session">Set session duration</string>
+    <string name="start_session">Start Study Session</string>
+    <string name="stop_session">Stop Session</string>
+    <string name="default_timer">30</string>
+    <string name="start_coin_balance">0</string>
+    <string name="start_timer_digits">"00:00:00"</string>
+</resources>

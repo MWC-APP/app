@@ -1,0 +1,10 @@
+<resources>
+    <string name="profile">Profile</string>
+    <string name="username">Username</string>
+    <string name="default_balance">0</string>
+    <string name="sprint_length_label">Sprint length label</string>
+    <string name="default_sprint_length">25 minute</string>
+    <string name="tags_label">Tags label</string>
+    <string name="no_tags_defined">No tags defined</string>
+    <string name="onboarding_sensors_pickup_fallback_in_use">fallback in use</string>
+</resources>
