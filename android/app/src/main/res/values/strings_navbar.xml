@@ -1,0 +1,33 @@
+<resources>
+
+
+    <!-- navbar -->
+    <string name="title_home">Home</string>
+    <string name="title_shop">Shop</string>
+    <string name="title_profile">Profile</string>
+
+
+
+        <!-- Home  -->
+    <string name="set_session">Set session duration</string>
+    <string name="start_session">Start Study Session</string>
+    <string name="stop_session">Stop Session</string>
+    <string name="default_timer">30</string>
+    <string name="start_coin_balance">0</string>
+    <string name="start_timer_digits">"00:00:00"</string>
+
+        <!-- Shop -->
+    <string name="shop_category_1">Furniture</string>
+    <string name="shop_category_2">Assets</string>
+
+
+    <!-- Profile -->
+    <string name="profile">Profile</string>
+    <string name="username">Username</string>
+    <string name="default_balance">0</string>
+    <string name="sprint_length_label">Sprint length label</string>
+    <string name="default_sprint_length">25 minute</string>
+    <string name="tags_label">Tags label</string>
+    <string name="no_tags_defined">No tags defined</string>
+    <string name="onboarding_sensors_pickup_fallback_in_use">fallback in use</string>
+</resources>
