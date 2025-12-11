@@ -121,6 +121,15 @@ public class PreferencesManager {
         preferences.edit().putString(PreferencesKey.USER_AVATAR_SEED.getName(), seed).apply();
     }
 
+    // -- User avatar URI --
+    public void setUserAvatarUri(String uri) {
+        preferences.edit().putString(PreferencesKey.USER_AVATAR_URI.getName(), uri).apply();
+    }
+
+    public String getUserAvatarUri() {
+        return preferences.getString(PreferencesKey.USER_AVATAR_URI.getName(), null);
+    }
+
     /**
      * Adds the ID of a newly purchased item to the set of owned items.
      *
@@ -195,4 +204,3 @@ public class PreferencesManager {
         preferences.edit().putInt(PreferencesKey.TIMER_LONG_PAUSE_DURATION.getName(), minutes).apply();
     }
 }
-

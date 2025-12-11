@@ -1,19 +1,28 @@
 package ch.inf.usi.mindbricks.ui.nav.profile;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.chip.Chip;
 
 import java.util.ArrayList;
@@ -35,12 +44,48 @@ public class ProfileFragment extends Fragment {
     private ProfileViewModel profileViewModel;
     private PreferencesManager prefs;
 
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+    private ActivityResultLauncher<String> pickImageLauncher;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // create the launcher for picking an image from the gallery
+        pickImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        try {
+                            final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                            requireActivity().getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                            prefs.setUserAvatarUri(uri.toString());
+                            loadLocalProfilePicture(uri);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(requireContext(), "Failed to save image.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+        );
+        // create the launcher to ask he user for permission to access the gallery
+        requestPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        pickImageLauncher.launch("image/*");
+                    } else {
+                        Toast.makeText(requireContext(), "Permission is required to select a profile picture.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         profileViewModel = new ViewModelProvider(requireActivity()).get(ProfileViewModel.class);
         prefs = new PreferencesManager(requireContext());
         binding = FragmentProfileBinding.inflate(inflater, container, false);
-
 
         allShopItems.add(new PurchasedItem("avatar_cool_1", "Cool Blue Avatar", R.drawable.ic_avatar_placeholder));
         allShopItems.add(new PurchasedItem("avatar_pro_2", "Pro Red Avatar", R.drawable.ic_avatar_placeholder));
@@ -64,7 +109,20 @@ public class ProfileFragment extends Fragment {
             startActivity(intent);
         });
 
+        binding.profileImageView.setOnClickListener(v -> handleImageClick());
+
         setupPurchasedItemsList();
+    }
+
+    private void handleImageClick() {
+        // WHen profile image is clicked it asks for permission to read the gallery
+        String permission = Manifest.permission.READ_MEDIA_IMAGES;
+
+        if (ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED) {
+            pickImageLauncher.launch("image/*"); // to open the ui to the user that shows the gallery
+        } else {
+            requestPermissionLauncher.launch(permission);
+        }
     }
 
     @Override
@@ -78,12 +136,27 @@ public class ProfileFragment extends Fragment {
         String sprintLength = prefs.getUserSprintLengthMinutes();
         binding.profileSprintLength.setText(String.format("%s minutes", sprintLength));
 
-        String avatarSeed = prefs.getUserAvatarSeed();
-        if (avatarSeed != null && !avatarSeed.isEmpty()) {
-            loadRandomizedProfilePicture(avatarSeed);
+        // if AvatarUri is present use that, if not use the AvatarSeed
+        String localAvatarUri = prefs.getUserAvatarUri();
+        if (localAvatarUri != null && !localAvatarUri.isEmpty()) {
+            loadLocalProfilePicture(Uri.parse(localAvatarUri));
+        } else {
+            String avatarSeed = prefs.getUserAvatarSeed();
+            if (avatarSeed != null && !avatarSeed.isEmpty()) {
+                loadRandomizedProfilePicture(avatarSeed);
+            }
         }
 
         loadAndRenderTags();
+    }
+
+    private void loadLocalProfilePicture(Uri imageUri) {
+        Glide.with(this)
+                .load(imageUri)
+                .apply(RequestOptions.circleCropTransform()) // to crop the image like the placeholder
+                .placeholder(R.drawable.ic_avatar_placeholder)
+                .error(R.drawable.ic_avatar_placeholder)
+                .into(binding.profileImageView);
     }
 
     private void loadRandomizedProfilePicture(String seed) {
@@ -94,9 +167,9 @@ public class ProfileFragment extends Fragment {
 
         Glide.with(this)
                 .load(avatarUri)
+                .apply(RequestOptions.circleCropTransform())
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .error(R.drawable.ic_avatar_placeholder)
-                .centerCrop()
                 .into(binding.profileImageView);
     }
 
@@ -120,10 +193,8 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupPurchasedItemsList() {
-        // Get the set of IDs for items the user has purchased
         Set<String> purchasedIds = prefs.getPurchasedItemIds();
 
-        // Filter the list of all shop items to get only the ones the user owns
         List<PurchasedItem> userOwnedItems = new ArrayList<>();
         for (PurchasedItem shopItem : allShopItems) {
             if (purchasedIds.contains(shopItem.id())) {
@@ -131,22 +202,17 @@ public class ProfileFragment extends Fragment {
             }
         }
 
-        //  Check if the user's inventory is empty and update the UI visibility
         if (userOwnedItems.isEmpty()) {
-            // If empty, hide the list and show the "empty" text
             binding.purchasedItemsRecyclerView.setVisibility(View.GONE);
             binding.purchasedItemsEmptyState.setVisibility(View.VISIBLE);
         } else {
-            // If not empty, show the list and hide the "empty" text
             binding.purchasedItemsRecyclerView.setVisibility(View.VISIBLE);
             binding.purchasedItemsEmptyState.setVisibility(View.GONE);
 
-            // Create and set the adapter for the RecyclerView.
             PurchasedItemsAdapter adapter = new PurchasedItemsAdapter(userOwnedItems);
             binding.purchasedItemsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
             binding.purchasedItemsRecyclerView.setAdapter(adapter);
 
-            //  To prevent the RecyclerView from being scrollable inside the NestedScrollView
             binding.purchasedItemsRecyclerView.setNestedScrollingEnabled(false);
         }
     }
