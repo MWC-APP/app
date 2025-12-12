@@ -70,6 +70,9 @@ public interface StudySessionDao {
            "ORDER BY s.timestamp DESC")
     List<StudySessionWithStats> getAllSessions();
 
+    @Query("SELECT * FROM study_sessions WHERE id = :sessionId")
+    StudySession getSessionById(long sessionId);
+
     @Insert
     long insert(StudySession session);
 

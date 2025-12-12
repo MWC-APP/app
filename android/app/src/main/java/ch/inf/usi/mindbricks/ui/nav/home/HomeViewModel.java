@@ -192,6 +192,22 @@ public class HomeViewModel extends AndroidViewModel {
             AppDatabase db = AppDatabase.getInstance(getApplication());
             long id = db.sessionQuestionnaireDao().insert(questionnaire);
             android.util.Log.d("HomeViewModel", "Questionnaire saved with ID: " + id);
+
+            // Calculate focus score
+            float focusScore;
+            if (questionnaire.isAnsweredDetailedQuestions()) {
+                focusScore = (questionnaire.getAverageRating() - 1) / 6 * 100;
+            } else {
+                focusScore = (float) questionnaire.getInitialEmotion() / 6 * 100;
+            }
+
+            // Update study session with focus score
+            StudySession session = db.studySessionDao().getSessionById(questionnaire.getSessionId());
+            if (session != null) {
+                session.setFocusScore(focusScore);
+                db.studySessionDao().update(session);
+                android.util.Log.d("HomeViewModel", "Updated session " + session.getId() + " with focus score: " + focusScore);
+            }
         });
     }
 
@@ -201,22 +217,15 @@ public class HomeViewModel extends AndroidViewModel {
         serviceIntent.setAction(SensorService.ACTION_STOP_SESSION);
         getApplication().startService(serviceIntent);
 
-        // Store data in DB
+        // Reset current session ID
         if (currentSessionId != -1) {
             long sessionIdToUpdate = currentSessionId;
-            dbExecutor.execute(() -> {
-                AppDatabase db = AppDatabase.getInstance(getApplication());
-                // Get aggregation
-                float avgNoise = db.sessionSensorLogDao().getAverageNoise(sessionIdToUpdate);
-                float avgLight = db.sessionSensorLogDao().getAverageLight(sessionIdToUpdate);
-                int motionCount = db.sessionSensorLogDao().getMotionCount(sessionIdToUpdate);
-
-                android.util.Log.d("HomeViewModel", "Completing session " + sessionIdToUpdate + ". Stats: Noise=" + avgNoise + ", Light=" + avgLight + ", Motion=" + motionCount);
-                // TODO: Implement actual DB update for stats
-            });
+            // Trigger the questionnaire
+            showQuestionnaireEvent.postValue(sessionIdToUpdate);
             currentSessionId = -1;
         }
     }
+
 
     // Resets the coin event LiveData to prevent it from re-firing
     public void onCoinsAwarded() {
