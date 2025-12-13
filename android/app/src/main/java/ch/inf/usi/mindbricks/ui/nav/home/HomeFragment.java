@@ -533,11 +533,124 @@ public class HomeFragment extends Fragment {
         PreferencesManager prefs = new PreferencesManager(requireContext());
         List<Tag> tags = prefs.getUserTags();
 
+        // Add special "Create New Tag" option at the beginning
+        tags.add(0, new Tag("+ Create New Tag", getResources().getColor(R.color.analytics_accent_green, null)));
+
         // NOTE; add default tag "No tag" (user doesn't have to create one for everything)
         tags.add(new Tag("No tag", android.graphics.Color.GRAY));
 
         // setup spinner items - one component for each tag
-        tagSpinner.setAdapter(new TagSpinnerAdapter(requireContext(), tags));
+        TagSpinnerAdapter adapter = new TagSpinnerAdapter(requireContext(), tags);
+        tagSpinner.setAdapter(adapter);
+
+        // Handle tag selection
+        tagSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                Tag selectedTag = (Tag) parent.getItemAtPosition(position);
+                // Check if user selected "Create New Tag"
+                if (selectedTag.title().equals("+ Create New Tag")) {
+                    showAddTagDialog();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                // Do nothing
+            }
+        });
+    }
+
+    private void showAddTagDialog() {
+        // FIXME: this is mostly copied from the settings view. We should create a wrapper in order to avoid code duplication!!
+
+        // load the dialog view
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_tag, null);
+        TextInputLayout tagNameLayout = dialogView.findViewById(R.id.layoutTagName);
+        TextInputEditText editTagName = dialogView.findViewById(R.id.editTagName);
+        ChipGroup colorGroup = dialogView.findViewById(R.id.chipTagColors);
+
+        // configure all availble tag colors
+        int[] palette = Tags.getTagColorPalette(requireContext());
+        for (int i = 0; i < palette.length; i++) {
+            Chip chip = (Chip) LayoutInflater.from(requireContext())
+                    .inflate(R.layout.view_color_chip, colorGroup, false);
+            chip.setId(View.generateViewId());
+            chip.setChipBackgroundColor(ColorStateList.valueOf(palette[i]));
+            chip.setCheckable(true);
+            chip.setChecked(i == 0);
+            colorGroup.addView(chip);
+        }
+
+        // build dialog
+        MaterialAlertDialogBuilder builder =
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.onboarding_tags_dialog_title)
+                        .setView(dialogView)
+                        .setNegativeButton(android.R.string.cancel, (dialog, which) -> {
+                            // reset to previous selection if aborted
+                            tagSpinner.setSelection(1);
+                        })
+                        .setPositiveButton(R.string.onboarding_tags_dialog_add, null);
+
+        // create dialog + set listeners
+        AlertDialog dialog = builder.create();
+
+        // if user creates tag -> update spinner + select new tag
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    // validate user input
+                    String title = editTagName.getText() != null ? editTagName.getText().toString().trim() : "";
+                    ValidationResult titleResult = TagValidator.validateTitle(title);
+                    if (!titleResult.isValid()) {
+                        tagNameLayout.setError(getString(titleResult.errorResId()));
+                        return;
+                    }
+                    tagNameLayout.setError(null);
+
+                    // get selected color
+                    int checkedChipId = colorGroup.getCheckedChipId();
+                    if (checkedChipId == View.NO_ID) {
+                        Toast.makeText(requireContext(), R.string.onboarding_error_tag_color_required, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // if no color selected, assign default one
+                    Chip selected = colorGroup.findViewById(checkedChipId);
+                    ColorStateList chipBgColor = selected.getChipBackgroundColor();
+                    int color = chipBgColor != null ? chipBgColor.getDefaultColor() : android.graphics.Color.BLUE;
+
+                    // Save the new tag inside preferences (name + bg color)
+                    PreferencesManager prefs = new PreferencesManager(requireContext());
+                    List<Tag> currentTags = prefs.getUserTags();
+                    Tag newTag = new Tag(title, color);
+                    currentTags.add(newTag);
+                    prefs.setUserTags(currentTags);
+
+                    // recreate tag spinner to include new tag
+                    setupTagSpinner();
+
+                    // Find and select the new tag
+                    for (int i = 0; i < tagSpinner.getCount(); i++) {
+                        Tag tag = (Tag) tagSpinner.getItemAtPosition(i);
+                        if (tag.title().equals(title) && tag.color() == color) {
+                            tagSpinner.setSelection(i);
+                            break;
+                        }
+                    }
+
+                    // close dialog + notify user
+                    dialog.dismiss();
+                    Toast.makeText(requireContext(), "Tag created successfully!", Toast.LENGTH_SHORT).show();
+                }));
+
+        // if aborts creation -> reset to previous state
+        dialog.setOnCancelListener(d -> {
+            tagSpinner.setSelection(1); // select "no tag"
+        });
+
+        // show dialog
+        dialog.show();
     }
 
 }
