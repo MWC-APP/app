@@ -112,12 +112,22 @@ public class IsometricCityView extends View {
         PreferencesManager prefs = new PreferencesManager(context);
         String[] purchasedBuildings = prefs.getPurchasedItemIds().toArray(new String[0]);
 
-        new AlertDialog.Builder(context)
-                .setTitle("Select Building")
-                .setItems(purchasedBuildings, (dialog, which) -> {
-                    slot.setBuilding(purchasedBuildings[which]);
-                    invalidate();
-                })
-                .show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Select Building");
+
+        // List of buildings to choose
+        builder.setItems(purchasedBuildings, (dialog, which) -> {
+            slot.setBuilding(purchasedBuildings[which]);
+            invalidate();
+        });
+
+        // button to rmove building
+        builder.setNeutralButton("Remove Building", (dialog, which) -> {
+            slot.setBuilding(null);
+            invalidate();
+        });
+
+        builder.show();
     }
+
 }
