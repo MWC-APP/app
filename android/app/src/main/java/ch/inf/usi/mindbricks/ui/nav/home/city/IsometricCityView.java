@@ -24,7 +24,6 @@ public class IsometricCityView extends View {
 
     private float cellWidth;
     private float cellHeight;
-    private float yOffset;
 
     public IsometricCityView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -38,12 +37,13 @@ public class IsometricCityView extends View {
 
     public void setSlots(List<CitySlot> slots) {
         this.slots = slots;
-        invalidate();
+        invalidate(); // redraw the view
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         if (slots == null || slots.isEmpty()) return;
 
         int maxCol = 0, maxRow = 0;
@@ -52,59 +52,56 @@ public class IsometricCityView extends View {
             if (slot.getRow() > maxRow) maxRow = slot.getRow();
         }
 
-        cellWidth = getWidth() / (float) (maxCol + maxRow + 2) * 2f;
-        cellHeight = getHeight() / (float) (maxCol + maxRow + 2) * 2f;
-        yOffset = getHeight() / 10f;
+        cellWidth = getWidth() / (float) (maxCol + 1);
+        cellHeight = getHeight() / (float) (maxRow + 1);
 
         for (CitySlot slot : slots) {
-            float centerX = (slot.getCol() - slot.getRow()) * cellWidth / 2 + getWidth() / 2f;
-            float centerY = (slot.getCol() + slot.getRow()) * cellHeight / 2 + yOffset;
-            float hw = cellWidth / 2f;
-            float hh = cellHeight / 2f;
+            float left = slot.getCol() * cellWidth;
+            float top = slot.getRow() * cellHeight;
+            float right = left + cellWidth;
+            float bottom = top + cellHeight;
 
-            float[] verts = {centerX, centerY - hh, centerX + hw, centerY,
-                    centerX, centerY + hh, centerX - hw, centerY};
+            // Fill slot
+            canvas.drawRect(left, top, right, bottom, slot.isUnlocked() ? paintUnlocked : paintLocked);
+            // Outline
+            canvas.drawRect(left, top, right, bottom, paintOutline);
 
-            canvas.drawVertices(Canvas.VertexMode.TRIANGLE_FAN, verts.length, verts, 0,
-                    null, 0, null, 0, null, 0, 0,
-                    slot.isUnlocked() ? paintUnlocked : paintLocked);
-
-            canvas.drawLine(verts[0], verts[1], verts[2], verts[3], paintOutline);
-            canvas.drawLine(verts[2], verts[3], verts[4], verts[5], paintOutline);
-            canvas.drawLine(verts[4], verts[5], verts[6], verts[7], paintOutline);
-            canvas.drawLine(verts[6], verts[7], verts[0], verts[1], paintOutline);
-
+            // Draw building if assigned
             if (slot.getBuilding() != null) {
-                canvas.drawCircle(centerX, centerY, Math.min(hw, hh) / 2, paintBuilding);
+                float cx = left + cellWidth / 2f;
+                float cy = top + cellHeight / 2f;
+                float radius = Math.min(cellWidth, cellHeight) / 4f;
+                canvas.drawCircle(cx, cy, radius, paintBuilding);
             }
         }
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() != MotionEvent.ACTION_DOWN) return true;
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            float touchX = event.getX();
+            float touchY = event.getY();
 
-        float x = event.getX();
-        float y = event.getY();
-        CitySlot clicked = null;
-
-        for (CitySlot slot : slots) {
-            float cx = (slot.getCol() - slot.getRow()) * cellWidth / 2 + getWidth() / 2f;
-            float cy = (slot.getCol() + slot.getRow()) * cellHeight / 2 + yOffset;
-            float hw = cellWidth / 2f;
-            float hh = cellHeight / 2f;
-
-            if (x >= cx - hw && x <= cx + hw && y >= cy - hh && y <= cy + hh) {
-                clicked = slot;
-                break;
+            CitySlot clickedSlot = findClickedSlot(touchX, touchY);
+            if (clickedSlot != null && clickedSlot.isUnlocked()) {
+                showBuildingSelectionDialog(clickedSlot);
             }
         }
-
-        if (clicked != null && clicked.isUnlocked()) {
-            showBuildingSelectionDialog(clicked);
-        }
-
         return true;
+    }
+
+    private CitySlot findClickedSlot(float x, float y) {
+        for (CitySlot slot : slots) {
+            float left = slot.getCol() * cellWidth;
+            float top = slot.getRow() * cellHeight;
+            float right = left + cellWidth;
+            float bottom = top + cellHeight;
+
+            if (x >= left && x <= right && y >= top && y <= bottom) {
+                return slot;
+            }
+        }
+        return null;
     }
 
     private void showBuildingSelectionDialog(CitySlot slot) {
@@ -114,20 +111,18 @@ public class IsometricCityView extends View {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Select Building");
-
-        // List of buildings to choose
         builder.setItems(purchasedBuildings, (dialog, which) -> {
             slot.setBuilding(purchasedBuildings[which]);
             invalidate();
         });
 
-        // button to rmove building
-        builder.setNeutralButton("Remove Building", (dialog, which) -> {
-            slot.setBuilding(null);
-            invalidate();
-        });
+        if (slot.getBuilding() != null) {
+            builder.setNeutralButton("Remove Building", (dialog, which) -> {
+                slot.setBuilding(null);
+                invalidate();
+            });
+        }
 
         builder.show();
     }
-
 }
