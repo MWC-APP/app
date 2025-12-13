@@ -22,6 +22,7 @@ import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 import ch.inf.usi.mindbricks.service.SensorService;
@@ -42,6 +43,7 @@ public class HomeViewModel extends AndroidViewModel {
     public final MutableLiveData<Integer> earnedCoinsEvent = new MutableLiveData<>();
 
     private int sessionCounter = 0;
+    private Tag currentSessionTag;
     private final NotificationHelper notificationHelper;
     private long currentSessionId = -1;
     private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
@@ -55,11 +57,13 @@ public class HomeViewModel extends AndroidViewModel {
 
     // The main entry point to start a new Pomodoro cycle
     // help source: https://stackoverflow.com/questions/39215947/stuck-on-trying-to-resume-paused-stopped-function-pomodoro-timer
-    public void pomodoroTechnique(int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
+    public void pomodoroTechnique(int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes, Tag tag) {
         // Prevent starting a new timer if one is already running.
         if (currentState.getValue() != PomodoroState.IDLE) {
             return;
         }
+
+        this.currentSessionTag = tag;
 
         boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
         if (!hasMicPermission) {
@@ -83,7 +87,10 @@ public class HomeViewModel extends AndroidViewModel {
 
         // Save new session (to get its id) + start foreground service
         long startTime = System.currentTimeMillis();
-        StudySession session = new StudySession(startTime, studyDurationMinutes, "General", Color.GRAY);
+        String tagName = (currentSessionTag != null) ? currentSessionTag.title() : "General";
+        int tagColor = (currentSessionTag != null) ? currentSessionTag.color() : Color.GRAY;
+        
+        StudySession session = new StudySession(startTime, studyDurationMinutes, tagName, tagColor);
 
         dbExecutor.execute(() -> {
             AppDatabase db = AppDatabase.getInstance(getApplication());

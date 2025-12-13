@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import android.widget.Spinner;
+import ch.inf.usi.mindbricks.model.Tag;
+
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
@@ -40,9 +43,9 @@ import ch.inf.usi.mindbricks.util.ProfileViewModel;
 public class HomeFragment extends Fragment {
 
     private TextView timerTextView;
+    private Spinner tagSpinner;
     private Button startSessionButton;
     private TextView coinBalanceTextView;
-    private ImageView settingsIcon;
 
     private HomeViewModel homeViewModel;
     private ProfileViewModel profileViewModel;
@@ -118,9 +121,12 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         timerTextView = view.findViewById(R.id.timer_text_view);
+        tagSpinner = view.findViewById(R.id.tag_spinner);
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
         ImageView settingsIcon = view.findViewById(R.id.settings_icon);
+
+        setupTagSpinner();
 
         // Find the container for the dots
         sessionDotsLayout = view.findViewById(R.id.session_dots_layout);
@@ -249,9 +255,11 @@ public class HomeFragment extends Fragment {
         int studyDuration = prefs.getTimerStudyDuration();
         int shortPauseDuration = prefs.getTimerShortPauseDuration();
         int longPauseDuration = prefs.getTimerLongPauseDuration();
+        
+        Tag selectedTag = (Tag) tagSpinner.getSelectedItem();
 
         // start focus session
-        homeViewModel.pomodoroTechnique(studyDuration, shortPauseDuration, longPauseDuration);
+        homeViewModel.pomodoroTechnique(studyDuration, shortPauseDuration, longPauseDuration, selectedTag);
     }
 
     // Updates the color and width of the session indicator dots based on the current state
@@ -368,4 +376,17 @@ public class HomeFragment extends Fragment {
 
         homeViewModel.saveQuestionnaireResponse(questionnaire);
     }
+
+    private void setupTagSpinner() {
+        // load tags from preferences
+        PreferencesManager prefs = new PreferencesManager(requireContext());
+        List<Tag> tags = prefs.getUserTags();
+
+        // NOTE; add default tag "No tag" (user doesn't have to create one for everything)
+        tags.add(new Tag("No tag", android.graphics.Color.GRAY));
+
+        // setup spinner items - one component for each tag
+        tagSpinner.setAdapter(new TagSpinnerAdapter(requireContext(), tags));
+    }
+
 }
