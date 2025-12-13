@@ -87,9 +87,11 @@ public class ProfileFragment extends Fragment {
         prefs = new PreferencesManager(requireContext());
         binding = FragmentProfileBinding.inflate(inflater, container, false);
 
-        allShopItems.add(new PurchasedItem("avatar_cool_1", "Cool Blue Avatar", R.drawable.ic_avatar_placeholder));
-        allShopItems.add(new PurchasedItem("avatar_pro_2", "Pro Red Avatar", R.drawable.ic_avatar_placeholder));
-        allShopItems.add(new PurchasedItem("theme_dark_3", "Dark Theme", R.drawable.ic_chip_check));
+        allShopItems.add(new PurchasedItem("building_1", "house1", R.drawable.house1));
+        allShopItems.add(new PurchasedItem("building_2", "house2", R.drawable.house2));
+        allShopItems.add(new PurchasedItem("building_3", "house3", R.drawable.ic_avatar_placeholder));
+        allShopItems.add(new PurchasedItem("building_4", "house4", R.drawable.ic_coin_icon));
+        allShopItems.add(new PurchasedItem("building_5", "house5", R.drawable.ic_home_black_24dp));
 
         return binding.getRoot();
     }

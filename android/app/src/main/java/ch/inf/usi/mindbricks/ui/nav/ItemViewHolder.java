@@ -1,9 +1,10 @@
-package ch.inf.usi.mindbricks.ui.nav.shop;
+package ch.inf.usi.mindbricks.ui.nav;
 
 import androidx.recyclerview.widget.RecyclerView;
 
 import ch.inf.usi.mindbricks.databinding.ItemPurchasedAssetBinding;
 import ch.inf.usi.mindbricks.ui.nav.profile.PurchasedItem;
+import ch.inf.usi.mindbricks.ui.nav.shop.ShopItem;
 
 public class ItemViewHolder extends RecyclerView.ViewHolder {
 
@@ -14,13 +15,13 @@ public class ItemViewHolder extends RecyclerView.ViewHolder {
         this.binding = binding;
     }
 
-    /**
-     * A method to use the views in the ViewHolder with data from a PurchasedItem object.
-     *
-     * @param item The PurchasedItem object containing the data for this view.
-     */
+    public void bind(ShopItem item) {
+        binding.itemName.setText(item.getName());
+        binding.itemImage.setImageResource(item.getDrawableResId());
+    }
+
     public void bind(PurchasedItem item) {
-        binding.purchasedItemName.setText(item.name());
-        binding.purchasedItemImage.setImageResource(item.imageResId());
+        binding.itemName.setText(item.name());
+        binding.itemImage.setImageResource(item.imageResId());
     }
 }

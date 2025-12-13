@@ -17,7 +17,7 @@
 
         <!-- Item Image -->
         <ImageView
-            android:id="@+id/purchased_item_image"
+            android:id="@+id/item_image"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:contentDescription="purchased_item_image_desc"
@@ -30,7 +30,7 @@
 
         <!-- Item Name -->
         <TextView
-            android:id="@+id/purchased_item_name"
+            android:id="@+id/item_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
@@ -38,7 +38,7 @@
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/purchased_item_image"
+            app:layout_constraintStart_toEndOf="@+id/item_image"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Cool New Avatar" />
 
