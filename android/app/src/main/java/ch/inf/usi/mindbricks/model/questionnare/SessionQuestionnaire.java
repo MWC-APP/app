@@ -26,7 +26,7 @@ public class SessionQuestionnaire {
     // PAM emotion -> 0-6 scale
     private int initialEmotion;
 
-    // detailed questionare
+    // detailed questionnaire
     private boolean answeredDetailedQuestions;
     private Integer enthusiasmRating;
     private Integer energyRating;
