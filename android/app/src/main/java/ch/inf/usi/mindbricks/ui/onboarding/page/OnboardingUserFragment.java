@@ -8,6 +8,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -49,6 +52,7 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
     private MaterialTextView tagEmptyState;
     private FloatingActionButton reloadAvatarButton;
     private PreferencesManager prefs;
+    private ActivityResultLauncher<PickVisualMediaRequest> photoPickerLauncher;
 
     @Nullable
     @Override
@@ -58,6 +62,23 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
         View view = inflater.inflate(R.layout.fragment_onboarding_user, container, false);
 
         prefs = new PreferencesManager(requireContext());
+
+        // register photo picker launcher
+        photoPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.PickVisualMedia(),
+                uri -> {
+                    if (uri != null) {
+                        // persist permission to access the URI
+                        requireContext().getContentResolver().takePersistableUriPermission(
+                                uri,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        );
+                        // save URI and load the selected image
+                        prefs.setUserAvatarUri(uri.toString());
+                        loadLocalProfilePicture(uri);
+                    }
+                }
+        );
 
         // NOTE: get fields
 
@@ -81,8 +102,10 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
         // show dialog on "add a tag"
         addTagButton.setOnClickListener(v -> showAddTagDialog());
 
-        // generate a new avatar on "refresh" click
+        // on refresh -> remove custom photo + generate new avatar
         reloadAvatarButton.setOnClickListener(v -> {
+            // clear custom avatar URI to revert to DiceBear
+            prefs.setUserAvatarUri(null);
             String seed = generateUniqueSeed();
             prefs.setUserAvatarSeed(seed);
             loadRandomizedProfilePicture(seed);
@@ -102,12 +125,26 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        String seed = prefs.getUserAvatarSeed();
-        if (seed == null || seed.isEmpty()) {
-            seed = generateUniqueSeed();
-            prefs.setUserAvatarSeed(seed);
+        loadProfilePicture();
+    }
+
+    /**
+     * Loads the profile picture, preferring custom photo over DiceBear avatar
+     */
+    private void loadProfilePicture() {
+        // check if user has a custom avatar URI
+        String avatarUri = prefs.getUserAvatarUri();
+        if (avatarUri != null && !avatarUri.isEmpty()) {
+            loadLocalProfilePicture(Uri.parse(avatarUri));
+        } else {
+            // fall back to DiceBear avatar
+            String seed = prefs.getUserAvatarSeed();
+            if (seed == null || seed.isEmpty()) {
+                seed = generateUniqueSeed();
+                prefs.setUserAvatarSeed(seed);
+            }
+            loadRandomizedProfilePicture(seed);
         }
-        loadRandomizedProfilePicture(seed);
     }
 
     @Override
@@ -169,8 +206,25 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
                 .into(profilePicture);
     }
 
+    /**
+     * Loads a local profile picture from the given URI
+     */
+    private void loadLocalProfilePicture(Uri uri) {
+        Glide.with(this)
+                .load(uri)
+                .placeholder(R.drawable.ic_avatar_placeholder)
+                .error(R.drawable.ic_avatar_placeholder)
+                .centerCrop()
+                .into(profilePicture);
+    }
+
+    /**
+     * Launches the system gallery to select a profile picture
+     */
     private void launchPhotoPicker() {
-        // FIXME: we need to implement this!
+        photoPickerLauncher.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                .build());
     }
 
     /**
