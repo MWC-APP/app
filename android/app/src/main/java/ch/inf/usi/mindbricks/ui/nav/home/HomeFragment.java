@@ -520,15 +520,16 @@ public class HomeFragment extends Fragment {
         PreferencesManager prefs = new PreferencesManager(requireContext());
         List<Tag> tags = prefs.getUserTags();
 
-        // Add special "Create New Tag" option at the beginning
-        tags.add(0, new Tag("+ Create New Tag", getResources().getColor(R.color.analytics_accent_green, null)));
+        // add default tag "No tag" (user doesn't have to create one for everything)
+        tags.add(0, new Tag("No tag", android.graphics.Color.GRAY));
 
-        // NOTE; add default tag "No tag" (user doesn't have to create one for everything)
-        tags.add(new Tag("No tag", android.graphics.Color.GRAY));
+        // Add special "Create New Tag" option (last)
+        tags.add(new Tag("+ Create New Tag", getResources().getColor(R.color.analytics_accent_green, null)));
 
         // setup spinner items - one component for each tag
         TagSpinnerAdapter adapter = new TagSpinnerAdapter(requireContext(), tags);
         tagSpinner.setAdapter(adapter);
+        tagSpinner.setSelection(0, false); // select "No tag" by default
 
         // Handle tag selection
         tagSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
