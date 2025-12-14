@@ -47,6 +47,7 @@
 
     <string name="onboarding_sensors_title">Sense your environment</string>
     <string name="onboarding_sensors_description">MindBricks learns based on ambient noise and light environment during study sessions.</string>
+    <string name="onboarding_sensors_learn_more">Learn More</string>
     <string name="onboarding_sensors_microphone_title">Microphone check-ins</string>
     <string name="onboarding_sensors_microphone_body">We only listen for noise levels during your sessions to understand in what environment you are.</string>
     <string name="onboarding_sensors_microphone_rationale_title">Allow microphone in background</string>

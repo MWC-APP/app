@@ -94,22 +94,12 @@
                             android:text="@string/onboarding_sensors_microphone_body" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/buttonEnableMicrophone"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="@string/onboarding_enable_microphone"
-                            android:textColor="?attr/colorOnPrimaryContainer"
-                            app:backgroundTint="?attr/colorPrimaryContainer"
-                            app:strokeWidth="0dp" />
-
-                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonMicBackgroundInfo"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/onboarding_sensors_microphone_background_button" />
+                            android:layout_marginTop="12dp"
+                            android:text="@string/onboarding_sensors_learn_more" />
 
                     </LinearLayout>
 
@@ -168,13 +158,22 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/onboarding_sensors_light_body" />
 
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textLightStatus"
+                            style="@style/TextAppearance.Material3.BodySmall"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="?attr/colorError"
+                            android:visibility="gone" />
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonLightInfo"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="@string/onboarding_enable_light_info"
+                            android:text="@string/onboarding_sensors_learn_more"
                             app:strokeWidth="0dp" />
 
                     </LinearLayout>
@@ -233,13 +232,22 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/onboarding_sensors_pickup_body" />
 
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textPickupStatus"
+                            style="@style/TextAppearance.Material3.BodySmall"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="?attr/colorError"
+                            android:visibility="gone" />
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonEnablePickup"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="@string/onboarding_info_pickup"
+                            android:text="@string/onboarding_sensors_learn_more"
                             app:strokeWidth="0dp" />
 
                     </LinearLayout>

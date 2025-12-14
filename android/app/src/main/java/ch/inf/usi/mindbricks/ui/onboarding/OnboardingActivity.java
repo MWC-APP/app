@@ -14,7 +14,6 @@ import com.google.android.material.snackbar.Snackbar;
 
 import ch.inf.usi.mindbricks.MainActivity;
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ValidationResult;
 import ch.inf.usi.mindbricks.util.validators.ProfileValidator;
@@ -22,7 +21,6 @@ import ch.inf.usi.mindbricks.util.validators.ProfileValidator;
 public class OnboardingActivity extends AppCompatActivity {
 
     private static final int PAGE_USER = 1;
-    private static final int PAGE_SENSORS = 2;
 
     private ViewPager2 viewPager;
     private MaterialButton buttonSkip;
