@@ -45,6 +45,8 @@ public class IsometricCityView extends View {
         invalidate(); // redraw the view
     }
 
+    // In IsometricCityView.java
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -66,12 +68,24 @@ public class IsometricCityView extends View {
             float right = left + cellWidth;
             float bottom = top + cellHeight;
 
-            // Fill slot
-            canvas.drawRect(left, top, right, bottom, slot.isUnlocked() ? paintUnlocked : paintLocked);
-            // Outline
-            canvas.drawRect(left, top, right, bottom, paintOutline);
+            Rect destinationRect = new Rect((int) left, (int) top, (int) right, (int) bottom);
 
-            // Draw building if assigned
+            canvas.drawRect(left, top, right, bottom, slot.isUnlocked() ? paintUnlocked : paintLocked);
+
+            // Draw default sprite first
+            Bitmap defaultBitmap = BitmapFactory.decodeResource(
+                    getResources(),
+                    R.drawable.default_sprite
+            );
+            canvas.drawBitmap(
+                    defaultBitmap,
+                    null,
+                    destinationRect,
+                    null
+            );
+
+
+            // Draw assigned building on top, if it exists
             if (slot.getBuildingResId() != null) {
                 Bitmap buildingBitmap = BitmapFactory.decodeResource(
                         getResources(),
@@ -80,12 +94,16 @@ public class IsometricCityView extends View {
                 canvas.drawBitmap(
                         buildingBitmap,
                         null,
-                        new Rect((int) left, (int) top, (int) right, (int) bottom),
+                        destinationRect,
                         null
                 );
             }
+
+            // Draw the outline last, so it's on top
+            canvas.drawRect(left, top, right, bottom, paintOutline);
         }
     }
+
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
