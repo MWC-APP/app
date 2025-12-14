@@ -43,9 +43,7 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
     private final List<Tag> tags = new ArrayList<>();
     private ImageView profilePicture;
     private TextInputLayout nameLayout;
-    private TextInputLayout sprintLengthLayout;
     private TextInputEditText editName;
-    private TextInputEditText editSprintLength;
     private ChipGroup tagChipGroup;
     private MaterialButton addTagButton;
     private MaterialTextView tagEmptyState;
@@ -70,10 +68,6 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
         nameLayout = view.findViewById(R.id.layoutName);
         editName = view.findViewById(R.id.editName);
 
-        // sprint length + container
-        sprintLengthLayout = view.findViewById(R.id.layoutSprintLength);
-        editSprintLength = view.findViewById(R.id.editSprintLength);
-
         // tag management
         tagChipGroup = view.findViewById(R.id.chipGroupTags);
         addTagButton = view.findViewById(R.id.buttonAddTag);
@@ -96,7 +90,6 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
 
         // preload if already stored
         editName.setText(prefs.getUserName());
-        editSprintLength.setText(prefs.getUserSprintLengthMinutes());
 
         // load + render the list of tags stored inside preferences
         loadTagsFromPrefs();
@@ -121,18 +114,16 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
     public void onPause() {
         // on pause: store field values
         super.onPause();
-        persistUserData(readText(editName), readText(editSprintLength));
+        persistUserData(readText(editName));
     }
 
     @Override
     public boolean validateStep() {
         boolean isValid = validateNameField();
 
-        if (!validateSprintLengthField()) isValid = false;
-
         // if all valid: store the result in app preferences
         if (isValid) {
-            persistUserData(readText(editName), readText(editSprintLength));
+            persistUserData(readText(editName));
         }
 
         return isValid;
@@ -141,12 +132,10 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
     /**
      * Stores the user data in preferences
      *
-     * @param name         User name to store
-     * @param sprintLength Sprint length to store
+     * @param name User name to store
      */
-    private void persistUserData(String name, String sprintLength) {
+    private void persistUserData(String name) {
         prefs.setUserName(name);
-        prefs.setUserSprintLengthMinutes(sprintLength);
         prefs.setUserTags(tags);
     }
 
@@ -198,9 +187,6 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
         editName.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) validateNameField();
         });
-        editSprintLength.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) validateSprintLengthField();
-        });
     }
 
     /**
@@ -215,21 +201,6 @@ public class OnboardingUserFragment extends Fragment implements OnboardingStepVa
             return false;
         }
         nameLayout.setError(null);
-        return true;
-    }
-
-    /**
-     * Validates the sprint length field ensuring that user input is not empty and is a valid number
-     *
-     * @return true if the sprint length is valid, false otherwise
-     */
-    private boolean validateSprintLengthField() {
-        ValidationResult result = ProfileValidator.validateSprintLength(readText(editSprintLength));
-        if (!result.isValid()) {
-            sprintLengthLayout.setError(getString(result.errorResId()));
-            return false;
-        }
-        sprintLengthLayout.setError(null);
         return true;
     }
 

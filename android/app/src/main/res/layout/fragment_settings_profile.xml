@@ -113,23 +113,5 @@
             android:layout_marginTop="8dp"
             app:strokeWidth="1dp" />
 
-        <!-- Sprint Length Section -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/layoutSprintLength"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="@string/onboarding_profile_session_label"
-            app:helperText="@string/onboarding_profile_session_helper"
-            app:boxBackgroundMode="outline">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editSprintLength"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

@@ -42,9 +42,7 @@ public class SettingsProfileFragment extends Fragment {
     private final List<Tag> tags = new ArrayList<>();
     private ImageView profilePicture;
     private TextInputLayout nameLayout;
-    private TextInputLayout sprintLengthLayout;
     private TextInputEditText editName;
-    private TextInputEditText editSprintLength;
     private ChipGroup tagChipGroup;
     private MaterialButton addTagButton;
     private MaterialTextView tagEmptyState;
@@ -63,8 +61,6 @@ public class SettingsProfileFragment extends Fragment {
         profilePicture = view.findViewById(R.id.imageProfile);
         nameLayout = view.findViewById(R.id.layoutName);
         editName = view.findViewById(R.id.editName);
-        sprintLengthLayout = view.findViewById(R.id.layoutSprintLength);
-        editSprintLength = view.findViewById(R.id.editSprintLength);
         tagChipGroup = view.findViewById(R.id.chipGroupTags);
         addTagButton = view.findViewById(R.id.buttonAddTag);
         tagEmptyState = view.findViewById(R.id.textTagsEmptyState);
@@ -79,7 +75,6 @@ public class SettingsProfileFragment extends Fragment {
         });
 
         editName.setText(prefs.getUserName());
-        editSprintLength.setText(prefs.getUserSprintLengthMinutes());
 
         loadTagsFromPrefs();
         renderTags();
@@ -102,14 +97,13 @@ public class SettingsProfileFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        if (validateNameField() && validateSprintLengthField()) {
-            persistUserData(readText(editName), readText(editSprintLength));
+        if (validateNameField()) {
+            persistUserData(readText(editName));
         }
     }
 
-    private void persistUserData(String name, String sprintLength) {
+    private void persistUserData(String name) {
         prefs.setUserName(name);
-        prefs.setUserSprintLengthMinutes(sprintLength);
         prefs.setUserTags(tags);
     }
 
@@ -143,9 +137,6 @@ public class SettingsProfileFragment extends Fragment {
         editName.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) validateNameField();
         });
-        editSprintLength.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) validateSprintLengthField();
-        });
     }
 
     private boolean validateNameField() {
@@ -155,16 +146,6 @@ public class SettingsProfileFragment extends Fragment {
             return false;
         }
         nameLayout.setError(null);
-        return true;
-    }
-
-    private boolean validateSprintLengthField() {
-        ValidationResult result = ProfileValidator.validateSprintLength(readText(editSprintLength));
-        if (!result.isValid()) {
-            sprintLengthLayout.setError(getString(result.errorResId()));
-            return false;
-        }
-        sprintLengthLayout.setError(null);
         return true;
     }
 

@@ -23,13 +23,9 @@
     <string name="onboarding_profile_photo_helper">Don\'t have the right photo yet? You can always update it later.</string>
     <string name="onboarding_profile_name_label">What should we call you?</string>
     <string name="onboarding_profile_goal_label">What project or habits do you want to focus on?</string>
-    <string name="onboarding_profile_session_label">Preferred sprint length (minutes)</string>
-    <string name="onboarding_profile_session_helper">Start with 25 minutes to follow the classic Pomodoro technique.</string>
     <string name="onboarding_tags_empty_state">Add tags to label each study session (e.g. Algorithms, UX Research, Physics).</string>
     <string name="onboarding_tags_add_button">Add a tag</string>
     <string name="onboarding_error_goal_required">Tell us what you want to focus on.</string>
-    <string name="validation_error_sprint_required">Enter your preferred sprint length.</string>
-    <string name="validation_error_sprint_invalid">Use a positive number of minutes.</string>
     <string name="validation_error_tags_required">Create at least one tag to track your sessions.</string>
     <string name="onboarding_error_profile_required">Complete your profile to continue.</string>
     <string name="onboarding_tags_dialog_title">Create a tag</string>
@@ -248,8 +244,6 @@
     <string name="profile">Profile</string>
     <string name="username">Username</string>
     <string name="default_balance">0</string>
-    <string name="sprint_length_label">Sprint length label</string>
-    <string name="default_sprint_length">25 minute</string>
     <string name="tags_label">Tags label</string>
     <string name="no_tags_defined">No tags defined</string>
     <string name="my_items_label">My Items</string>

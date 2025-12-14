@@ -8,7 +8,6 @@ public enum PreferencesKey {
     USER_SURNAME("user_surname"),
     USER_EMAIL("user_email"),
     USER_FOCUS_GOAL("user_focus_goal"),
-    USER_SPRINT_LENGTH_MINUTES("user_sprint_length_minutes"),
     USER_TAGS_JSON("user_tags_json"),
     USER_AVATAR_SEED("user_avatar_seed"),
     USER_PURCHASED_ITEMS("user_purchased_items"),

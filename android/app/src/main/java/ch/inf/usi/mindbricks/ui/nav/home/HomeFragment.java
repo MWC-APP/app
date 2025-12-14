@@ -635,9 +635,8 @@ public class HomeFragment extends Fragment {
                         }
                     }
 
-                    // close dialog + notify user
+                    // close dialog
                     dialog.dismiss();
-                    Toast.makeText(requireContext(), "Tag created successfully!", Toast.LENGTH_SHORT).show();
                 }));
 
         // if aborts creation -> reset to previous state

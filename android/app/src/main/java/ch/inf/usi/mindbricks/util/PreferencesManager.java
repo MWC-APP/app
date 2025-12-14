@@ -45,17 +45,6 @@ public class PreferencesManager {
         preferences.edit().putString(PreferencesKey.USER_NAME.getName(), name).apply();
     }
 
-
-
-    public String getUserSprintLengthMinutes() {
-        return preferences.getString(PreferencesKey.USER_SPRINT_LENGTH_MINUTES.getName(), "");
-    }
-
-    // -- Sprint length (minutes) --
-    public void setUserSprintLengthMinutes(String minutes) {
-        preferences.edit().putString(PreferencesKey.USER_SPRINT_LENGTH_MINUTES.getName(), minutes).apply();
-    }
-
     public List<Tag> getUserTags() {
         String json = preferences.getString(PreferencesKey.USER_TAGS_JSON.getName(), "[]");
         Type type = new TypeToken<List<Tag>>() {}.getType();

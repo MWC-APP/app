@@ -110,40 +110,6 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
-            <!-- Sprint Length Section -->
-            <LinearLayout
-                android:id="@+id/sprint_length_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="32dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="sprint_length_icon_desc"
-                    android:src="@drawable/ic_coin_icon"
-                    app:tint="?attr/colorOnSurface" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:text="@string/sprint_length_label"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
-
-                <TextView
-                    android:id="@+id/profile_sprint_length"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-                    android:textStyle="bold"
-                    tools:text="@string/default_sprint_length" />
-            </LinearLayout>
-
             <!-- Tags Section -->
             <LinearLayout
                 android:id="@+id/tags_layout"

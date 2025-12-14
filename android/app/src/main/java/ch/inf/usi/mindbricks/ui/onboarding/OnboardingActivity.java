@@ -151,15 +151,13 @@ public class OnboardingActivity extends AppCompatActivity {
      * @return true if user has completed the onboarding, false otherwise
      */
     private boolean canCompleteOnboarding() {
-        // ensure user has a valid name + sprint length
+        // ensure user has a valid name
         ValidationResult nameResult = ProfileValidator.validateName(prefs.getUserName());
-        ValidationResult sprintLengthResult = ProfileValidator.validateSprintLength(prefs.getUserSprintLengthMinutes());
-        if (!nameResult.isValid() || !sprintLengthResult.isValid()) {
+        if (!nameResult.isValid()) {
             viewPager.setCurrentItem(PAGE_USER, true);
             Snackbar.make(viewPager, R.string.onboarding_error_profile_required, Snackbar.LENGTH_SHORT).show();
             return false;
         }
-
 
         return true;
     }

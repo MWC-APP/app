@@ -135,8 +135,6 @@ public class ProfileFragment extends Fragment {
 
     private void loadAndDisplayUserData() {
         binding.profileUserName.setText(prefs.getUserName());
-        String sprintLength = prefs.getUserSprintLengthMinutes();
-        binding.profileSprintLength.setText(String.format("%s minutes", sprintLength));
 
         // if AvatarUri is present use that, if not use the AvatarSeed
         String localAvatarUri = prefs.getUserAvatarUri();
