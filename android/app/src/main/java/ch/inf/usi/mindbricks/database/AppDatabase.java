@@ -8,6 +8,7 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
@@ -17,12 +18,13 @@ import ch.inf.usi.mindbricks.util.database.DatabaseSeeder;
 /**
  * Room database for MindBricks app
  */
-@Database(entities = {StudySession.class, SessionSensorLog.class, SessionQuestionnaire.class}, version = 4, exportSchema = false)
+@Database(entities = {Tag.class, StudySession.class, SessionSensorLog.class, SessionQuestionnaire.class}, version = 5, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase INSTANCE;
     private static Context appContext;
 
+    public abstract TagDao tagDao();
     public abstract StudySessionDao studySessionDao();
     public abstract SessionSensorLogDao sessionSensorLogDao();
     public abstract SessionQuestionnaireDao sessionQuestionnaireDao();
