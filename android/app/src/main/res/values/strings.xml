@@ -21,6 +21,16 @@
     <string name="onboarding_profile_subtitle">Add a friendly face and a few focus goals so we can cheer you on.</string>
     <string name="onboarding_profile_upload_photo">Add profile picture</string>
     <string name="onboarding_profile_photo_helper">Don\'t have the right photo yet? You can always update it later.</string>
+    <string name="profile_photo_source_title">Choose photo source</string>
+    <string name="profile_photo_camera">Take photo</string>
+    <string name="profile_photo_gallery">Choose from gallery</string>
+    <string name="camera_permission_denied">Camera permission is required to take photos</string>
+    <string name="camera_permission_rationale_title">Camera Access Needed</string>
+    <string name="camera_permission_rationale_message">MindBricks needs camera access to take your profile picture. This helps personalize your experience.</string>
+    <string name="camera_permission_grant">Grant Permission</string>
+    <string name="camera_permission_required_title">Camera Permission Required</string>
+    <string name="camera_permission_settings_message">Camera permission was denied. To take photos, please enable camera access in Settings.</string>
+    <string name="camera_permission_open_settings">Open Settings</string>
     <string name="onboarding_profile_name_label">What should we call you?</string>
     <string name="onboarding_profile_goal_label">What project or habits do you want to focus on?</string>
     <string name="onboarding_tags_empty_state">Add tags to label each study session (e.g. Algorithms, UX Research, Physics).</string>

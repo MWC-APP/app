@@ -19,6 +19,9 @@
     <!-- Gallery Permissions -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
+    <!-- Camera Permission -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <!-- Significant Motion Permission -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
@@ -67,6 +70,18 @@
             android:foregroundServiceType="microphone|specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="sensors" />
         </service>
+
+        <!-- FileProvider for camera photos -->
+        <!-- Source: https://developer.android.com/training/secure-file-sharing/setup-sharing -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

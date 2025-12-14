@@ -52,12 +52,19 @@
                         app:maxImageSize="20dp"
                         app:srcCompat="@drawable/ic_avatar_reload" />
                 </FrameLayout>
-                
-                <!-- Helper text instead of button since photo picker isn't implemented -->
-                <com.google.android.material.textview.MaterialTextView
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonChoosePhoto"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:text="@string/onboarding_profile_upload_photo" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="@string/onboarding_profile_photo_helper"
                     android:textAlignment="center" />
 
