@@ -16,25 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ch.inf.usi.mindbricks.drivers.calendar.CalendarDriver;
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 
 /**
  * CalendarDriver implementation that reads from the Android device's
  * built-in Calendar Provider (CalendarContract).
- *
- * This driver accesses calendars synced to the device, which include:
- * - Google Calendar (if signed in)
- * - Samsung Calendar
- * - Exchange calendars
- * - Any other calendar app that uses the standard ContentProvider
- *
- * Requires: android.permission.READ_CALENDAR
- *
- * Advantages over direct Google Calendar API:
- * - No OAuth setup required
- * - Works offline with cached events
- * - Accesses ALL calendars on the device, not just Google
- *
  */
 public class DeviceCalendarDriver implements CalendarDriver {
 

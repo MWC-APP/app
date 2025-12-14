@@ -8,7 +8,7 @@ import java.util.Calendar;
 import java.util.List;
 
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 import ch.inf.usi.mindbricks.repository.CalendarRepository;
 
 /**

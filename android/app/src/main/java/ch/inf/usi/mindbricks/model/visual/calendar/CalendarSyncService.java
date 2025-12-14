@@ -2,6 +2,7 @@ package ch.inf.usi.mindbricks.model.visual.calendar;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
@@ -15,19 +16,19 @@ import java.util.concurrent.Executors;
 
 import ch.inf.usi.mindbricks.drivers.calendar.CalendarDriver;
 import ch.inf.usi.mindbricks.drivers.calendar.DeviceCalendarDriver;
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
 import ch.inf.usi.mindbricks.repository.CalendarRepository;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
+
 
 /**
  * Service that orchestrates calendar synchronization.
  *
- * Responsibilities:
  * - Manages registered CalendarDriver instances
  * - Coordinates sync operations between drivers and repository
  * - Tracks sync status and last sync times
  * - Provides a clean API for the rest of the app
- *
  */
+
 public class CalendarSyncService {
 
     private static final String TAG = "CalendarSyncService";
@@ -49,7 +50,6 @@ public class CalendarSyncService {
     private int syncRangeBackwardDays = 7;   // How far back to sync
     private int syncRangeForwardDays = 30;   // How far forward to sync
 
-
     public static synchronized CalendarSyncService getInstance(Context context) {
         if (instance == null) {
             instance = new CalendarSyncService(context.getApplicationContext());
@@ -68,14 +68,10 @@ public class CalendarSyncService {
     }
 
     private void registerDefaultDrivers() {
-        // Register device calendar driver
+        // Device Calendar
         registerDriver(new DeviceCalendarDriver(context));
 
-        // TODO: Register Google Calendar driver when implemented
-        // registerDriver(new GoogleCalendarDriver(context));
-
-        // TODO: Register other drivers as needed
-        // registerDriver(new OutlookCalendarDriver(context));
+        Log.d(TAG, "Registered " + drivers.size() + " calendar drivers");
     }
 
     public void registerDriver(CalendarDriver driver) {
@@ -101,6 +97,19 @@ public class CalendarSyncService {
         return authenticated;
     }
 
+    public List<DriverInfo> getDriverInfoList() {
+        List<DriverInfo> infoList = new ArrayList<>();
+        for (CalendarDriver driver : drivers.values()) {
+            infoList.add(new DriverInfo(
+                    driver.getSourceName(),
+                    driver.getDisplayName(),
+                    driver.isAuthenticated(),
+                    getLastSyncTime(driver.getSourceName())
+            ));
+        }
+        return infoList;
+    }
+
     public boolean isDriverAuthenticated(String sourceName) {
         CalendarDriver driver = drivers.get(sourceName);
         return driver != null && driver.isAuthenticated();
@@ -113,7 +122,27 @@ public class CalendarSyncService {
             return;
         }
 
-        driver.authenticate(activity, callback);
+        driver.authenticate(activity, new CalendarDriver.AuthCallback() {
+            @Override
+            public void onAuthSuccess() {
+                Log.d(TAG, "Authentication successful for: " + sourceName);
+                // Trigger initial sync after successful authentication
+                syncDriver(sourceName, null);
+                callback.onAuthSuccess();
+            }
+
+            @Override
+            public void onAuthFailure(String error) {
+                Log.e(TAG, "Authentication failed for " + sourceName + ": " + error);
+                callback.onAuthFailure(error);
+            }
+
+            @Override
+            public void onAuthCancelled() {
+                Log.d(TAG, "Authentication cancelled for: " + sourceName);
+                callback.onAuthCancelled();
+            }
+        });
     }
 
     public void disconnectDriver(String sourceName) {
@@ -181,7 +210,6 @@ public class CalendarSyncService {
         });
     }
 
-
     private SyncResult syncDriverInternal(CalendarDriver driver) {
         String sourceName = driver.getSourceName();
         Log.d(TAG, "Syncing driver: " + sourceName);
@@ -195,6 +223,7 @@ public class CalendarSyncService {
             long startTime = syncRange[0];
             long endTime = syncRange[1];
 
+            // Record sync start time (for cleanup of deleted events)
             long syncTimestamp = System.currentTimeMillis();
 
             // Fetch events from the driver
@@ -207,9 +236,6 @@ public class CalendarSyncService {
                 }
 
                 repository.saveEvents(events);
-
-                // Clean up events that were deleted from the source
-                // (they won't have the new syncTimestamp)
                 repository.cleanupStaleEvents(sourceName, syncTimestamp);
             }
 
@@ -290,6 +316,37 @@ public class CalendarSyncService {
 
     public CalendarRepository getRepository() {
         return repository;
+    }
+
+    public static class DriverInfo {
+        public final String sourceName;
+        public final String displayName;
+        public final boolean isConnected;
+        public final long lastSyncTime;
+
+        public DriverInfo(String sourceName, String displayName, boolean isConnected,
+                          long lastSyncTime) {
+            this.sourceName = sourceName;
+            this.displayName = displayName;
+            this.isConnected = isConnected;
+            this.lastSyncTime = lastSyncTime;
+        }
+
+        public String getLastSyncTimeString() {
+            if (lastSyncTime == 0) return "Never";
+
+            long ageMs = System.currentTimeMillis() - lastSyncTime;
+            long ageMinutes = ageMs / (1000 * 60);
+
+            if (ageMinutes < 1) return "Just now";
+            if (ageMinutes < 60) return ageMinutes + " min ago";
+
+            long ageHours = ageMinutes / 60;
+            if (ageHours < 24) return ageHours + " hr ago";
+
+            long ageDays = ageHours / 24;
+            return ageDays + " day" + (ageDays > 1 ? "s" : "") + " ago";
+        }
     }
 
     public static class SyncResult {

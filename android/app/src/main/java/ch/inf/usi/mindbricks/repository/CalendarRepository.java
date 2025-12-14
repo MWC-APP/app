@@ -13,7 +13,7 @@ import java.util.concurrent.Executors;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.database.CalendarEventDao;
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 
 /**
  * Repository class for CalendarEvent data access.

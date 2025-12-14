@@ -5,7 +5,7 @@ import android.content.Context;
 
 import java.util.List;
 
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 
 /**
  * Interface for calendar data providers

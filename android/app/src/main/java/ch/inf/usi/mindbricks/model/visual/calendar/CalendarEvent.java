@@ -1,4 +1,4 @@
-package ch.inf.usi.mindbricks.model.visual;
+package ch.inf.usi.mindbricks.model.visual.calendar;
 
 import androidx.room.Entity;
 import androidx.room.Index;
@@ -32,8 +32,6 @@ public class CalendarEvent {
     private int color;
 
     // Default constructor required by Room
-    public CalendarEvent() {}
-
     public CalendarEvent(String externalId, String calendarSource, String title,
                          long startTime, long endTime, boolean isAllDay) {
         this.externalId = externalId;

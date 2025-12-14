@@ -9,9 +9,9 @@ import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 import ch.inf.usi.mindbricks.util.database.DatabaseSeeder;
 
 

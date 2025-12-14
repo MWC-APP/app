@@ -10,7 +10,8 @@ import androidx.room.Update;
 
 import java.util.List;
 
-import ch.inf.usi.mindbricks.model.visual.CalendarEvent;
+import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
+
 
 @Dao
 public interface CalendarEventDao {
