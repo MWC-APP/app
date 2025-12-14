@@ -2,14 +2,17 @@ package ch.inf.usi.mindbricks.util;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.ImageView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -78,10 +81,8 @@ public class ProfilePictureManager {
                         // permission granted -> launch camera
                         launchCameraIntent();
                     } else {
-                        // permission denied -> show message
-                        Snackbar.make(fragment.requireView(),
-                                R.string.camera_permission_denied,
-                                Snackbar.LENGTH_SHORT).show();
+                        // permission denied -> check if we should show rationale
+                        handlePermissionDenied();
                     }
                 }
         );
@@ -109,7 +110,6 @@ public class ProfilePictureManager {
 
     /**
      * Checks camera permission and launches camera if granted
-     * FIXME: we should also show the rationale if the user denied first time
      */
     private void launchCamera() {
         // check if user granted permission
@@ -118,9 +118,66 @@ public class ProfilePictureManager {
             // if granted -> open camera to take photo
             launchCameraIntent();
         } else {
-            // if not granted -> request + listen for result using registered callback
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+            // check if we should show rationale
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    fragment.requireActivity(), Manifest.permission.CAMERA)) {
+                // user denied before, show explanation
+                showPermissionRationale();
+            } else {
+                // first time or "don't ask again" - request permission
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+            }
         }
+    }
+
+    /**
+     * Shows a dialog explaining why camera permission is needed
+     */
+    private void showPermissionRationale() {
+        new MaterialAlertDialogBuilder(fragment.requireContext())
+                .setTitle(R.string.camera_permission_rationale_title)
+                .setMessage(R.string.camera_permission_rationale_message)
+                .setPositiveButton(R.string.camera_permission_grant, (dialog, which) -> {
+                    // user wants to give permission now -> retry
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * Handles permission denial - either shows message or directs to settings
+     */
+    private void handlePermissionDenied() {
+        // check if user selected "don't ask again"
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                fragment.requireActivity(), Manifest.permission.CAMERA)) {
+            // user denied with "don't ask again" - direct to settings
+            showSettingsDialog();
+        } else {
+            // simple denial - show message
+            Snackbar.make(fragment.requireView(),
+                    R.string.camera_permission_denied,
+                    Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Shows a dialog allowing the user to open app settings to change camera permissions
+     */
+    private void showSettingsDialog() {
+        new MaterialAlertDialogBuilder(fragment.requireContext())
+                .setTitle(R.string.camera_permission_required_title)
+                .setMessage(R.string.camera_permission_settings_message)
+                .setPositiveButton(R.string.camera_permission_open_settings, (dialog, which) -> {
+                    // open app settings -> let user change permissions manually
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    Uri uri = Uri.fromParts("package", fragment.requireContext().getPackageName(), null);
+                    intent.setData(uri);
+                    fragment.startActivity(intent);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /**
