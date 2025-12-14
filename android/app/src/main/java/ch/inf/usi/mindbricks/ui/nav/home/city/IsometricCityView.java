@@ -6,6 +6,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -45,7 +47,6 @@ public class IsometricCityView extends View {
         invalidate(); // redraw the view
     }
 
-    // In IsometricCityView.java
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -77,11 +78,35 @@ public class IsometricCityView extends View {
                     getResources(),
                     R.drawable.default_sprite
             );
+
+            Paint spritePaint = new Paint();
+            if (!slot.isUnlocked()) {
+                // Make the sprite darker for locked slots
+                ColorMatrix cm = new ColorMatrix();
+                cm.set(new float[] {
+                        0.75f, 0,    0,    0, -25, // red
+                        0,    0.75f, 0,    0, -25, // green
+                        0,    0,    0.75f, 0, -25, // blue
+                        0,    0,    0,    1, 0    // alpha
+                });
+                spritePaint.setColorFilter(new ColorMatrixColorFilter(cm));
+            } else {
+                // Make the sprite lighter for unlocked slots
+                ColorMatrix cm = new ColorMatrix();
+                cm.set(new float[] {
+                        1, 0, 0, 0, 30, // red
+                        0, 1, 0, 0, 30, // green
+                        0, 0, 1, 0, 30, // blue
+                        0, 0, 0, 1, 0   // alpha
+                });
+                spritePaint.setColorFilter(new ColorMatrixColorFilter(cm));
+            }
+
             canvas.drawBitmap(
                     defaultBitmap,
                     null,
                     destinationRect,
-                    null
+                    spritePaint
             );
 
 
@@ -95,7 +120,7 @@ public class IsometricCityView extends View {
                         buildingBitmap,
                         null,
                         destinationRect,
-                        null
+                        null // Draw with no filter
                 );
             }
 
