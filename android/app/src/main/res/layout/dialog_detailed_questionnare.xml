@@ -1,70 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:fillViewport="true">
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
 
+    <!-- Header/Title Section -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/title_section"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:background="?attr/colorSurfaceContainer"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Header/Instructions -->
-        <TextView
-            android:id="@+id/questionnaire_header"
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/questionnaire_title"
+            style="@style/TextAppearance.Material3.HeadlineMedium"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Please rate your agreement with each statement based on your recent session."
-            android:textSize="14sp"
-            android:textColor="@color/analytics_card_background"
-            android:layout_marginBottom="24dp"
-            android:lineSpacingExtra="4dp" />
+            android:text="How did you feel during this session?"
+            android:textColor="?attr/colorOnSurface"
+            android:letterSpacing="0" />
 
-        <!-- Questions Container -->
-        <LinearLayout
-            android:id="@+id/questions_container"
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/questionnaire_subtitle"
+            style="@style/TextAppearance.Material3.BodyMedium"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-        </LinearLayout>
-
-        <!-- Buttons Container -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="24dp"
-            android:gravity="center">
-
-            <!-- Skip Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/skip_button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Skip"
-                android:textAllCaps="false"
-                android:paddingVertical="12dp"
-                android:layout_marginEnd="8dp"
-                app:cornerRadius="8dp"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
-
-            <!-- Submit Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/submit_button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Submit Feedback"
-                android:textAllCaps="false"
-                android:paddingVertical="12dp"
-                android:layout_marginStart="8dp"
-                app:cornerRadius="8dp"
-                style="@style/Widget.Material3.Button.ElevatedButton" />
-
-        </LinearLayout>
+            android:layout_marginTop="8dp"
+            android:text="Your feedback helps us understand your productivity patterns"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:alpha="0.87" />
 
     </LinearLayout>
-</ScrollView>
+
+    <!-- Divider -->
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/title_divider"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/title_section"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Scrollable Questions Area -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/questions_scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/title_divider"
+        app:layout_constraintBottom_toTopOf="@id/buttons_divider"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="16dp"
+            android:clipToPadding="false">
+
+            <!-- Questions Container -->
+            <LinearLayout
+                android:id="@+id/questions_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Divider above buttons -->
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/buttons_divider"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@id/buttons_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Sticky Footer with buttons -->
+    <LinearLayout
+        android:id="@+id/buttons_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="20dp"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Skip Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/skip_button"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:text="Skip"
+            android:textAllCaps="false"
+            android:layout_marginEnd="12dp"
+            android:letterSpacing="0.01"
+            style="@style/Widget.Material3.Button.TextButton" />
+
+        <!-- Submit Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/submit_button"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:text="Submit"
+            android:textAllCaps="false"
+            android:letterSpacing="0.01"
+            style="@style/Widget.Material3.Button" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
