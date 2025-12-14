@@ -1,13 +1,24 @@
 package ch.inf.usi.mindbricks.model.visual;
 
 import androidx.room.Entity;
+import androidx.room.ForeignKey;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
+
+import ch.inf.usi.mindbricks.model.Tag;
 
 
 /**
  * Model representing a completed study session with metrics
  */
-@Entity(tableName = "study_sessions")
+@Entity(tableName = "study_sessions",
+        foreignKeys = @ForeignKey(
+                entity = Tag.class,
+                parentColumns = "id",
+                childColumns = "tagId",
+                onDelete = ForeignKey.SET_NULL
+        ),
+        indices = {@Index("tagId")})
 public class StudySession {
 
     @PrimaryKey(autoGenerate = true)
@@ -24,14 +35,9 @@ public class StudySession {
     private int durationMinutes;
 
     /**
-     * Title of the tag/subject studied
+     * Foreign key reference to the Tag table
      */
-    private String tagTitle;
-
-    /**
-     * Color of the tag/subject studied
-     */
-    private int tagColor;
+    private Long tagId;
 
     // Focus metrics
 
@@ -48,11 +54,10 @@ public class StudySession {
     // Optional notes
     private String notes;
 
-    public StudySession(long timestamp, int durationMinutes, String tagTitle, int tagColor) {
+    public StudySession(long timestamp, int durationMinutes, Long tagId) {
         this.timestamp = timestamp;
         this.durationMinutes = durationMinutes;
-        this.tagTitle = tagTitle;
-        this.tagColor = tagColor;
+        this.tagId = tagId;
         this.focusScore = 0;
         this.coinsEarned = 0;
         this.notes = "";
@@ -83,20 +88,12 @@ public class StudySession {
         this.durationMinutes = durationMinutes;
     }
 
-    public String getTagTitle() {
-        return tagTitle;
+    public Long getTagId() {
+        return tagId;
     }
 
-    public void setTagTitle(String tagTitle) {
-        this.tagTitle = tagTitle;
-    }
-
-    public int getTagColor() {
-        return tagColor;
-    }
-
-    public void setTagColor(int tagColor) {
-        this.tagColor = tagColor;
+    public void setTagId(Long tagId) {
+        this.tagId = tagId;
     }
 
     public float getFocusScore() {

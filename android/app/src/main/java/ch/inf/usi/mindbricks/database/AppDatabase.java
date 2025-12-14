@@ -8,9 +8,11 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
+import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
 import ch.inf.usi.mindbricks.util.database.DatabaseSeeder;
 
@@ -19,12 +21,12 @@ import ch.inf.usi.mindbricks.util.database.DatabaseSeeder;
  * Room database for MindBricks app
  */
 @Database(entities = {
-            StudySession.class,
-            SessionSensorLog.class,
-            SessionQuestionnaire.class,
-            CalendarEvent.class
+        StudySessionWithStats.class,
+        SessionSensorLog.class,
+        SessionQuestionnaire.class,
+        Tag.class
         },
-        version = 5,
+        version = 6,
         exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -32,10 +34,12 @@ public abstract class AppDatabase extends RoomDatabase {
     private static AppDatabase INSTANCE;
     private static Context appContext;
 
+    public abstract TagDao tagDao();
     public abstract StudySessionDao studySessionDao();
     public abstract SessionSensorLogDao sessionSensorLogDao();
     public abstract SessionQuestionnaireDao sessionQuestionnaireDao();
     public abstract CalendarEventDao calendarEventDao();
+
     private static final RoomDatabase.Callback DB_CALLBACK = new RoomDatabase.Callback(){
         // called on the database thread -> safe
         @Override
@@ -63,21 +67,9 @@ public abstract class AppDatabase extends RoomDatabase {
                             "mindbricks_database"
                     )
                     .addCallback(DB_CALLBACK)
-                    //.fallbackToDestructiveMigrationOnDowngrade(true)
-                    // For development: destroys and recreates DB on version change
-                    // For production: use proper migrations instead
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigrationOnDowngrade(true)
                     .build();
         }
         return INSTANCE;
-    }
-
-    // WARNING
-    // must call getInstance() before using the database again!!!
-    public static void closeDatabase(){
-        if(INSTANCE != null && INSTANCE.isOpen()){
-            INSTANCE.close();
-            INSTANCE = null;
-        }
     }
 }

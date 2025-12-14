@@ -1,7 +1,5 @@
 package ch.inf.usi.mindbricks.ui.nav.home.questionnare;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.util.FocusScoreCalculator;
 
 public class DetailedQuestionsDialogFragment extends DialogFragment {
 
@@ -68,16 +67,18 @@ public class DetailedQuestionsDialogFragment extends DialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Set full-screen dialog style
+        setStyle(DialogFragment.STYLE_NORMAL, android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);
+
         if (getArguments() != null) {
             emotionIndex = getArguments().getInt("emotionIndex", 0);
         }
     }
 
-    @NonNull
+    @Nullable
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        View view = LayoutInflater.from(getContext())
-                .inflate(R.layout.dialog_detailed_questionnare, null);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.dialog_detailed_questionnare, container, false);
 
         LinearLayout questionsContainer = view.findViewById(R.id.questions_container);
 
@@ -104,27 +105,22 @@ public class DetailedQuestionsDialogFragment extends DialogFragment {
         Button skipButton = view.findViewById(R.id.skip_button);
         skipButton.setOnClickListener(v -> onSkipClicked());
 
-        Dialog dialog = new AlertDialog.Builder(requireContext())
-                .setTitle("How did you feel during this session?")
-                .setView(view)
-                .setCancelable(false)
-                .create();
-
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(R.drawable.rounded_background);
+        // Make dialog non-cancelable
+        if (getDialog() != null) {
+            getDialog().setCanceledOnTouchOutside(false);
         }
 
-        return dialog;
+        return view;
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        // Make dialog fill width
+        // Make dialog fill screen
         if (getDialog() != null && getDialog().getWindow() != null) {
             getDialog().getWindow().setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    ViewGroup.LayoutParams.MATCH_PARENT
             );
         }
     }
@@ -187,77 +183,4 @@ public class DetailedQuestionsDialogFragment extends DialogFragment {
     public OnQuestionnaireCompleteListener getListener() {
         return listener;
     }
-
-    public int getEmotionIndex() {
-        return emotionIndex;
-    }
-
-    public void setEmotionIndex(int emotionIndex) {
-        this.emotionIndex = emotionIndex;
-    }
-
-    public int getEnthusiasmRating() {
-        return enthusiasmRating;
-    }
-
-    public void setEnthusiasmRating(int enthusiasmRating) {
-        this.enthusiasmRating = enthusiasmRating;
-    }
-
-    public int getEnergyRating() {
-        return energyRating;
-    }
-
-    public void setEnergyRating(int energyRating) {
-        this.energyRating = energyRating;
-    }
-
-    public int getEngagementRating() {
-        return engagementRating;
-    }
-
-    public void setEngagementRating(int engagementRating) {
-        this.engagementRating = engagementRating;
-    }
-
-    public int getSatisfactionRating() {
-        return satisfactionRating;
-    }
-
-    public void setSatisfactionRating(int satisfactionRating) {
-        this.satisfactionRating = satisfactionRating;
-    }
-
-    public int getAnticipationRating() {
-        return anticipationRating;
-    }
-
-    public void setAnticipationRating(int anticipationRating) {
-        this.anticipationRating = anticipationRating;
-    }
-
-
-    // Further use in the recommendation -> prepared for future use
-    public int[] getAllRatings() {
-        return new int[] {
-                enthusiasmRating,
-                energyRating,
-                engagementRating,
-                satisfactionRating,
-                anticipationRating
-        };
-    }
-    public float getAverageRating() {
-        return (enthusiasmRating + energyRating + engagementRating +
-                satisfactionRating + anticipationRating) / 5f;
-    }
-
-    public boolean areAllRatingsPositive() {
-        return enthusiasmRating >= 5 &&
-                energyRating >= 5 &&
-                engagementRating >= 5 &&
-                satisfactionRating >= 5 &&
-                anticipationRating >= 5;
-    }
-
 }

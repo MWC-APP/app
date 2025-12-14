@@ -3,6 +3,7 @@ package ch.inf.usi.mindbricks.ui.nav.home;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,10 +16,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.transition.TransitionManager;
@@ -29,6 +33,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
@@ -37,7 +42,7 @@ import ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
-import ch.inf.usi.mindbricks.util.PermissionManager;
+import ch.inf.usi.mindbricks.util.FocusScoreCalculator;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 import ch.inf.usi.mindbricks.util.TagManager;
@@ -59,8 +64,8 @@ public class HomeFragment extends Fragment {
     private List<ImageView> sessionDots;
     private ConstraintLayout sessionDotsLayout;
 
-    private PermissionManager.PermissionRequest audioPermissionRequest;
-    private PermissionManager.PermissionRequest motionPermissionRequest;
+    private ActivityResultLauncher<String> audioPermissionLauncher;
+    private ActivityResultLauncher<String> motionPermissionLauncher;
 
     private IsometricCityView cityView;
     private CityViewModel cityViewModel;
@@ -79,22 +84,19 @@ public class HomeFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Its job is to finally start the session, regardless of the outcome.
-        motionPermissionRequest = PermissionManager.registerSinglePermission(
-                this,
-                Manifest.permission.ACTIVITY_RECOGNITION,
-                this::startDefaultSession,
-                this::startDefaultSession
-                // in both cases start as default, so if permission is denied it will just don't work
+
+        // Register motion permission launcher
+        // Starts session regardless of outcome (not granted = no sensor data won't be collected)
+        motionPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> startDefaultSession()
         );
 
-        // Its job is to trigger the next request in the chain.
-        audioPermissionRequest = PermissionManager.registerSinglePermission(
-                this,
-                Manifest.permission.RECORD_AUDIO,
-                () -> motionPermissionRequest.launch(),
-                () -> motionPermissionRequest.launch()
-                // in both cases start as default, so if permission is denied it will just don't work
+        // Register audio permission launcher
+        // (After audio permission, request motion permission)
+        audioPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> motionPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
         );
     }
 
@@ -190,15 +192,16 @@ public class HomeFragment extends Fragment {
                     boolean isFirstTime = prefsListener.isFirstSession();
 
                     // check if both permissions are already granted
-                    boolean hasAudio = PermissionManager.hasPermission(requireContext(), Manifest.permission.RECORD_AUDIO);
-                    boolean hasMotion = PermissionManager.hasPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION);
+                    boolean hasAudio = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED;
+                    boolean hasMotion = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION)
+                            == PackageManager.PERMISSION_GRANTED;
 
                     if (hasAudio && hasMotion) {
                         startDefaultSession();
                     } else if (isFirstTime) {
                         prefsListener.setFirstSession(false);
-                        audioPermissionRequest.launch();
-                        motionPermissionRequest.launch();
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                     } else {
                         startDefaultSession();
                     }
@@ -206,6 +209,7 @@ public class HomeFragment extends Fragment {
             }
         });
 
+        // TODO: REMOVE THIS BEFORE SUBMISSION!!! ONLY FOR TESTING
         Button testButton = view.findViewById(R.id.test_questionnaire_button);
         if (testButton != null) {
             testButton.setOnClickListener(v -> showEmotionDialog(999L));
@@ -513,39 +517,64 @@ public class HomeFragment extends Fragment {
         questionnaire.setEngagementRating(engagement);
         questionnaire.setSatisfactionRating(satisfaction);
         questionnaire.setAnticipationRating(anticipation);
-        homeViewModel.saveQuestionnaireResponse(questionnaire);
+
+        // Calculate focus score based on questionnaire responses
+        float focusScore = FocusScoreCalculator.calculate(enthusiasm, energy, engagement, satisfaction, anticipation);
+
+        // Save questionnaire and update session focus score
+        homeViewModel.saveQuestionnaireResponse(questionnaire, sessionId, focusScore);
     }
 
     private void setupTagSpinner() {
         PreferencesManager prefs = new PreferencesManager(requireContext());
-        List<Tag> tags = prefs.getUserTags();
 
-        // Add special "Create New Tag" option at the beginning
-        tags.add(0, new Tag("+ Create New Tag", getResources().getColor(R.color.analytics_accent_green, null)));
+        // Load tags on background thread
+        new Thread(() -> {
+            AppDatabase db = AppDatabase.getInstance(requireContext());
 
-        // NOTE; add default tag "No tag" (user doesn't have to create one for everything)
-        tags.add(new Tag("No tag", android.graphics.Color.GRAY));
-
-        // setup spinner items - one component for each tag
-        TagSpinnerAdapter adapter = new TagSpinnerAdapter(requireContext(), tags);
-        tagSpinner.setAdapter(adapter);
-
-        // Handle tag selection
-        tagSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                Tag selectedTag = (Tag) parent.getItemAtPosition(position);
-                // Check if user selected "Create New Tag"
-                if (selectedTag.title().equals("+ Create New Tag")) {
-                    showAddTagDialog();
-                }
+            // Ensure default "No tag" exists
+            Tag defaultTag = db.tagDao().getTagByTitle("No tag");
+            if (defaultTag == null) {
+                defaultTag = new Tag("No tag", android.graphics.Color.GRAY);
+                long defaultTagId = db.tagDao().insert(defaultTag);
+                defaultTag.setId(defaultTagId);
             }
 
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                // Do nothing
-            }
-        });
+            // Load user tags from preferences (will eventually migrate to database)
+            List<Tag> tags = new ArrayList<>(prefs.getUserTags());
+
+            // Add default tag at the beginning
+            Tag finalDefaultTag = defaultTag;
+            requireActivity().runOnUiThread(() -> {
+                tags.add(0, finalDefaultTag);
+
+                // Add special "Create New Tag" option (last)
+                Tag createNewTag = new Tag("+ Create New Tag", getResources().getColor(R.color.analytics_accent_green, null));
+                tags.add(createNewTag);
+
+                // setup spinner items - one component for each tag
+                TagSpinnerAdapter adapter = new TagSpinnerAdapter(requireContext(), tags);
+                tagSpinner.setAdapter(adapter);
+                tagSpinner.setSelection(0, false); // select "No tag" by default
+
+                // Handle tag selection
+                tagSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                        Tag selectedTag = (Tag) parent.getItemAtPosition(position);
+                        // Check if user selected "Create New Tag"
+                        if (selectedTag.getTitle().equals("+ Create New Tag")) {
+                            showAddTagDialog();
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                        // Do nothing
+                    }
+                });
+            });
+        }).start();
     }
 
     private void showAddTagDialog() {
@@ -562,7 +591,7 @@ public class HomeFragment extends Fragment {
                     // Find and select the new tag
                     for (int i = 0; i < tagSpinner.getCount(); i++) {
                         Tag tag = (Tag) tagSpinner.getItemAtPosition(i);
-                        if (tag.title().equals(newTag.title()) && tag.color() == newTag.color()) {
+                        if (tag.getTitle().equals(newTag.getTitle()) && tag.getColor() == newTag.getColor()) {
                             tagSpinner.setSelection(i);
                             break;
                         }

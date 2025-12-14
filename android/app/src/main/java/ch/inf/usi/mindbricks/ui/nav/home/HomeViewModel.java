@@ -3,8 +3,10 @@ package ch.inf.usi.mindbricks.ui.nav.home;
 import android.Manifest;
 import android.app.Application;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.CountDownTimer;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 
@@ -14,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.util.NotificationHelper;
-import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 import ch.inf.usi.mindbricks.util.VibrationHelper;
@@ -71,7 +72,8 @@ public class HomeViewModel extends AndroidViewModel {
 
         this.currentSessionTag = tag;
 
-        boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+        boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
         if (!hasMicPermission) {
             android.util.Log.w("HomeViewModel", "Microphone permission not granted. SensorService will not be started.");
         }
@@ -93,7 +95,8 @@ public class HomeViewModel extends AndroidViewModel {
 
         switch (phase) {
             case FOCUS:
-                boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+                boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED;
                 startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
                 break;
             case SHORT_BREAK:
@@ -116,10 +119,9 @@ public class HomeViewModel extends AndroidViewModel {
         VibrationHelper.vibrate(getApplication(), VibrationHelper.VibrationType.SESSION_START);
 
         long startTime = System.currentTimeMillis();
-        String tagName = (currentSessionTag != null) ? currentSessionTag.title() : "General";
-        int tagColor = (currentSessionTag != null) ? currentSessionTag.color() : Color.GRAY;
+        Long tagId = (currentSessionTag != null) ? currentSessionTag.getId() : null;
 
-        StudySession session = new StudySession(startTime, studyDurationMinutes, tagName, tagColor);
+        StudySession session = new StudySession(startTime, studyDurationMinutes, tagId);
 
         dbExecutor.execute(() -> {
             AppDatabase db = AppDatabase.getInstance(getApplication());
@@ -194,7 +196,8 @@ public class HomeViewModel extends AndroidViewModel {
                     stopTimerAndReset();
                 } else {
                     notificationHelper.showNotification("Break's Over!", "Time to get back to studying.", 3);
-                    boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+                    boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED;
                     startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
                 }
             }
@@ -279,6 +282,19 @@ public class HomeViewModel extends AndroidViewModel {
             AppDatabase db = AppDatabase.getInstance(getApplication());
             long id = db.sessionQuestionnaireDao().insert(questionnaire);
             android.util.Log.d("HomeViewModel", "Questionnaire saved with ID: " + id);
+        });
+    }
+
+    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire, long sessionId, float focusScore) {
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            // Save questionnaire
+            long id = db.sessionQuestionnaireDao().insert(questionnaire);
+            android.util.Log.d("HomeViewModel", "Questionnaire saved with ID: " + id + ", Focus Score: " + focusScore);
+
+            // Update session with calculated focus score
+            db.studySessionDao().updateFocusScore(sessionId, focusScore);
+            android.util.Log.d("HomeViewModel", "Session " + sessionId + " updated with focus score: " + focusScore);
         });
     }
 

@@ -12,15 +12,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
-import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 
 /**
  * Utility class to seed the database with initial data from JSON files in the assets folder.
@@ -30,55 +30,23 @@ public class DatabaseSeeder {
     private static final String TAG = "DatabaseSeeder";
     private static final String STUDY_SESSION_FILE = "initial_data/study_data.json";
 
-    private static final Executor dbExecutor = Executors.newSingleThreadExecutor();
-
-    public static void seedDatabase(Context context, AppDatabase database) {
-        dbExecutor.execute(() -> {
-            try {
-                Log.d(TAG, "Seeding database...");
-
-                if (isDatabaseEmpty(database)) {
-                    Log.d(TAG, "Database is empty, proceeding with seeding...");
-
-                    List<StudySession> sessions = loadStudySessionsFromAssets(context);
-
-                    if (!sessions.isEmpty()) {
-                        for (StudySession session : sessions) {
-                            long id = database.studySessionDao().insert(session);
-                            generateAndInsertLogs(database, id, session);
-                        }
-                        Log.d(TAG, "Successfully loaded database with " + sessions.size() + " sessions.");
-                    } else {
-                        Log.w(TAG, "No sessions loaded from JSON file.");
-                    }
-
-                    Log.d(TAG, "Database seeding succesfull.");
-                } else {
-                    Log.d(TAG, "Database is not empty, skipping seeding.");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error during database seeding.", e);
-            }
-        });
-    }
-
-    private static boolean isDatabaseEmpty(AppDatabase database) {
-        List<StudySessionWithStats> sessions = database.studySessionDao().getAllSessions();
-        return sessions == null || sessions.isEmpty();
-    }
-
     public static void seedDatabaseOnCreate(Context context, AppDatabase database) {
         try {
             Log.d(TAG, "Seeding database on creation...");
 
-            List<StudySession> sessions = loadStudySessionsFromAssets(context);
+            // create default tag
+            createDefaultTag(database);
+
+            // Load sessions and create tags first
+            Map<String, Long> tagMap = new HashMap<>();
+            List<StudySession> sessions = loadStudySessionsFromAssets(context, database, tagMap);
 
             if (!sessions.isEmpty()) {
                 for (StudySession session : sessions) {
                     long id = database.studySessionDao().insert(session);
                     generateAndInsertLogs(database, id, session);
                 }
-                Log.d(TAG, "Successfully seeded " + sessions.size() + " sessions.");
+                Log.d(TAG, "Successfully seeded " + sessions.size() + " sessions and " + tagMap.size() + " tags.");
             }
             else {
                 Log.w(TAG, "No sessions loaded from JSON file.");
@@ -87,6 +55,25 @@ public class DatabaseSeeder {
             Log.e(TAG, "Error during database seeding.", e);
         }
 
+    }
+
+    /**
+     * Creates the default "No tag" tag if it doesn't exist.
+     * @return The ID of the default tag
+     */
+    private static long createDefaultTag(AppDatabase database) {
+        // Check if default tag already exists
+        Tag existingTag = database.tagDao().getTagByTitle("No tag");
+        if (existingTag != null) {
+            Log.d(TAG, "Default tag already exists with ID: " + existingTag.getId());
+            return existingTag.getId();
+        }
+
+        // Create default tag with gray color
+        Tag defaultTag = new Tag("No tag", 0xFF808080);
+        long tagId = database.tagDao().insert(defaultTag);
+        Log.d(TAG, "Created default tag with ID: " + tagId);
+        return tagId;
     }
 
     private static void generateAndInsertLogs(AppDatabase db, long sessionId, StudySession session) {
@@ -115,7 +102,7 @@ public class DatabaseSeeder {
         db.sessionSensorLogDao().insertAll(logs);
     }
 
-    private static List<StudySession> loadStudySessionsFromAssets(Context context) {
+    private static List<StudySession> loadStudySessionsFromAssets(Context context, AppDatabase database, Map<String, Long> tagMap) {
         List<StudySession> sessions = new ArrayList<>();
 
         try {
@@ -130,7 +117,7 @@ public class DatabaseSeeder {
 
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
-                StudySession session = parseStudySession(jsonObject);
+                StudySession session = parseStudySession(jsonObject, database, tagMap);
                 if (session != null) {
                     sessions.add(session);
                 }
@@ -166,14 +153,40 @@ public class DatabaseSeeder {
         return stringBuilder.toString();
     }
 
-    private static StudySession parseStudySession(JSONObject json) {
+    private static StudySession parseStudySession(JSONObject json, AppDatabase database, Map<String, Long> tagMap) {
         try {
-            // Create session with required fields
+            // Get or create tag
+            Long tagId;
+
+            if (json.has("tagTitle") && json.has("tagColor")) {
+                String tagTitle = json.getString("tagTitle");
+                int tagColor = json.getInt("tagColor");
+
+                tagId = tagMap.get(tagTitle);
+                if (tagId == null) {
+                    // Tag doesn't exist yet, create it
+                    Tag tag = new Tag(tagTitle, tagColor);
+                    tagId = database.tagDao().insert(tag);
+                    tagMap.put(tagTitle, tagId);
+                    Log.d(TAG, "Created new tag: " + tagTitle + " with ID: " + tagId);
+                }
+            } else {
+                // No tag info in JSON, use default "No tag"
+                Tag defaultTag = database.tagDao().getTagByTitle("No tag");
+                if (defaultTag != null) {
+                    tagId = defaultTag.getId();
+                } else {
+                    // Create default tag if it doesn't exist
+                    tagId = createDefaultTag(database);
+                }
+                Log.d(TAG, "Using default tag for session (no tag info in JSON)");
+            }
+
+            // Create session with tag reference
             StudySession session = new StudySession(
                     json.getLong("timestamp"),
                     json.getInt("durationMinutes"),
-                    json.getString("tagTitle"),
-                    json.getInt("tagColor")
+                    tagId
             );
 
             // Set optional fields
@@ -194,17 +207,5 @@ public class DatabaseSeeder {
             return null;
 
         }
-    }
-
-    public static void clearDatabase(AppDatabase database) {
-        dbExecutor.execute(() -> {
-            try {
-                Log.d(TAG, "Clearing all database data...");
-                database.studySessionDao().deleteAll();
-                Log.d(TAG, "Database cleared successfully");
-            } catch (Exception e) {
-                Log.e(TAG, "Error clearing database", e);
-            }
-        });
     }
 }

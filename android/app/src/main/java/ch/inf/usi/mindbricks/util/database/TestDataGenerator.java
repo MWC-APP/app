@@ -11,10 +11,15 @@ import java.util.Random;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
+import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 
+/**
+ * Utility to generate test data for the database.
+ * Use this temporarily to populate your database with sample sessions.
+ */
 public class TestDataGenerator {
 
     private static final String TAG = "TestDataGenerator";
@@ -113,7 +118,20 @@ public class TestDataGenerator {
             try {
                 Log.d(TAG, "Generating " + numberOfSessions + " test sessions...");
 
-                List<StudySession> sessions = generateTestSessions(numberOfSessions);
+                long[] tagIds = new long[SUBJECTS.length];
+                for (int i = 0; i < SUBJECTS.length; i++) {
+                    // Check if tag exists
+                    Tag existingTag = db.tagDao().getTagByTitle(SUBJECTS[i]);
+                    if (existingTag != null) {
+                        tagIds[i] = existingTag.getId();
+                    } else {
+                        // Create new tag
+                        Tag tag = new Tag(SUBJECTS[i], COLORS[i]);
+                        tagIds[i] = db.tagDao().insert(tag);
+                    }
+                }
+
+                List<StudySession> sessions = generateTestSessions(numberOfSessions, tagIds);
 
                 // Insert each session and generate fake logs for it
                 for (StudySession session : sessions) {
@@ -265,11 +283,12 @@ public class TestDataGenerator {
     /**
      * Generate realistic test sessions with full variety.
      */
-    private static List<StudySession> generateTestSessions(int count) {
+    private static List<StudySession> generateTestSessions(int count, long[] tagIds) {
         List<StudySession> sessions = new ArrayList<>();
         Random random = new Random();
         Calendar calendar = Calendar.getInstance();
 
+        // Generate sessions spread over last 30 days
         for (int i = 0; i < count; i++) {
             int daysAgo = random.nextInt(365);
             calendar.setTimeInMillis(System.currentTimeMillis());
@@ -288,8 +307,11 @@ public class TestDataGenerator {
             int subjectIndex = random.nextInt(SUBJECTS.length);
             String subject = SUBJECTS[subjectIndex];
             int color = COLORS[subjectIndex];
+            // Random tag
+            long tagId = tagIds[random.nextInt(tagIds.length)];
 
-            StudySession session = new StudySession(timestamp, duration, subject, color);
+            // Create session
+            StudySession session = new StudySession(timestamp, duration, tagId);
 
             float focusScore = generateRealisticFocusScore(random);
             session.setFocusScore(focusScore);
@@ -316,7 +338,8 @@ public class TestDataGenerator {
         // Edge Case 1: Minimum duration (1 minute)
         calendar.setTimeInMillis(System.currentTimeMillis());
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession minDuration = new StudySession(calendar.getTimeInMillis(), 1, "Quick Review", COLORS[0]);
+        Tag tag = new Tag("Quick Review", COLORS[0]);
+        StudySession minDuration = new StudySession(calendar.getTimeInMillis(), 1, tag.getId());
         minDuration.setFocusScore(50f);
         minDuration.setCoinsEarned(0);
         minDuration.setNotes("Very short session");
@@ -324,7 +347,7 @@ public class TestDataGenerator {
 
         // Edge Case 2: Maximum realistic duration (8 hours = 480 minutes)
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession maxDuration = new StudySession(calendar.getTimeInMillis(), 480, "Marathon Study", COLORS[1]);
+        StudySession maxDuration = new StudySession(calendar.getTimeInMillis(), 480, (new Tag("Marathon Study", COLORS[1])).getId());
         maxDuration.setFocusScore(65f);
         maxDuration.setCoinsEarned(312);
         maxDuration.setNotes("Full day study marathon");
@@ -332,7 +355,7 @@ public class TestDataGenerator {
 
         // Edge Case 3: Zero focus score
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession zeroFocus = new StudySession(calendar.getTimeInMillis(), 30, "Distracted Session", COLORS[2]);
+        StudySession zeroFocus = new StudySession(calendar.getTimeInMillis(), 30, (new Tag("Distracted Session", COLORS[2])).getId());
         zeroFocus.setFocusScore(0f);
         zeroFocus.setCoinsEarned(0);
         zeroFocus.setNotes("Couldn't focus at all");
@@ -340,7 +363,7 @@ public class TestDataGenerator {
 
         // Edge Case 4: Perfect focus score (100%)
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession perfectFocus = new StudySession(calendar.getTimeInMillis(), 60, "Perfect Focus", COLORS[3]);
+        StudySession perfectFocus = new StudySession(calendar.getTimeInMillis(), 60, (new Tag("Perfect Focus", COLORS[3])).getId());
         perfectFocus.setFocusScore(100f);
         perfectFocus.setCoinsEarned(60);
         perfectFocus.setNotes("Best session ever!");
@@ -350,7 +373,7 @@ public class TestDataGenerator {
         calendar.add(Calendar.DAY_OF_MONTH, -1);
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
-        StudySession midnightSession = new StudySession(calendar.getTimeInMillis(), 45, "Midnight Cramming", COLORS[4]);
+        StudySession midnightSession = new StudySession(calendar.getTimeInMillis(), 45, (new Tag("Midnight Cramming", COLORS[4])).getId();
         midnightSession.setFocusScore(55f);
         midnightSession.setCoinsEarned(25);
         sessions.add(midnightSession);
@@ -359,14 +382,14 @@ public class TestDataGenerator {
         calendar.add(Calendar.DAY_OF_MONTH, -1);
         calendar.set(Calendar.HOUR_OF_DAY, 12);
         calendar.set(Calendar.MINUTE, 0);
-        StudySession noonSession = new StudySession(calendar.getTimeInMillis(), 30, "Lunch Break Study", COLORS[5]);
+        StudySession noonSession = new StudySession(calendar.getTimeInMillis(), 30, (new Tag("Lunch Break Study", COLORS[5])).getId());
         noonSession.setFocusScore(70f);
         noonSession.setCoinsEarned(21);
         sessions.add(noonSession);
 
         // Edge Case 7: Session with empty notes
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession emptyNotes = new StudySession(calendar.getTimeInMillis(), 25, "Regular Session", COLORS[6]);
+        StudySession emptyNotes = new StudySession(calendar.getTimeInMillis(), 25, (new Tag("Regular Session", COLORS[6]).getId()));
         emptyNotes.setFocusScore(75f);
         emptyNotes.setCoinsEarned(19);
         emptyNotes.setNotes("");
@@ -374,7 +397,7 @@ public class TestDataGenerator {
 
         // Edge Case 8: Session with very long notes
         calendar.add(Calendar.DAY_OF_MONTH, -1);
-        StudySession longNotes = new StudySession(calendar.getTimeInMillis(), 90, "Detailed Session", COLORS[7]);
+        StudySession longNotes = new StudySession(calendar.getTimeInMillis(), 90, (new Tag("Detailed Session", COLORS[7])).getId());
         longNotes.setFocusScore(80f);
         longNotes.setCoinsEarned(72);
         longNotes.setNotes("This was a very productive session where I covered chapters 5-8. " +
@@ -387,8 +410,7 @@ public class TestDataGenerator {
             StudySession subjectSession = new StudySession(
                     calendar.getTimeInMillis(),
                     30 + random.nextInt(60),
-                    SUBJECTS[i],
-                    COLORS[i]
+                    (new Tag(SUBJECTS[i], COLORS[i])).getId()
             );
             subjectSession.setFocusScore(60 + random.nextInt(40));
             subjectSession.setCoinsEarned((int) (subjectSession.getDurationMinutes() * subjectSession.getFocusScore() / 100));
