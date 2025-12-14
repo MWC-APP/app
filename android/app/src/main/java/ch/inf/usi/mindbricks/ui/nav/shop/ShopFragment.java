@@ -56,15 +56,22 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         shopRecyclerView1.setScrollBarFadeDuration(0);
         shopRecyclerView2.setScrollBarFadeDuration(0);
 
-        List<ShopItem> items = new ArrayList<>();
-        items.add(new ShopItem("building_1", "house1",  1, R.drawable.house1));
-        items.add(new ShopItem("building_2", "house2",2,  R.drawable.house2));
-        items.add(new ShopItem("building_3", "house3", 3, R.drawable.ic_avatar_placeholder));
-        items.add(new ShopItem("building_4", "house4", 10, R.drawable.ic_coin_icon));
-        items.add(new ShopItem("building_5", "house5", 5, R.drawable.ic_home_black_24dp));
+        List<ShopItem> items1 = new ArrayList<>();
+        List<ShopItem> items2 = new ArrayList<>();
 
-        ShopItemAdapter adapter1 = new ShopItemAdapter(items, this);
-        ShopItemAdapter adapter2 = new ShopItemAdapter(items, this);
+        // List category 1
+        items1.add(new ShopItem("building_1", "house1",  1, R.drawable.house1));
+        items1.add(new ShopItem("building_2", "house2",3,  R.drawable.house2));
+        items1.add(new ShopItem("building_3", "house3", 5, R.drawable.house3));
+
+        // List category 2
+        items2.add(new ShopItem("building_4", "shop1",  1, R.drawable.shop1));
+        items2.add(new ShopItem("building_5", "shop2",3,  R.drawable.shop2));
+        items2.add(new ShopItem("building_6", "shop33", 5, R.drawable.shop3));
+
+
+        ShopItemAdapter adapter1 = new ShopItemAdapter(items1, this);
+        ShopItemAdapter adapter2 = new ShopItemAdapter(items2, this);
 
         shopRecyclerView1.setAdapter(adapter1);
         shopRecyclerView2.setAdapter(adapter2);

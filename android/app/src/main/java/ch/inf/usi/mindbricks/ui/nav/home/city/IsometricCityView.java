@@ -42,6 +42,7 @@ public class IsometricCityView extends View {
         paintOutline.setStrokeWidth(4f);
     }
 
+
     public void setSlots(List<CitySlot> slots) {
         this.slots = slots;
         invalidate(); // redraw the view
@@ -174,11 +175,11 @@ public class IsometricCityView extends View {
         for (String id : purchasedIds) {
             if (id.equals("building_1")) {
                 names.add("house1");
-                resIds.add(R.drawable.house1);
+                resIds.add(R.drawable.house2);
             }
             if (id.equals("building_2")) {
                 names.add("house2");
-                resIds.add(R.drawable.house2);
+                resIds.add(R.drawable.house3);
             }
         }
 
