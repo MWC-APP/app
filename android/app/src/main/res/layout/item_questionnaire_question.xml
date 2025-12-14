@@ -4,9 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="16dp"
-    app:cardElevation="2dp"
-    app:cardCornerRadius="12dp"
-    app:contentPadding="16dp">
+    app:cardElevation="0dp"
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+    app:strokeWidth="0dp"
+    app:contentPadding="20dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,21 +16,22 @@
         android:orientation="vertical">
 
         <!-- Question Text -->
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/question_text"
+            style="@style/TextAppearance.Material3.BodyLarge"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Question text goes here"
-            android:textSize="16sp"
-            android:textColor="?android:textColorPrimary"
+            android:textColor="?attr/colorOnSurface"
             android:lineSpacingExtra="4dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
 
         <!-- Rating Section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
             <!-- Rating Bar -->
             <RatingBar
@@ -40,8 +43,11 @@
                 android:stepSize="1"
                 android:rating="4"
                 android:progressTint="?attr/colorPrimary"
-                android:secondaryProgressTint="?attr/colorPrimaryVariant"
+                android:secondaryProgressTint="?attr/colorSurfaceContainerHighest"
+                android:progressBackgroundTint="?attr/colorSurfaceContainerHighest"
                 android:isIndicator="false"
+                android:scaleX="0.9"
+                android:scaleY="0.9"
                 style="?android:attr/ratingBarStyle" />
 
             <!-- Labels Container -->
@@ -49,44 +55,28 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="12dp">
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/rating_min_label"
+                    style="@style/TextAppearance.Material3.LabelSmall"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Strongly Disagree"
-                    android:textSize="12sp"
-                    android:textColor="?android:textColorSecondary"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:gravity="start" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/rating_max_label"
+                    style="@style/TextAppearance.Material3.LabelSmall"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Strongly Agree"
-                    android:textSize="12sp"
-                    android:textColor="?android:textColorSecondary"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:gravity="end" />
-
             </LinearLayout>
-
-            <!-- Current Rating Display -->
-            <TextView
-                android:id="@+id/current_rating_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Rating: 4/7"
-                android:textSize="12sp"
-                android:textColor="?attr/colorPrimary"
-                android:gravity="center"
-                android:layout_marginTop="4dp"
-                android:visibility="gone" />
-
         </LinearLayout>
-
     </LinearLayout>
-
 </com.google.android.material.card.MaterialCardView>
