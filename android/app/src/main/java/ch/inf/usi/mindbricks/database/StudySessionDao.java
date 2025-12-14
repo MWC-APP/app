@@ -21,9 +21,12 @@ public interface StudySessionDao {
     @Query("SELECT s.*, " +
            "COALESCE(AVG(l.noiseLevel), 0) as avgNoiseLevel, " +
            "COALESCE(AVG(l.lightLevel), 0) as avgLightLevel, " +
-           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount " +
+           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount, " +
+           "t.title as tagTitle, " +
+           "COALESCE(t.color, 0) as tagColor " +
            "FROM study_sessions s " +
            "LEFT JOIN session_sensor_logs l ON s.id = l.sessionId " +
+           "LEFT JOIN tags t ON s.tagId = t.id " +
            "GROUP BY s.id " +
            "ORDER BY s.timestamp DESC LIMIT :limit")
     List<StudySessionWithStats> getRecentSessions(int limit);
@@ -31,9 +34,12 @@ public interface StudySessionDao {
     @Query("SELECT s.*, " +
            "COALESCE(AVG(l.noiseLevel), 0) as avgNoiseLevel, " +
            "COALESCE(AVG(l.lightLevel), 0) as avgLightLevel, " +
-           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount " +
+           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount, " +
+           "t.title as tagTitle, " +
+           "COALESCE(t.color, 0) as tagColor " +
            "FROM study_sessions s " +
            "LEFT JOIN session_sensor_logs l ON s.id = l.sessionId " +
+           "LEFT JOIN tags t ON s.tagId = t.id " +
            "GROUP BY s.id " +
            "ORDER BY s.timestamp DESC LIMIT :limit")
     LiveData<List<StudySessionWithStats>> observeRecentSessions(int limit);
@@ -41,9 +47,12 @@ public interface StudySessionDao {
     @Query("SELECT s.*, " +
            "COALESCE(AVG(l.noiseLevel), 0) as avgNoiseLevel, " +
            "COALESCE(AVG(l.lightLevel), 0) as avgLightLevel, " +
-           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount " +
+           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount, " +
+           "t.title as tagTitle, " +
+           "COALESCE(t.color, 0) as tagColor " +
            "FROM study_sessions s " +
            "LEFT JOIN session_sensor_logs l ON s.id = l.sessionId " +
+           "LEFT JOIN tags t ON s.tagId = t.id " +
            "WHERE s.timestamp >= :startTime " +
            "GROUP BY s.id " +
            "ORDER BY s.timestamp DESC")
@@ -52,9 +61,12 @@ public interface StudySessionDao {
     @Query("SELECT s.*, " +
            "COALESCE(AVG(l.noiseLevel), 0) as avgNoiseLevel, " +
            "COALESCE(AVG(l.lightLevel), 0) as avgLightLevel, " +
-           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount " +
+           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount, " +
+           "t.title as tagTitle, " +
+           "COALESCE(t.color, 0) as tagColor " +
            "FROM study_sessions s " +
            "LEFT JOIN session_sensor_logs l ON s.id = l.sessionId " +
+           "LEFT JOIN tags t ON s.tagId = t.id " +
            "WHERE s.timestamp >= :startTime " +
            "GROUP BY s.id " +
            "ORDER BY s.timestamp DESC")
@@ -63,9 +75,12 @@ public interface StudySessionDao {
     @Query("SELECT s.*, " +
            "COALESCE(AVG(l.noiseLevel), 0) as avgNoiseLevel, " +
            "COALESCE(AVG(l.lightLevel), 0) as avgLightLevel, " +
-           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount " +
+           "COALESCE(SUM(CASE WHEN l.motionDetected THEN 1 ELSE 0 END), 0) as phonePickupCount, " +
+           "t.title as tagTitle, " +
+           "COALESCE(t.color, 0) as tagColor " +
            "FROM study_sessions s " +
            "LEFT JOIN session_sensor_logs l ON s.id = l.sessionId " +
+           "LEFT JOIN tags t ON s.tagId = t.id " +
            "GROUP BY s.id " +
            "ORDER BY s.timestamp DESC")
     List<StudySessionWithStats> getAllSessions();
