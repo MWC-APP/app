@@ -286,6 +286,19 @@ public class HomeViewModel extends AndroidViewModel {
         });
     }
 
+    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire, long sessionId, float focusScore) {
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            // Save questionnaire
+            long id = db.sessionQuestionnaireDao().insert(questionnaire);
+            android.util.Log.d("HomeViewModel", "Questionnaire saved with ID: " + id + ", Focus Score: " + focusScore);
+
+            // Update session with calculated focus score
+            db.studySessionDao().updateFocusScore(sessionId, focusScore);
+            android.util.Log.d("HomeViewModel", "Session " + sessionId + " updated with focus score: " + focusScore);
+        });
+    }
+
     private void completeSessionAndStopService() {
         Intent serviceIntent = new Intent(getApplication(), SensorService.class);
         serviceIntent.setAction(SensorService.ACTION_STOP_SESSION);

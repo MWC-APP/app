@@ -126,19 +126,4 @@ public class EmotionSelectDialogFragment extends DialogFragment {
     public OnEmotionSelectedListener getListener() {
         return listener;
     }
-
-    public int[] getEmotionImages() {
-        return emotionImages;
-    }
-
-    public String[] getEmotionLabels() {
-        return emotionLabels;
-    }
-
-    public String getEmotionLabel(int index) {
-        if (index >= 0 && index < emotionLabels.length) {
-            return emotionLabels[index];
-        }
-        return "Unknown";
-    }
 }

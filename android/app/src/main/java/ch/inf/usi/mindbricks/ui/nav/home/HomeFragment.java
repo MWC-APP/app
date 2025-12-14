@@ -41,6 +41,7 @@ import ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
+import ch.inf.usi.mindbricks.util.FocusScoreCalculator;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 import ch.inf.usi.mindbricks.util.TagManager;
@@ -515,7 +516,12 @@ public class HomeFragment extends Fragment {
         questionnaire.setEngagementRating(engagement);
         questionnaire.setSatisfactionRating(satisfaction);
         questionnaire.setAnticipationRating(anticipation);
-        homeViewModel.saveQuestionnaireResponse(questionnaire);
+
+        // Calculate focus score based on questionnaire responses
+        float focusScore = FocusScoreCalculator.calculate(enthusiasm, energy, engagement, satisfaction, anticipation);
+
+        // Save questionnaire and update session focus score
+        homeViewModel.saveQuestionnaireResponse(questionnaire, sessionId, focusScore);
     }
 
     private void setupTagSpinner() {

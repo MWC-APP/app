@@ -73,9 +73,6 @@ public interface StudySessionDao {
     @Insert
     long insert(StudySession session);
 
-    @Insert
-    List<Long> insertAll(List<StudySession> sessions);
-
     @Delete
     void delete(StudySession session);
 
@@ -84,4 +81,7 @@ public interface StudySessionDao {
 
     @Update
     void update(StudySession session);
+
+    @Query("UPDATE study_sessions SET focusScore = :focusScore WHERE id = :sessionId")
+    void updateFocusScore(long sessionId, float focusScore);
 }
