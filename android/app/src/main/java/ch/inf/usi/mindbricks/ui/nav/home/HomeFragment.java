@@ -3,6 +3,7 @@ package ch.inf.usi.mindbricks.ui.nav.home;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,10 +16,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.transition.TransitionManager;
@@ -37,7 +41,6 @@ import ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
-import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 import ch.inf.usi.mindbricks.util.TagManager;
@@ -59,8 +62,8 @@ public class HomeFragment extends Fragment {
     private List<ImageView> sessionDots;
     private ConstraintLayout sessionDotsLayout;
 
-    private PermissionManager.PermissionRequest audioPermissionRequest;
-    private PermissionManager.PermissionRequest motionPermissionRequest;
+    private ActivityResultLauncher<String> audioPermissionLauncher;
+    private ActivityResultLauncher<String> motionPermissionLauncher;
 
     private IsometricCityView cityView;
     private CityViewModel cityViewModel;
@@ -79,22 +82,19 @@ public class HomeFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Its job is to finally start the session, regardless of the outcome.
-        motionPermissionRequest = PermissionManager.registerSinglePermission(
-                this,
-                Manifest.permission.ACTIVITY_RECOGNITION,
-                this::startDefaultSession,
-                this::startDefaultSession
-                // in both cases start as default, so if permission is denied it will just don't work
+
+        // Register motion permission launcher
+        // Starts session regardless of outcome (not granted = no sensor data won't be collected)
+        motionPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> startDefaultSession()
         );
 
-        // Its job is to trigger the next request in the chain.
-        audioPermissionRequest = PermissionManager.registerSinglePermission(
-                this,
-                Manifest.permission.RECORD_AUDIO,
-                () -> motionPermissionRequest.launch(),
-                () -> motionPermissionRequest.launch()
-                // in both cases start as default, so if permission is denied it will just don't work
+        // Register audio permission launcher
+        // (After audio permission, request motion permission)
+        audioPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> motionPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
         );
     }
 
@@ -190,15 +190,16 @@ public class HomeFragment extends Fragment {
                     boolean isFirstTime = prefsListener.isFirstSession();
 
                     // check if both permissions are already granted
-                    boolean hasAudio = PermissionManager.hasPermission(requireContext(), Manifest.permission.RECORD_AUDIO);
-                    boolean hasMotion = PermissionManager.hasPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION);
+                    boolean hasAudio = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED;
+                    boolean hasMotion = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION)
+                            == PackageManager.PERMISSION_GRANTED;
 
                     if (hasAudio && hasMotion) {
                         startDefaultSession();
                     } else if (isFirstTime) {
                         prefsListener.setFirstSession(false);
-                        audioPermissionRequest.launch();
-                        motionPermissionRequest.launch();
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                     } else {
                         startDefaultSession();
                     }

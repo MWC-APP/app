@@ -3,8 +3,10 @@ package ch.inf.usi.mindbricks.ui.nav.home;
 import android.Manifest;
 import android.app.Application;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.CountDownTimer;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 
@@ -14,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.util.NotificationHelper;
-import ch.inf.usi.mindbricks.util.PermissionManager;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 import ch.inf.usi.mindbricks.util.VibrationHelper;
@@ -71,7 +72,8 @@ public class HomeViewModel extends AndroidViewModel {
 
         this.currentSessionTag = tag;
 
-        boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+        boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
         if (!hasMicPermission) {
             android.util.Log.w("HomeViewModel", "Microphone permission not granted. SensorService will not be started.");
         }
@@ -93,7 +95,8 @@ public class HomeViewModel extends AndroidViewModel {
 
         switch (phase) {
             case FOCUS:
-                boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+                boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED;
                 startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
                 break;
             case SHORT_BREAK:
@@ -194,7 +197,8 @@ public class HomeViewModel extends AndroidViewModel {
                     stopTimerAndReset();
                 } else {
                     notificationHelper.showNotification("Break's Over!", "Time to get back to studying.", 3);
-                    boolean hasMicPermission = PermissionManager.hasPermission(getApplication(), Manifest.permission.RECORD_AUDIO);
+                    boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED;
                     startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
                 }
             }
