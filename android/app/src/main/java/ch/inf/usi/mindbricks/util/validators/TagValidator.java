@@ -1,5 +1,6 @@
 package ch.inf.usi.mindbricks.util.validators;
 
+import android.content.Context;
 import android.text.TextUtils;
 
 import java.util.regex.Pattern;
@@ -15,7 +16,7 @@ public final class TagValidator {
     /**
      * Maximum length for tag names.
      */
-    private static final int MAX_TAG_LENGTH = 20;
+    private static final int MAX_TAG_LENGTH = 35;
 
     /**
      * The validation pattern for tag names.
@@ -28,16 +29,17 @@ public final class TagValidator {
         // no instances
     }
 
-    public static ValidationResult validateTitle(String title) {
+    public static ValidationResult validateTitle(String title, Context ctx) {
         String normalized = title == null ? "" : title.trim();
         if (TextUtils.isEmpty(normalized)) {
-            return ValidationResult.error(R.string.onboarding_error_tag_name_required);
+            return ValidationResult.error(ctx.getString(R.string.onboarding_error_tag_name_required));
         }
         if (normalized.length() > MAX_TAG_LENGTH) {
-            return ValidationResult.error(R.string.validation_error_tag_name_too_long);
+            // getString(R.string.onboarding_tags_dialog_title, MAX_TAG_LENGTH);
+            return ValidationResult.error(ctx.getString(R.string.validation_error_tag_name_too_long, MAX_TAG_LENGTH));
         }
         if (!TITLE_PATTERN.matcher(normalized).matches()) {
-            return ValidationResult.error(R.string.validation_error_tag_name_format);
+            return ValidationResult.error(ctx.getString(R.string.validation_error_tag_name_format));
         }
         return ValidationResult.ok();
     }
