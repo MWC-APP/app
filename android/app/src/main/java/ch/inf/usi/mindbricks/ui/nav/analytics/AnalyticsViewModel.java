@@ -1,6 +1,8 @@
 package ch.inf.usi.mindbricks.ui.nav.analytics;
 
 import android.app.Application;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -61,10 +63,46 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private final MutableLiveData<ViewState> viewState = new MutableLiveData<>(ViewState.LOADING);
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
 
-    // Cache for processed data to avoid reprocessing
+    // Optimized caching system
+    private static class ResultCache {
+        final int sessionsHash;
+        final DateRange dateRange;
+        final long timestamp;
+
+        // Cached results
+        WeeklyStats weeklyStats;
+        List<TimeSlotStats> hourlyStats;
+        AIRecommendation dailyRecommendation;
+        List<HourlyQuality> energyCurve;
+        List<HeatmapCell> heatmap;
+        List<StreakDay> streak;
+        List<DailyRings> dailyRings;
+        List<AIRecommendation> aiRecommendations;
+        List<StudySessionWithStats> filteredSessions;
+
+        ResultCache(List<StudySessionWithStats> sessions, DateRange range) {
+            this.sessionsHash = sessions.hashCode();
+            this.dateRange = range;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        boolean isValid(List<StudySessionWithStats> sessions, DateRange range) {
+            return sessions.hashCode() == this.sessionsHash
+                    && this.dateRange.equals(range)
+                    && (System.currentTimeMillis() - timestamp) < 300000; // 5 min validity
+        }
+    }
+
+    private ResultCache resultCache;
     private List<StudySessionWithStats> cachedSessions;
     private long lastLoadTime = 0;
-    private static final long CACHE_VALIDITY_MS = 5 * 60 * 1000; // 5 minutes
+
+    // Debouncing for rapid updates
+    private final Handler debounceHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingUpdate;
+    private static final long DEBOUNCE_DELAY_MS = 300;
+
+
     private LiveData<List<StudySessionWithStats>> sessionsSource;
     private final Observer<List<StudySessionWithStats>> sessionsObserver = this::handleSessionsUpdate;
 
@@ -185,6 +223,17 @@ public class AnalyticsViewModel extends AndroidViewModel {
     }
 
     private void handleSessionsUpdate(List<StudySessionWithStats> sessions) {
+        // Cancel any pending debounced update
+        if (pendingUpdate != null) {
+            debounceHandler.removeCallbacks(pendingUpdate);
+        }
+
+        // Schedule debounced update
+        pendingUpdate = () -> handleSessionsUpdateImmediate(sessions);
+        debounceHandler.postDelayed(pendingUpdate, DEBOUNCE_DELAY_MS);
+    }
+
+    private void handleSessionsUpdateImmediate(List<StudySessionWithStats> sessions) {
         Log.d(TAG, "Sessions updated from database: " +
                 (sessions != null ? sessions.size() + " sessions" : "null"));
 
@@ -226,6 +275,26 @@ public class AnalyticsViewModel extends AndroidViewModel {
         Log.d(TAG, "=== processAllData START ===");
         Log.d(TAG, "All sessions count: " + (allSessions != null ? allSessions.size() : "null"));
         Log.d(TAG, "Date range: " + dateRange.getDisplayName());
+
+        if (resultCache != null && resultCache.isValid(sessions, dateRange)) {
+            Log.d(TAG, "Using cached results - skipping computation");
+
+            // Post cached values
+            weeklyStats.postValue(resultCache.weeklyStats);
+            hourlyStats.postValue(resultCache.hourlyStats);
+            dailyRecommendation.postValue(resultCache.dailyRecommendation);
+            energyCurveData.postValue(resultCache.energyCurve);
+            heatmapData.postValue(resultCache.heatmap);
+            streakData.postValue(resultCache.streak);
+            dailyRingsHistory.postValue(resultCache.dailyRings);
+            aiRecommendations.postValue(resultCache.aiRecommendations);
+            sessionHistory.postValue(resultCache.filteredSessions);
+            viewState.postValue(ViewState.SUCCESS);
+
+            return;
+        }
+
+        Log.d(TAG, "Cache miss - computing new results");
 
         processingExecutor.execute(() -> {
             try {
@@ -299,7 +368,22 @@ public class AnalyticsViewModel extends AndroidViewModel {
                 sessionHistory.postValue(filtered);
                 viewState.postValue(ViewState.SUCCESS);
 
-                // Set SUCCESS only after all data is posted
+                sessionHistory.postValue(filtered);
+
+                // Store in cache
+                resultCache = new ResultCache(sessions, dateRange);
+                resultCache.weeklyStats = weekly;
+                resultCache.hourlyStats = hourly;
+                resultCache.dailyRecommendation = adaptiveSchedule;
+                resultCache.energyCurve = energyCurve;
+                resultCache.heatmap = heatmap;
+                resultCache.streak = streak;
+                resultCache.dailyRings = history;
+                resultCache.aiRecommendations = recommendations;
+                resultCache.filteredSessions = filtered;
+
+                Log.d(TAG, "Results cached successfully");
+
                 viewState.postValue(ViewState.SUCCESS);
 
             } catch (Exception e) {
@@ -317,8 +401,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
     public void refreshData() {
         Log.d(TAG, "Refreshing data (cache invalidated)");
         cachedSessions = null;
-        lastLoadTime = 0;
-        loadData();
+        resultCache = null;
     }
 
     public void setRingsExpanded(boolean expanded) {
@@ -400,5 +483,13 @@ public class AnalyticsViewModel extends AndroidViewModel {
         if (sessionsSource != null) {
             sessionsSource.removeObserver(sessionsObserver);
         }
+
+        if (pendingUpdate != null) {
+            debounceHandler.removeCallbacks(pendingUpdate);
+        }
+
+        resultCache = null;
+        cachedSessions = null;
+        allSessions = null;
     }
 }
