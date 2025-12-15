@@ -23,10 +23,6 @@ public class ProfileViewModel extends AndroidViewModel {
 
         // Load the saved coin balance when the ViewModel is created
         int saved = preferencesManager.getBalance();
-        if (saved == 0) {
-            int initialCoins = application.getResources().getInteger(R.integer.starting_coins);
-            saveCoins(initialCoins);
-        }
         _coins.setValue(saved);
     }
 
