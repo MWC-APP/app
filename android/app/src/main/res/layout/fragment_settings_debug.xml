@@ -89,6 +89,14 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:cornerRadius="8dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_test_questionnaire"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Test Questionnaire"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="8dp" />
+
         <!-- Environment Presets Section -->
         <TextView
             android:layout_width="match_parent"
@@ -182,6 +190,24 @@
             android:textColor="#D32F2F"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:strokeColor="#D32F2F"
+            app:cornerRadius="8dp" />
+
+        <!-- Balance tools -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="Balance tools"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_add_coins"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add 1000 Coins"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:cornerRadius="8dp" />
 
         <!-- Info Section -->

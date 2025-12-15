@@ -16,11 +16,9 @@
     <string name="onboarding_intro_body">
     Build focus through timed study sessions
     </string>
-    <string name="onboarding_intro_card_title"></string>
+    <string name="onboarding_intro_card_title">Application logo</string>
     <string name="onboarding_intro_card_body">
-    Start a study session, remain focused, and watch your <b>city</b> come to life. Distractions can slow your study and building process down.</string>
-    <string name="onboarding_intro_final_title">Sensors</string>
-    <string name="onboarding_intro_final_body">MindBricks uses sensors to understand your study environment. Over time, this data helps you discover the best places and moments to study like you never could!</string>
+    Build your empire, one study session at a time. Keep your focus sharp to grow your city and avoid delays!</string>
     <string name="onboarding_profile_title">Let\'s personalize your coaching</string>
     <string name="onboarding_profile_subtitle">Add a friendly face and a few focus goals so we can cheer you on.</string>
     <string name="onboarding_profile_upload_photo">Add profile picture</string>
@@ -353,6 +351,7 @@
     <string name="permission_settings_title">Permission Required</string>
     <string name="permission_settings_message">Calendar permission was denied. To connect your calendar, please enable the Calendar permission in the app settings.</string>
     <string name="permission_settings_button">Open Settings</string>
+    <string name="app_name">MindBricks</string>
 
 
 </resources>

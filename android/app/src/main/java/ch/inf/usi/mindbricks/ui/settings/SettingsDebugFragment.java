@@ -11,11 +11,15 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
+import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
+import ch.inf.usi.mindbricks.util.ProfileViewModel;
 import ch.inf.usi.mindbricks.util.database.TestDataGenerator;
 
 /**
@@ -24,9 +28,12 @@ import ch.inf.usi.mindbricks.util.database.TestDataGenerator;
  */
 public class SettingsDebugFragment extends Fragment {
 
+    private ProfileViewModel profileViewModel;
+
     private MaterialButton btnGenerateBasic;
     private MaterialButton btnGenerateLarge;
     private MaterialButton btnGenerateEdgeCases;
+    private MaterialButton btnTestQuestionnaire;
     private MaterialButton btnGenerateLibrary;
     private MaterialButton btnGenerateCafe;
     private MaterialButton btnGenerateDarkRoom;
@@ -35,6 +42,7 @@ public class SettingsDebugFragment extends Fragment {
     private MaterialButton btnGenerateCommute;
     private MaterialButton btnVerifyDatabase;
     private MaterialButton btnClearDatabase;
+    private MaterialButton btnAddCoins;
 
     @Nullable
     @Override
@@ -42,11 +50,15 @@ public class SettingsDebugFragment extends Fragment {
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings_debug, container, false);
+        
+        // Initialize ViewModel
+        profileViewModel = new ViewModelProvider(requireActivity()).get(ProfileViewModel.class);
 
         // Initialize buttons
         btnGenerateBasic = view.findViewById(R.id.btn_generate_basic);
         btnGenerateLarge = view.findViewById(R.id.btn_generate_large);
         btnGenerateEdgeCases = view.findViewById(R.id.btn_generate_edge_cases);
+        btnTestQuestionnaire = view.findViewById(R.id.btn_test_questionnaire);
         btnGenerateLibrary = view.findViewById(R.id.btn_generate_library);
         btnGenerateCafe = view.findViewById(R.id.btn_generate_cafe);
         btnGenerateDarkRoom = view.findViewById(R.id.btn_generate_dark_room);
@@ -55,6 +67,7 @@ public class SettingsDebugFragment extends Fragment {
         btnGenerateCommute = view.findViewById(R.id.btn_generate_commute);
         btnVerifyDatabase = view.findViewById(R.id.btn_verify_database);
         btnClearDatabase = view.findViewById(R.id.btn_clear_database);
+        btnAddCoins = view.findViewById(R.id.btn_add_coins);
 
         setupClickListeners();
 
@@ -62,6 +75,16 @@ public class SettingsDebugFragment extends Fragment {
     }
 
     private void setupClickListeners() {
+        // Add 1000 coins
+        btnAddCoins.setOnClickListener(v -> {
+            profileViewModel.addCoins(1000);
+            showToast("Added 1000 coins!");
+            showCompletionToast("Balance updated!");
+        });
+
+        // Test Questionnaire
+        btnTestQuestionnaire.setOnClickListener(v -> showEmotionDialog());
+
         // Generate basic test data (50 sessions)
         btnGenerateBasic.setOnClickListener(v -> {
             showToast("Generating 50 test sessions...");
@@ -168,6 +191,32 @@ public class SettingsDebugFragment extends Fragment {
                     .setNegativeButton("Cancel", null)
                     .show();
         });
+    }
+
+    private void showEmotionDialog() {
+        EmotionSelectDialogFragment dialog = new EmotionSelectDialogFragment();
+        dialog.setListener((emotionIndex, wantsDetailedQuestions) -> {
+            if (wantsDetailedQuestions) showDetailedQuestionnaire(emotionIndex);
+            else showToast("Quick questionnaire completed! (Emotion: " + emotionIndex + ")");
+        });
+        dialog.show(getChildFragmentManager(), "emotion_dialog");
+    }
+
+    private void showDetailedQuestionnaire(int emotionIndex) {
+        DetailedQuestionsDialogFragment dialog = DetailedQuestionsDialogFragment.newInstance(emotionIndex);
+        dialog.setListener(new DetailedQuestionsDialogFragment.OnQuestionnaireCompleteListener() {
+            @Override
+            public void onQuestionnaireComplete(int emotion, int enthusiasm, int energy,
+                                                int engagement, int satisfaction, int anticipation) {
+                showToast("Detailed questionnaire completed! (Score calculated)");
+            }
+
+            @Override
+            public void onQuestionnaireSkipped(int emotionIndex) {
+                showToast("Detailed questionnaire skipped. Quick response saved.");
+            }
+        });
+        dialog.show(getChildFragmentManager(), "detailed_questionnaire");
     }
 
     private void showToast(String message) {

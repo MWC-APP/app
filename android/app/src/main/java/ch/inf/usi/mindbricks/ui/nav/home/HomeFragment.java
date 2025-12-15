@@ -211,17 +211,6 @@ public class HomeFragment extends Fragment {
                 }
             }
         });
-
-        // Dev mode - test questionnaire button
-        Button testButton = view.findViewById(R.id.test_questionnaire_button);
-        if (testButton != null) {
-            if (BuildConfig.DEBUG) {
-                testButton.setVisibility(View.VISIBLE);
-                testButton.setOnClickListener(v -> showEmotionDialog(999L));
-            } else {
-                testButton.setVisibility(View.GONE);
-            }
-        }
     }
 
     private void setupObservers() {
