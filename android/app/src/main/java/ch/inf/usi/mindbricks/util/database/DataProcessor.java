@@ -1,8 +1,7 @@
 package ch.inf.usi.mindbricks.util.database;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Color;
+import android.util.Log;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -10,15 +9,19 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.database.AppDatabase;
+import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
+import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
 import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
+import ch.inf.usi.mindbricks.model.visual.TagUsage;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
@@ -222,59 +225,136 @@ public class DataProcessor {
         return hourlyData;
     }
 
-    public static List<HeatmapCell> calculateQualityHeatmap(List<StudySessionWithStats> sessions, DateRange dateRange) {
+    public static List<HeatmapCell> calculateQualityHeatmap(
+            List<StudySessionWithStats> sessions,
+            DateRange dateRange
+    ) {
+        Log.d("DataProcessor", "calculateQualityHeatmap START - range: " + dateRange.getDisplayName());
+
+        // ✅ Cap to prevent infinite loops with ALL_TIME
+        DateRange cappedRange = dateRange;
+        if (dateRange.getRangeType() == DateRange.RangeType.ALL_TIME) {
+            Log.d("DataProcessor", "ALL_TIME detected, capping to last 90 days for heatmap");
+            cappedRange = DateRange.lastNDays(90);
+        } else if (dateRange.getDurationInDays() > 365) {
+            Log.d("DataProcessor", "Range > 365 days, capping to 365 days for performance");
+            long cappedStart = dateRange.getEndTimestamp() - (365L * 24 * 60 * 60 * 1000);
+            cappedRange = DateRange.custom(cappedStart, dateRange.getEndTimestamp());
+        }
+
+        // Filter sessions to the (possibly capped) range
+        List<StudySessionWithStats> filteredSessions = filterSessionsInRange(sessions, cappedRange);
+        Log.d("DataProcessor", "Filtered sessions for heatmap: " + filteredSessions.size());
+
+        if (filteredSessions.isEmpty()) {
+            Log.d("DataProcessor", "No sessions for heatmap, returning empty list");
+            return new ArrayList<>();
+        }
+
+        // ✅ Create a cell for EVERY HOUR of EVERY DAY in the range
         Map<String, HeatmapCell> cellMap = new HashMap<>();
         Calendar calendar = Calendar.getInstance();
 
-        // STEP 1: Process actual session data first
-        for (StudySessionWithStats session : sessions) {
+        // Start at beginning of first day
+        calendar.setTimeInMillis(cappedRange.getStartTimestamp());
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        long hourMs = 60 * 60 * 1000L;
+        long currentHourStart = calendar.getTimeInMillis();
+
+        // Iterate through every hour in the range
+        while (currentHourStart <= cappedRange.getEndTimestamp()) {
+            calendar.setTimeInMillis(currentHourStart);
+
+            int year = calendar.get(Calendar.YEAR);
+            int month = calendar.get(Calendar.MONTH);
+            int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
+            int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+            int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
+
+            // Create unique key: YYYY-MM-DD-HH
+            String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
+
+            HeatmapCell cell = new HeatmapCell();
+            cell.setYear(year);
+            cell.setMonth(month);
+            cell.setDayOfMonth(dayOfMonth);
+            cell.setDayOfWeek(dayOfWeek);
+            cell.setHourOfDay(hourOfDay);
+            cell.setTimestamp(currentHourStart);
+            cell.setSessionCount(0);
+            cell.setAvgQuality(0);
+            cell.setTotalMinutes(0);
+
+            cellMap.put(hourKey, cell);
+
+            // Move to next hour
+            currentHourStart += hourMs;
+        }
+
+        Log.d("DataProcessor", "Created " + cellMap.size() + " hourly cells for range");
+
+        // Now populate cells with actual session data
+        for (StudySessionWithStats session : filteredSessions) {
             calendar.setTimeInMillis(session.getTimestamp());
 
             int year = calendar.get(Calendar.YEAR);
             int month = calendar.get(Calendar.MONTH);
             int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
-            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
 
-            String key = year + "-" + month + "-" + dayOfMonth + "-" + hour;
+            String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
 
-            HeatmapCell cell = cellMap.get(key);
-            if (cell == null) {
-                cell = new HeatmapCell(dayOfMonth, hour, 0, 0);
-                cellMap.put(key, cell);
+            HeatmapCell cell = cellMap.get(hourKey);
+            if (cell != null) {
+                // Accumulate session data for this hour
+                cell.setSessionCount(cell.getSessionCount() + 1);
+                cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
+                cell.setTotalMinutes(cell.getTotalMinutes() + session.getDurationMinutes());
+            } else {
+                // Session might span multiple hours - create cell if it doesn't exist
+                // This handles sessions that start in one hour but we're processing them
+                HeatmapCell newCell = new HeatmapCell();
+                calendar.setTimeInMillis(session.getTimestamp());
+
+                newCell.setYear(year);
+                newCell.setMonth(month);
+                newCell.setDayOfMonth(dayOfMonth);
+                newCell.setDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK));
+                newCell.setHourOfDay(hourOfDay);
+
+                // Set timestamp to start of this hour
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                newCell.setTimestamp(calendar.getTimeInMillis());
+
+                newCell.setSessionCount(1);
+                newCell.setAvgQuality(session.getFocusScore());
+                newCell.setTotalMinutes(session.getDurationMinutes());
+
+                cellMap.put(hourKey, newCell);
             }
-
-            cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
-            cell.setSessionCount(cell.getSessionCount() + 1);
         }
 
-        calendar.setTimeInMillis(dateRange.getStartTimestamp());
-        Calendar endCalendar = Calendar.getInstance();
-        endCalendar.setTimeInMillis(dateRange.getEndTimestamp());
-
-        while (calendar.before(endCalendar) || calendar.equals(endCalendar)) {
-            int year = calendar.get(Calendar.YEAR);
-            int month = calendar.get(Calendar.MONTH);
-            int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
-
-            for (int hour = 0; hour < 24; hour++) {
-                String key = year + "-" + month + "-" + dayOfMonth + "-" + hour;
-
-                if (!cellMap.containsKey(key)) {
-                    cellMap.put(key, new HeatmapCell(dayOfMonth, hour, 0, 0));
-                }
-            }
-
-            calendar.add(Calendar.DAY_OF_MONTH, 1);
-        }
-
-        // Calculate averages
+        // Calculate averages and convert to list
         List<HeatmapCell> result = new ArrayList<>();
         for (HeatmapCell cell : cellMap.values()) {
             if (cell.getSessionCount() > 0) {
+                // Calculate average quality
                 cell.setAvgQuality(cell.getAvgQuality() / cell.getSessionCount());
             }
             result.add(cell);
         }
+
+        // Sort chronologically (oldest to newest for scrolling)
+        Collections.sort(result, (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp()));
+
+        Log.d("DataProcessor", "Heatmap complete: " + result.size() + " hourly cells with " +
+                filteredSessions.size() + " sessions");
 
         return result;
     }
@@ -356,63 +436,72 @@ public class DataProcessor {
             List<StudySessionWithStats> allSessions,
             DateRange dateRange,
             int dailyMinutesTarget,
-            float dailyFocusTarget) {
+            int minSessionsForRing
+    ) {
+        Log.d("DataProcessor", "calculateDailyRingsHistory START");
+        Log.d("DataProcessor", "  Range: " + dateRange.getDisplayName());
+        Log.d("DataProcessor", "  Total sessions: " + allSessions.size());
+
+        long rangeMs = dateRange.getEndTimestamp() - dateRange.getStartTimestamp();
+        long maxMs = 365L * 24 * 60 * 60 * 1000;
+
+        DateRange cappedRange = dateRange;
+        if (rangeMs > maxMs) {
+            Log.w("DataProcessor", "  Range too large (" + (rangeMs / (24*60*60*1000)) + " days), capping to 365 days");
+            long cappedStart = dateRange.getEndTimestamp() - maxMs;
+            cappedRange = DateRange.custom(cappedStart, dateRange.getEndTimestamp());
+        }
 
         List<DailyRings> result = new ArrayList<>();
 
-        if (allSessions == null || allSessions.isEmpty()) {
-            return createEmptyDailyRings(context, dateRange, dailyMinutesTarget, dailyFocusTarget);
+        // Filter sessions to capped range
+        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, cappedRange);
+        Log.d("DataProcessor", "  Filtered sessions: " + sessions.size());
+
+        if (sessions.isEmpty()) {
+            Log.d("DataProcessor", "  No sessions, returning empty");
+            return result;
         }
 
-        // Group sessions by date
-        Map<String, List<StudySessionWithStats>> sessionsByDate = new HashMap<>();
+        // Group sessions by day
+        Map<String, List<StudySessionWithStats>> sessionsByDay = new HashMap<>();
+        Calendar cal = Calendar.getInstance();
 
-        for (StudySessionWithStats session : allSessions) {
-            if (!dateRange.contains(session.getTimestamp())) {
+        for (StudySessionWithStats session : sessions) {
+            cal.setTimeInMillis(session.getTimestamp());
+
+            String dayKey = String.format(Locale.US, "%d-%02d-%02d",
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH) + 1,
+                    cal.get(Calendar.DAY_OF_MONTH)
+            );
+
+            if (!sessionsByDay.containsKey(dayKey)) {
+                sessionsByDay.put(dayKey, new ArrayList<>());
+            }
+            sessionsByDay.get(dayKey).add(session);
+        }
+
+        Log.d("DataProcessor", "  Days with sessions: " + sessionsByDay.size());
+
+        for (Map.Entry<String, List<StudySessionWithStats>> entry : sessionsByDay.entrySet()) {
+            List<StudySessionWithStats> daySessions = entry.getValue();
+
+            if (daySessions.size() < minSessionsForRing) {
                 continue;
             }
 
-            @SuppressLint("DefaultLocale") String dateKey = String.format("%d-%02d-%02d",
-                    session.getYear(),
-                    session.getMonth(),
-                    session.getDayOfMonth());
+            long dayTimestamp = daySessions.get(0).getTimestamp();
 
-            sessionsByDate.computeIfAbsent(dateKey, k -> new ArrayList<>()).add(session);
+            List<GoalRing> rings = calculateGoalRings(context, daySessions, dailyMinutesTarget, 70);
+
+            DailyRings dailyRings = new DailyRings(LocalDate.ofEpochDay(dayTimestamp / 86400000), rings);
+            result.add(dailyRings);
         }
 
-        // Get date range boundaries
-        Calendar startCal = getStartCalendar(dateRange);
-        Calendar endCal = getEndCalendar(dateRange);
+        Collections.sort(result, (a, b) -> Long.compare(b.getDate().toEpochDay(), a.getDate().toEpochDay()));
 
-        // Create DailyRings for each day in range (newest first)
-        Calendar currentCal = (Calendar) endCal.clone();
-
-        while (!currentCal.before(startCal)) {
-            int year = currentCal.get(Calendar.YEAR);
-            int month = currentCal.get(Calendar.MONTH) + 1;
-            int day = currentCal.get(Calendar.DAY_OF_MONTH);
-
-            LocalDate date = LocalDate.of(year, month, day);
-            @SuppressLint("DefaultLocale") String dateKey = String.format( "%d-%02d-%02d", year, month, day);
-
-            // Get sessions for this day (or empty list)
-            List<StudySessionWithStats> sessionsForDay = sessionsByDate.getOrDefault(dateKey, new ArrayList<>());
-
-            // Calculate rings for this day
-            List<GoalRing> rings = calculateGoalRings(
-                    context,
-                    sessionsForDay,
-                    dailyMinutesTarget,
-                    dailyFocusTarget
-            );
-
-            DailyRings dayData = new DailyRings(date, rings);
-            result.add(dayData);
-
-            // Move to previous day
-            currentCal.add(Calendar.DAY_OF_MONTH, -1);
-        }
-
+        Log.d("DataProcessor", "  Daily rings created: " + result.size());
         return result;
     }
     
@@ -522,6 +611,78 @@ public class DataProcessor {
         ));
 
         return rings;
+    }
+
+    public static List<TagUsage> calculateTagUsage(List<StudySessionWithStats> allSessions,
+                                                       DateRange dateRange,
+                                                       int topN) {
+        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
+
+        if (sessions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Count sessions per tag
+        Map<String, TagInfo> tagStats = new HashMap<>();
+        int totalSessions = 0;
+
+        for (StudySessionWithStats session : sessions) {
+            String tagTitle = session.getTagTitle();
+            if (tagTitle == null || tagTitle.isEmpty()) {
+                tagTitle = "No tag";
+            }
+
+            TagInfo info = tagStats.get(tagTitle);
+            if (info == null) {
+                info = new TagInfo(tagTitle, session.getTagColor());
+                tagStats.put(tagTitle, info);
+            }
+
+            info.sessionCount++;
+            info.totalMinutes += session.getDurationMinutes();
+            totalSessions++;
+        }
+
+        // Convert to list and sort
+        List<TagUsage> usageList = new ArrayList<>();
+        for (TagInfo info : tagStats.values()) {
+            float percentage = (float) info.sessionCount / totalSessions * 100f;
+            usageList.add(new TagUsage(
+                    info.title,
+                    info.color,
+                    info.sessionCount,
+                    info.totalMinutes,
+                    percentage
+            ));
+        }
+
+        Collections.sort(usageList);
+
+        // Keep top N, group rest as "Other"
+        if (usageList.size() > topN) {
+            List<TagUsage> topTags = new ArrayList<>(usageList.subList(0, topN));
+
+            int otherCount = 0;
+            int otherMinutes = 0;
+            for (int i = topN; i < usageList.size(); i++) {
+                TagUsage data = usageList.get(i);
+                otherCount += data.getSessionCount();
+                otherMinutes += data.getTotalMinutes();
+            }
+
+            float otherPercentage = (float) otherCount / totalSessions * 100f;
+            topTags.add(new TagUsage(
+                    "Other",
+                    0xFF808080, // Gray
+                    otherCount,
+                    otherMinutes,
+                    otherPercentage
+            ));
+
+            return topTags;
+        }
+
+        return usageList;
     }
 
     //"ai" generation
@@ -820,97 +981,6 @@ public class DataProcessor {
         return filtered;
     }
 
-    public static int calculateTotalMinutes(List<StudySessionWithStats> allSessions, DateRange dateRange) {
-        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
-
-        int total = 0;
-        for (StudySessionWithStats session : sessions) {
-            total += session.getDurationMinutes();
-        }
-
-        return total;
-    }
-
-    public static float calculateAverageFocusScore(List<StudySessionWithStats> allSessions,
-                                                   DateRange dateRange) {
-        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
-
-        if (sessions.isEmpty()) {
-            return 0;
-        }
-
-        float sum = 0;
-        for (StudySessionWithStats session : sessions) {
-            sum += session.getFocusScore();
-        }
-
-        return sum / sessions.size();
-    }
-
-    public static Map<String, List<StudySessionWithStats>> groupSessionsByTag(List<StudySessionWithStats> allSessions,
-                                                                     DateRange dateRange) {
-        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
-        Map<String, List<StudySessionWithStats>> grouped = new HashMap<>();
-
-        for (StudySessionWithStats session : sessions) {
-            String tag = session.getTagTitle();
-            if (tag == null || tag.isEmpty()) {
-                tag = "Untagged";
-            }
-
-            if (!grouped.containsKey(tag)) {
-                grouped.put(tag, new ArrayList<>());
-            }
-            grouped.get(tag).add(session);
-        }
-
-        return grouped;
-    }
-
-    public static int calculateLongestStreak(List<StudySessionWithStats> allSessions, DateRange dateRange) {
-        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
-
-        if (sessions.isEmpty()) {
-            return 0;
-        }
-
-        List<StudySessionWithStats> sortedSessions = new ArrayList<>(sessions);
-        Collections.sort(sortedSessions, (a, b) ->
-                Long.compare(a.getTimestamp(), b.getTimestamp()));
-
-        int longestStreak = 1;
-        int currentStreak = 1;
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(sortedSessions.get(0).getTimestamp());
-        int lastDayOfYear = cal.get(Calendar.DAY_OF_YEAR);
-        int lastYear = cal.get(Calendar.YEAR);
-
-        for (int i = 1; i < sortedSessions.size(); i++) {
-            cal.setTimeInMillis(sortedSessions.get(i).getTimestamp());
-            int currentDayOfYear = cal.get(Calendar.DAY_OF_YEAR);
-            int currentYear = cal.get(Calendar.YEAR);
-
-            if (currentYear == lastYear && currentDayOfYear == lastDayOfYear + 1) {
-                currentStreak++;
-                longestStreak = Math.max(longestStreak, currentStreak);
-            } else if (currentYear == lastYear + 1 && currentDayOfYear == 1 &&
-                    lastDayOfYear == 365) {
-                // Year boundary case (Dec 31 -> Jan 1)
-                currentStreak++;
-                longestStreak = Math.max(longestStreak, currentStreak);
-            } else if (currentDayOfYear != lastDayOfYear) {
-                // Streak broken
-                currentStreak = 1;
-            }
-
-            lastDayOfYear = currentDayOfYear;
-            lastYear = currentYear;
-        }
-
-        return longestStreak;
-    }
-
     // ---> Helper methods
     private static int convertCalendarDayToIndex(int calendarDay) {
         switch (calendarDay) {
@@ -972,5 +1042,17 @@ public class DataProcessor {
         }
     }
 
+    private static class TagInfo {
+        String title;
+        int color;
+        int sessionCount;
+        int totalMinutes;
 
+        TagInfo(String title, int color) {
+            this.title = title;
+            this.color = color;
+            this.sessionCount = 0;
+            this.totalMinutes = 0;
+        }
+    }
 }

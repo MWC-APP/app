@@ -33,20 +33,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Coin Icon -->
+    <!-- Coin Balance TextView -->
+
     <ImageView
         android:id="@+id/ic_coin_image"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="33dp"
+        android:layout_height="35dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="40dp"
         android:src="@drawable/ic_coin_icon"
+        app:layout_constraintEnd_toStartOf="@+id/coin_balance_text"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/coin_balance_text" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Coin Balance TextView -->
     <TextView
         android:id="@+id/coin_balance_text"
         android:layout_width="wrap_content"
@@ -70,7 +70,6 @@
         android:id="@+id/tag_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
         android:gravity="center"
         android:minWidth="150dp"
         android:spinnerMode="dropdown"
@@ -78,8 +77,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.467"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/settings_icon"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.218" />
 
     <ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView
         android:id="@+id/cityView"

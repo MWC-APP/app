@@ -24,13 +24,13 @@ public class EmotionSelectDialogFragment extends DialogFragment {
     }
 
     private final int[] emotionImages = {
-            R.drawable.emotion_1,
-            R.drawable.emotion_2,
-            R.drawable.emotion_3,
-            R.drawable.emotion_4,
-            R.drawable.emotion_5,
-            R.drawable.emotion_6,
-            R.drawable.emotion_7
+            R.drawable.sentiment_very_dissatisfied_24px,
+            R.drawable.sentiment_dissatisfied_24px,
+            R.drawable.mood_bad_24px,
+            R.drawable.sentiment_neutral_24px,
+            R.drawable.mood_24px,
+            R.drawable.sentiment_satisfied_24px,
+            R.drawable.sentiment_very_satisfied_24px,
     };
 
     private final String[] emotionLabels = {
@@ -71,24 +71,17 @@ public class EmotionSelectDialogFragment extends DialogFragment {
 
     private void setupEmotionGrid(View view) {
         GridLayout emotionGrid = view.findViewById(R.id.emotion_grid);
+        emotionGrid.setColumnCount(4);
 
         for (int i = 0; i < emotionImages.length; i++) {
             final int emotionIndex = i;
-            ImageView emotionView = new ImageView(getContext());
-            emotionView.setImageResource(emotionImages[i]);
-
-            emotionView.setClickable(true);
-            emotionView.setFocusable(true);
-
+            ImageView emotionView = createEmotionImageView(emotionIndex);
             emotionView.setOnClickListener(v -> onEmotionClicked(emotionIndex));
-
             emotionGrid.addView(emotionView);
         }
     }
 
-
     private void onEmotionClicked(int emotionIndex) {
-        // Directly proceed to detailed questions
         if (listener != null) {
             listener.onEmotionSelected(emotionIndex, true);
         }
@@ -101,24 +94,25 @@ public class EmotionSelectDialogFragment extends DialogFragment {
 
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
-        params.height = (int) (80 * getResources().getDisplayMetrics().density); // 80dp height
-        params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); // Equal column weight
-        params.setMargins(8, 8, 8, 8);
+        params.height = (int) (80 * getResources().getDisplayMetrics().density);
+        params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+
+        int margin = (int) (8 * getResources().getDisplayMetrics().density);
+        params.setMargins(margin, margin, margin, margin);
         emotionView.setLayoutParams(params);
 
         emotionView.setClickable(true);
         emotionView.setFocusable(true);
         emotionView.setBackgroundResource(android.R.drawable.list_selector_background);
-
         emotionView.setContentDescription(emotionLabels[emotionIndex]);
-
         emotionView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        emotionView.setPadding(12, 12, 12, 12);
+
+        int padding = (int) (12 * getResources().getDisplayMetrics().density);
+        emotionView.setPadding(padding, padding, padding, padding);
 
         return emotionView;
     }
 
-    // getters and setters
     public void setListener(OnEmotionSelectedListener listener) {
         this.listener = listener;
     }
