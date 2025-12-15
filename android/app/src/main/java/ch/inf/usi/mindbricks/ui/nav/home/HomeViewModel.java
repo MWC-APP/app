@@ -65,6 +65,7 @@ public class HomeViewModel extends AndroidViewModel {
     private Tag currentSessionTag;
     private final NotificationHelper notificationHelper;
     private long currentSessionId = -1;
+    private long currentSessionStartTime = 0;
     private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     public final MutableLiveData<Long> showQuestionnaireEvent = new MutableLiveData<>();
@@ -130,6 +131,7 @@ public class HomeViewModel extends AndroidViewModel {
         VibrationHelper.vibrate(getApplication(), VibrationHelper.VibrationType.SESSION_START);
 
         long startTime = System.currentTimeMillis();
+        currentSessionStartTime = startTime;
         Long tagId = (currentSessionTag != null) ? currentSessionTag.getId() : null;
 
         StudySession session = new StudySession(startTime, studyDurationMinutes, tagId);
@@ -328,13 +330,24 @@ public class HomeViewModel extends AndroidViewModel {
 
         if (currentSessionId != -1) {
             long sessionIdToUpdate = currentSessionId;
+            long startTime = currentSessionStartTime;
             dbExecutor.execute(() -> {
                 AppDatabase db = AppDatabase.getInstance(getApplication());
+                
+                // Update duration
+                long elapsedMillis = System.currentTimeMillis() - startTime;
+                int durationMinutes = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
+
+                // Ensure at least one minute
+                if (durationMinutes == 0 && elapsedMillis > 30000) durationMinutes = 1; 
+                
+                db.studySessionDao().updateDuration(sessionIdToUpdate, durationMinutes);
+
                 float avgNoise = db.sessionSensorLogDao().getAverageNoise(sessionIdToUpdate);
                 float avgLight = db.sessionSensorLogDao().getAverageLight(sessionIdToUpdate);
                 int motionCount = db.sessionSensorLogDao().getMotionCount(sessionIdToUpdate);
 
-                android.util.Log.d("HomeViewModel", "Completing session " + sessionIdToUpdate + ". Stats: Noise=" + avgNoise + ", Light=" + avgLight + ", Motion=" + motionCount);
+                Log.d("HomeViewModel", "Completing session " + sessionIdToUpdate + ". Duration: " + durationMinutes + "m. Stats: Noise=" + avgNoise + ", Light=" + avgLight + ", Motion=" + motionCount);
             });
             currentSessionId = -1;
         }

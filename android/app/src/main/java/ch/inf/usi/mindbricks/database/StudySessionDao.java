@@ -127,4 +127,7 @@ public interface StudySessionDao {
 
     @Query("UPDATE study_sessions SET focusScore = :focusScore WHERE id = :sessionId")
     void updateFocusScore(long sessionId, float focusScore);
+
+    @Query("UPDATE study_sessions SET durationMinutes = :durationMinutes WHERE id = :sessionId")
+    void updateDuration(long sessionId, int durationMinutes);
 }

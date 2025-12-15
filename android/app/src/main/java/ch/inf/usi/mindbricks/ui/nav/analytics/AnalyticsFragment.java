@@ -356,14 +356,21 @@ public class AnalyticsFragment extends Fragment {
         sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
             @Override
             public void onSessionClick(StudySessionWithStats session) {
+                if (isScrolling) {
+                    Log.d(TAG, "Click ignored - currently scrolling");
+                    return;
+                }
                 showSessionDetails(session);
             }
 
             @Override
             public void onSessionLongClick(StudySessionWithStats session) {
+                if (isScrolling) {
+                    Log.d(TAG, "Long click ignored - currently scrolling");
+                    return;
+                }
                 showSessionOptionsDialog(session);
             }
-
         });
 
         // Set layout manager
@@ -393,28 +400,6 @@ public class AnalyticsFragment extends Fragment {
                         (isScrolling ? "SCROLLING" : "IDLE"));
             }
         });
-
-        sessionHistoryAdapter = new SessionHistoryAdapter(new SessionHistoryAdapter.OnSessionClickListener() {
-            @Override
-            public void onSessionClick(StudySessionWithStats session) {
-                if (isScrolling) {
-                    Log.d(TAG, "Click ignored - currently scrolling");
-                    return;
-                }
-                showSessionDetails(session);
-            }
-
-            @Override
-            public void onSessionLongClick(StudySessionWithStats session) {
-                if (isScrolling) {
-                    Log.d(TAG, "Long click ignored - currently scrolling");
-                    return;
-                }
-                showSessionOptionsDialog(session);
-            }
-        });
-
-        Log.d(TAG, "RecyclerView setup complete");
 
         Log.d(TAG, "RecyclerView setup complete");
     }
