@@ -1,4 +1,4 @@
-package ch.inf.usi.mindbricks.util;
+package ch.inf.usi.mindbricks.util.evaluation;
 
 import android.content.Context;
 import android.util.Log;
@@ -26,6 +26,7 @@ public class UserPreferencesManager {
 
     private final Context context;
     private UserPreferences cachedPreferences;
+
 
     public UserPreferencesManager(Context context) {
         this.context = context.getApplicationContext();

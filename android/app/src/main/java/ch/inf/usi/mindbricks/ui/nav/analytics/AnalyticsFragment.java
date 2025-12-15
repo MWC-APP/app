@@ -26,6 +26,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import android.content.Intent;
+import com.google.android.material.button.MaterialButton;
+import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
@@ -75,6 +78,7 @@ public class AnalyticsFragment extends Fragment {
     private AIRecommendationCardView aiRecommendationView;
     private LinearLayout aiLegendContainer;
     private TagUsageChartView tagUsagePieChart;
+    private MaterialButton changePreferencesButton;
 
 
     // rings
@@ -203,6 +207,11 @@ public class AnalyticsFragment extends Fragment {
      */
     private void initializeViews(View view) {
         Log.d(TAG, "Initializing views...");
+
+        changePreferencesButton = view.findViewById(R.id.changePreferencesButton);
+        if (changePreferencesButton != null) {
+            changePreferencesButton.setOnClickListener(v -> navigateToPreferences());
+        }
 
         // Tab navigation
         tabLayout = view.findViewById(R.id.analyticsTabLayout);
@@ -408,10 +417,10 @@ public class AnalyticsFragment extends Fragment {
         viewModel.getDailyRingsHistory().observe(getViewLifecycleOwner(), this::updateDailyRingsDisplay);
 
         // Observe AI Recommendations
-        viewModel.getAiRecommendations().observe(getViewLifecycleOwner(), recommendation -> {
+        viewModel.getDailyRecommendation().observe(getViewLifecycleOwner(), recommendation -> {
 
-            if (recommendation != null && !recommendation.isEmpty() && aiRecommendationView != null) {
-                aiRecommendationView.setData(recommendation.get(0));
+            if (recommendation != null && aiRecommendationView != null) {
+                aiRecommendationView.setData(recommendation);
 
                 // Post to ensure view has been laid out
                 aiRecommendationView.post(this::updateAILegend);
@@ -907,6 +916,12 @@ public class AnalyticsFragment extends Fragment {
         } else {
             return String.format(Locale.getDefault(), "%d minutes", minutes);
         }
+    }
+
+    private void navigateToPreferences() {
+        Intent intent = new Intent(requireContext(), SettingsActivity.class);
+        intent.putExtra(SettingsActivity.EXTRA_TAB_INDEX, 1);
+        startActivity(intent);
     }
 
     private void loadStreakDataForMonth(int month, int year) {

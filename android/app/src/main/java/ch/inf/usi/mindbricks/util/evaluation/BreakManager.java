@@ -5,7 +5,7 @@ import android.content.Context;
 import android.util.Log;
 
 import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
-import ch.inf.usi.mindbricks.util.UserPreferencesManager;
+import ch.inf.usi.mindbricks.util.evaluation.UserPreferencesManager;
 import ch.inf.usi.mindbricks.model.evaluation.UserPreferences;
 
 

@@ -6,7 +6,7 @@ import android.util.Log;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
-import ch.inf.usi.mindbricks.util.UserPreferencesManager;
+import ch.inf.usi.mindbricks.util.evaluation.UserPreferencesManager;
 import ch.inf.usi.mindbricks.util.VibrationHelper;
 import ch.inf.usi.mindbricks.model.evaluation.UserPreferences;
 

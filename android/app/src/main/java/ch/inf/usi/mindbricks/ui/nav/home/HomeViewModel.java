@@ -24,7 +24,7 @@ import ch.inf.usi.mindbricks.model.evaluation.UserPreferences;
 import ch.inf.usi.mindbricks.util.NotificationHelper;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
-import ch.inf.usi.mindbricks.util.UserPreferencesManager;
+import ch.inf.usi.mindbricks.util.evaluation.UserPreferencesManager;
 import ch.inf.usi.mindbricks.util.VibrationHelper;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
