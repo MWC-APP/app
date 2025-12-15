@@ -25,6 +25,7 @@
                 android:layout_height="wrap_content"
                 android:background="@color/analytics_chart_background"
                 android:elevation="4dp"
+                android:layout_marginTop="40dp"
                 app:tabGravity="fill"
                 app:tabIndicatorColor="@android:color/system_on_secondary_container_light"
                 app:tabMode="fixed"

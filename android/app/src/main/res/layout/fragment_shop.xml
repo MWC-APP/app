@@ -21,13 +21,15 @@
 
             <ImageView
                 android:id="@+id/ic_coin_image"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="33dp"
+                android:layout_height="35dp"
                 android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
                 android:src="@drawable/ic_coin_icon"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"/>
+                app:layout_constraintVertical_bias="0.0" />
 
             <TextView
                 android:id="@+id/coin_balance_text"
@@ -46,12 +48,14 @@
                 android:id="@+id/page_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
                 android:text="Shop"
                 android:textColor="@android:color/black"
                 android:textSize="34sp"
                 android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.498"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
