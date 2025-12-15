@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -269,9 +270,9 @@ public class ProfilePictureManager {
 
         Glide.with(fragment)
                 .load(avatarUri)
+                .apply(RequestOptions.circleCropTransform())
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .error(R.drawable.ic_avatar_placeholder)
-                .centerCrop()
                 .into(imageView);
     }
 
@@ -281,9 +282,9 @@ public class ProfilePictureManager {
     private void loadLocalProfilePicture(Uri uri) {
         Glide.with(fragment)
                 .load(uri)
+                .apply(RequestOptions.circleCropTransform())
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .error(R.drawable.ic_avatar_placeholder)
-                .centerCrop()
                 .into(imageView);
     }
 

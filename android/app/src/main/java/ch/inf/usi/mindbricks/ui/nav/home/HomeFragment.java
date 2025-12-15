@@ -32,18 +32,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import ch.inf.usi.mindbricks.BuildConfig;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
-import ch.inf.usi.mindbricks.ui.nav.home.city.CityViewModel;
-import ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
 import ch.inf.usi.mindbricks.util.evaluation.FocusScoreCalculator;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
+import ch.inf.usi.mindbricks.util.ProfilePictureManager;
 import ch.inf.usi.mindbricks.util.ProfileViewModel;
 import ch.inf.usi.mindbricks.util.TagManager;
 
@@ -58,6 +58,7 @@ public class HomeFragment extends Fragment {
 
     private HomeViewModel homeViewModel;
     private ProfileViewModel profileViewModel;
+    private ProfilePictureManager profilePictureManager;
 
     private NavigationLocker navigationLocker;
 
@@ -66,9 +67,6 @@ public class HomeFragment extends Fragment {
 
     private ActivityResultLauncher<String> audioPermissionLauncher;
     private ActivityResultLauncher<String> motionPermissionLauncher;
-
-    private IsometricCityView cityView;
-    private CityViewModel cityViewModel;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -109,6 +107,10 @@ public class HomeFragment extends Fragment {
             PreferencesManager prefs = new PreferencesManager(requireContext());
             updateTimerUI(TimeUnit.MINUTES.toMillis(prefs.getTimerStudyDuration()));
         }
+        // Reload avatar in case it changed
+        if (profilePictureManager != null) {
+            profilePictureManager.loadProfilePicture();
+        }
     }
 
     @Nullable
@@ -134,10 +136,6 @@ public class HomeFragment extends Fragment {
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
         settingsIcon = view.findViewById(R.id.settings_icon);
-        cityView = view.findViewById(R.id.cityView);
-
-        // Initialize cityViewModel before any observer uses it
-        cityViewModel = new ViewModelProvider(this).get(CityViewModel.class);
 
         setupTagSpinner();
 
@@ -151,18 +149,23 @@ public class HomeFragment extends Fragment {
         sessionDots.add(view.findViewById(R.id.dot3));
         sessionDots.add(view.findViewById(R.id.dot4));
 
-        // Click listener to open settings activity
+        // Initialize profile picture manager
+        PreferencesManager prefs = new PreferencesManager(requireContext());
+        profilePictureManager = new ProfilePictureManager(this, settingsIcon, prefs);
+
+        // Click listener to open profile/settings
         settingsIcon.setOnClickListener(v -> {
-            // Only open settings if enabled (not during focus session)
+            // Only open profile if enabled (not during focus session)
             if (settingsIcon.isEnabled()) {
                 Intent intent = new Intent(requireContext(), SettingsActivity.class);
-                // force to select the Pomodoro tab at the start
-                intent.putExtra(SettingsActivity.EXTRA_TAB_INDEX, 2);
+                // Open profile tab
                 startActivity(intent);
             }
         });
 
-        PreferencesManager prefs = new PreferencesManager(requireContext());
+        // Load profile avatar
+        profilePictureManager.loadProfilePicture();
+
         int defaultStudyDurationMinutes = prefs.getTimerStudyDuration();
         updateTimerUI(TimeUnit.MINUTES.toMillis(defaultStudyDurationMinutes));
 
@@ -209,27 +212,16 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // TODO: REMOVE THIS BEFORE SUBMISSION!!! ONLY FOR TESTING
+        // Dev mode - test questionnaire button
         Button testButton = view.findViewById(R.id.test_questionnaire_button);
         if (testButton != null) {
-            testButton.setOnClickListener(v -> showEmotionDialog(999L));
-        }
-
-        // Initialize slots
-        cityViewModel.initializeSlots(5, 5);
-
-        // Observe LiveData to update the view
-        cityViewModel.getSlots().observe(getViewLifecycleOwner(), slots -> {
-            cityView.setSlots(slots);
-        });
-
-        // Unlock a random slot every minute of study
-        homeViewModel.studyElapsedTime.observe(getViewLifecycleOwner(), elapsedMillis -> {
-            int minutes = (int) (elapsedMillis / 60000);
-            if (minutes > 0 && elapsedMillis % 60000 < 1000) {
-                cityViewModel.unlockRandomSlot();
+            if (BuildConfig.DEBUG) {
+                testButton.setVisibility(View.VISIBLE);
+                testButton.setOnClickListener(v -> showEmotionDialog(999L));
+            } else {
+                testButton.setVisibility(View.GONE);
             }
-        });
+        }
     }
 
     private void setupObservers() {
@@ -478,7 +470,6 @@ public class HomeFragment extends Fragment {
     }
 
     private void showDetailedQuestionnaire(long sessionId, int emotionIndex) {
-        // FIXME: we need to use a new view rather than a dialog (a bit messy)
         DetailedQuestionsDialogFragment dialog = DetailedQuestionsDialogFragment.newInstance(emotionIndex);
         dialog.setListener(new DetailedQuestionsDialogFragment.OnQuestionnaireCompleteListener() {
             @Override

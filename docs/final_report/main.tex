@@ -50,7 +50,7 @@
 % --- QUESTION 6 ---
 \textbf{6. If you answered yes to question 5, list the existing apps that are most related to yours and explain how these solutions differ from your own. If you answered no to question 5, \textcolor{red}{explain why do you think nobody else has solved this problem before}.} (Max. 650 characters)
 
-\AnswerBoxXLarge{Apps like Forest and Focus To-Do offer offer timers and basic gamification, but they do not consider the user\'s environment and serve only as productivity tools. Our app differentiates itself by collecting sensor data to provide a personalized study plan based on the user\'s study study habits, the environment, and questionnaire feedback. These features are not usually found in existing pomodoro apps, as they usually focus solely on time management and gamification.}
+\AnswerBoxXLarge{Apps like Forest and Focus To-Do offer offer timers and basic gamification, but they do not consider the user\'s environment and serve only as productivity tools. Our app differentiates itself by collecting sensor data to provide a personalized study plan based on the user\'s study habits, the environment, and questionnaire feedback. These features are not usually found in existing pomodoro apps, as they usually focus solely on time management and gamification.}
 
 % --- QUESTION 7 ---
 \textbf{7. Which of the built-in sensors of your phone does the app make use of?} (Max. 200 char.)
@@ -60,7 +60,7 @@
 % --- QUESTION 8 ---
 \textbf{8. Which of the built-in actuators of your phone does the app make use of?} (Max. 200 char.)
 
-\AnswerBoxSmall{Speaker (for sound effects), \textcolor{red}{Vibration motor (feedback on session completion)}}
+\AnswerBoxSmall{Speaker (for sound effects), Vibration motor (feedback on session completion)}
 
 % --- QUESTION 9 ---
 \textbf{9. Does your app store sensor data locally, remotely, or in both ways?} \\
@@ -107,7 +107,9 @@
 % --- QUESTION 15 ---
 \textbf{15. Which permissions does your app require to be granted by the user?} (Max. 200 characters)
 
-\AnswerBoxSmall{The app requires explicit user approval for \texttt{RECORD\_AUDIO} and \texttt{ACTIVITY\_RECOGNITION} for its core functions. \texttt{POST\_NOTIFICATIONS} is also required in for Android 13+.}
+
+
+\AnswerBoxSmall{The app requires \texttt{RECORD\_AUDIO} and \texttt{ACTIVITY\_RECOGNITION} for core functionality, \texttt{POST\_NOTIFICATIONS} on Android 13+, VIBRATE for feedback, and \texttt{READ\_CALENDAR} to support the user’s study goals.}
 
 % --- QUESTION 16 ---
 \textbf{16. Does the app raise any ethical issues?} \\
@@ -125,15 +127,14 @@
 \textbf{18. Indicate how each member of the group contributed to the App. Provide the name of the member, his/her main task (UI, database, data processing) and the parts of the code he/she wrote.} (Max. 650 characters)
 
 \AnswerBoxXLarge{\textbf{Luca Di Bello} (Data Processing \& DB):
-	Wrote the sensor drivers (microphone, light, motion), the database logic for storing sensor data, and the focus score estimation. Also handled user onboarding, settings, and data validation. \\
+	Wrote the sensor drivers (microphone, light, motion), the database logic for storing sensor data, and the focus score estimation. Also handled user onboarding, settings, and data validation. Implemented the current version of the gamification of the app with the city personalization. \\
 
 	\textbf{Marta Šafářová} (UI \& Data Visualization):
 	Focused on data visualization and user feedback. She created the perceived productivity questionnaire, implemented the analytics visuals, and developed the interactive study timeline recommendation. \\
 
 	\textbf{Luca Beltrami} (UI \& Gamification):
-	Handled the core app experience and gamification. He implemented the Pomodoro timer logic, notifications, sound effects, and the gamification animations (house building, isometric city). \\
+	Handled the core app experience and gamification. He implemented the Pomodoro timer logic, notifications, sound effects, and started the gamification animations and structure.
 
-	\textcolor{red}{NOTE: this needs to be checked. I exported GitHub project data and analyzed it using an LLM}
 }
 
 \clearpage
@@ -141,6 +142,18 @@
 % --- QUESTION 19 ---
 \textbf{19. What are the main challenges you had to cope with in order to build your app and how did you manage to overcome them? Please also describe "failed attempts", i.e., ideas and solutions you might have explored but did not bring to the expected result.} (Max. 1 page)
 
-\AnswerBoxHuge{ }
+\AnswerBoxHuge{
+
+At the beginning, we had difficulties deciding how to manage the sensors, as the app was initially designed to work in the background. However, due to Android permission constraints and sensor usage rules, we decided to run the app in the foreground instead.
+
+Data visualization also proved to be challenging, and we revised it multiple times to make meaningful and effective use of both the sensor data and the user questionnaire. Toward the end of the project, we decided to shift the concept from having the user build a house during study sessions to building a city instead. We found this approach to be more motivating for users and easier to manage, as handling a city with buildings was simpler than managing a house with furniture or complex structures.
+
+Another significant challenge was designing and structuring the city-building system. Managing the city required handling a large amount of game logic, data structures, asset files, and an inventory system, which initially made the codebase difficult to maintain and reason about. To address this, we refactored the game logic by separating it into ten dedicated files, each responsible for a specific aspect of the system (such as city state, buildings, assets, and inventory). This modularization significantly improved code clarity, maintainability, and overall system organization, allowing us to make sense of the complexity and continue development more effectively.
+
+During development, we usually fixed bugs as soon as we noticed them. However, around three quarters of the way through the project, a significant number of bugs had accumulated, and Luca Di Bello had to spend a considerable amount of time focusing exclusively on bug fixing.
+
+Another major challenge was designing and implementing the post-session questionnaire system effectively. We supported our decisions with research and revised the system several times as we found new material. At the same time, we needed to adapt existing questionnaire models to our specific needs without compromising their validity.
+
+Finally, our perspective on the user experience evolved throughout development. Initially, we planned a large onboarding process with multiple fragments explaining the app and requesting all sensor and notification permissions upfront. Following Professor Santini’s suggestions, we rethought this approach and redesigned the onboarding to be more user-friendly, minimizing wasted time at the start of the experience and requesting sensor permissions at runtime instead. }
 
 \end{document}

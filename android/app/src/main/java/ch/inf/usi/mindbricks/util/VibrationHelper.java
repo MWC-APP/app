@@ -13,7 +13,9 @@ public final class VibrationHelper {
         SESSION_START,
         SESSION_END,
         SESSION_CANCELLED,
-        CYCLE_COMPLETE
+        CYCLE_COMPLETE,
+        DESTROY_TILE,
+        PLACE_TILE
     }
 
     public static void vibrate(Context context, VibrationType type) {
@@ -59,6 +61,12 @@ public final class VibrationHelper {
                     new int[]{0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE},
                     -1
                 );
+            case DESTROY_TILE ->
+                // Medium vibration
+                VibrationEffect.createOneShot(400, VibrationEffect.EFFECT_HEAVY_CLICK);
+            case PLACE_TILE ->
+                // Medium vibration
+                VibrationEffect.createOneShot(400, VibrationEffect.EFFECT_CLICK);
         };
     }
 }

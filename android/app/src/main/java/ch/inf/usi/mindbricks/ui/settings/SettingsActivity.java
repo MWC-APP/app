@@ -19,6 +19,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.util.List;
 
+import ch.inf.usi.mindbricks.BuildConfig;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.drivers.calendar.CalendarDriver;
 import ch.inf.usi.mindbricks.model.visual.calendar.CalendarSyncService;
@@ -27,7 +28,6 @@ import ch.inf.usi.mindbricks.util.SoundPlayer;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    public static final String EXTRA_TAB_INDEX = "tab_index";
     private CalendarSyncService syncService;
 
     @Override
@@ -59,19 +59,13 @@ public class SettingsActivity extends AppCompatActivity {
             else if (position == 3){
                 tab.setText(R.string.settings_tab_calendar);
             }
-            else{
+            // Dev mode - debug tab
+            else if (position == 4 && BuildConfig.DEBUG){
                 tab.setText(R.string.settings_tab_debug);
             }
         }).attach();
 
-        // Handle initial tab selection (needed for pomodoro settings from home)
-        int initialTab = getIntent().getIntExtra(EXTRA_TAB_INDEX, 0);
-        if (initialTab > 0 && initialTab < adapter.getItemCount()) {
-            viewPager.setCurrentItem(initialTab, false);
-        }
-
         syncService = CalendarSyncService.getInstance(this);
-
     }
 
     @Override
@@ -154,14 +148,17 @@ public class SettingsActivity extends AppCompatActivity {
             else if(position == 3) {
                 return new SettingsCalendarFragment();
             }
-            else{
+            else if(position == 4 && BuildConfig.DEBUG){
                 return new SettingsDebugFragment();
             }
+            // Fallback (should not happen in production)
+            return new SettingsProfileFragment();
         }
 
         @Override
         public int getItemCount() {
-            return 5;
+            // Show debug tab only in debug builds
+            return BuildConfig.DEBUG ? 5 : 4;
         }
     }
 }
