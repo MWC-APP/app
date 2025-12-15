@@ -162,6 +162,22 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         BottomSheetBehavior<MaterialCardView> bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet);
         bottomSheetBehavior.setPeekHeight(dpToPx(250));
         bottomSheetBehavior.setDraggable(true);
+
+        // Add callback to update exclusion zone when bottom sheet moves
+        bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+            @Override
+            public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                updateExclusionZone();
+            }
+
+            @Override
+            public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                updateExclusionZone();
+            }
+        });
+
+        // Initial update
+        binding.bottomSheet.post(this::updateExclusionZone);
     }
 
     /**
@@ -443,6 +459,29 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
      */
     private int[] sizeForTile(String ignored) {
         return new int[]{1, 1};
+    }
+
+    /**
+     * Update the exclusion zone in the city view based on the current bottom sheet position.
+     */
+    private void updateExclusionZone() {
+        if (binding == null) return;
+
+        // Get the bottom sheet Y coordinate
+        int[] location = new int[2];
+        binding.bottomSheet.getLocationOnScreen(location);
+        float bottomSheetTopY = location[1];
+
+        // Get city Y coordinate
+        int[] cityLocation = new int[2];
+        binding.cityView.getLocationOnScreen(cityLocation);
+        float cityViewTopY = cityLocation[1];
+
+        // Compute deltaY
+        float relativeTopY = bottomSheetTopY - cityViewTopY;
+
+        // Update exclusion zone
+        binding.cityView.setExclusionZoneTopY(relativeTopY);
     }
 
     @Override

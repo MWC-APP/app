@@ -60,6 +60,11 @@ public class IsometricCityView extends View {
     private OnTileDropListener onTileDropListener;
 
     /**
+     * Top Y coordinate of the exclusion zone (bottom sheet).
+     */
+    private float exclusionZoneTopY = Float.MAX_VALUE;
+
+    /**
      * Width of each tile in pixels.
      */
     private float tileWidth;
@@ -179,6 +184,15 @@ public class IsometricCityView extends View {
      */
     public void setOnTileDropListener(OnTileDropListener listener) {
         this.onTileDropListener = listener;
+    }
+
+    /**
+     * Set the exclusion zone top y coordinate. Drops within this area will be ignored
+     *
+     * @param topY The Y coordinate of the exclusion zone in screen coordinates
+     */
+    public void setExclusionZoneTopY(float topY) {
+        this.exclusionZoneTopY = topY;
     }
 
     @Override
@@ -408,6 +422,14 @@ public class IsometricCityView extends View {
 
                 // get tile ID from clip data
                 String tileId = String.valueOf(event.getClipData().getItemAt(0).getText());
+
+                // check if drop location is inside the exclusion zone
+                if (event.getY() >= exclusionZoneTopY) {
+                    // cancel drop + reset state
+                    gridOutline.setAlpha(0);
+                    invalidate();
+                    return false;
+                }
 
                 // convert screen coordinates to grid coordinates
                 int[] grid = screenToGrid(event.getX(), event.getY());
