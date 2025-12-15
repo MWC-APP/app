@@ -37,8 +37,6 @@ import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
-import ch.inf.usi.mindbricks.ui.nav.home.city.CityViewModel;
-import ch.inf.usi.mindbricks.ui.nav.home.city.IsometricCityView;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.DetailedQuestionsDialogFragment;
 import ch.inf.usi.mindbricks.ui.nav.home.questionnare.EmotionSelectDialogFragment;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
@@ -66,9 +64,6 @@ public class HomeFragment extends Fragment {
 
     private ActivityResultLauncher<String> audioPermissionLauncher;
     private ActivityResultLauncher<String> motionPermissionLauncher;
-
-    private IsometricCityView cityView;
-    private CityViewModel cityViewModel;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -134,10 +129,6 @@ public class HomeFragment extends Fragment {
         startSessionButton = view.findViewById(R.id.start_stop_button);
         coinBalanceTextView = view.findViewById(R.id.coin_balance_text);
         settingsIcon = view.findViewById(R.id.settings_icon);
-        cityView = view.findViewById(R.id.cityView);
-
-        // Initialize cityViewModel before any observer uses it
-        cityViewModel = new ViewModelProvider(this).get(CityViewModel.class);
 
         setupTagSpinner();
 
@@ -214,22 +205,6 @@ public class HomeFragment extends Fragment {
         if (testButton != null) {
             testButton.setOnClickListener(v -> showEmotionDialog(999L));
         }
-
-        // Initialize slots
-        cityViewModel.initializeSlots(5, 5);
-
-        // Observe LiveData to update the view
-        cityViewModel.getSlots().observe(getViewLifecycleOwner(), slots -> {
-            cityView.setSlots(slots);
-        });
-
-        // Unlock a random slot every minute of study
-        homeViewModel.studyElapsedTime.observe(getViewLifecycleOwner(), elapsedMillis -> {
-            int minutes = (int) (elapsedMillis / 60000);
-            if (minutes > 0 && elapsedMillis % 60000 < 1000) {
-                cityViewModel.unlockRandomSlot();
-            }
-        });
     }
 
     private void setupObservers() {
