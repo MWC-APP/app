@@ -13,6 +13,7 @@ import androidx.lifecycle.Observer;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -38,6 +39,11 @@ import ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine;
 public class AnalyticsViewModel extends AndroidViewModel {
     private static final String TAG = "AnalyticsViewModel";
     private static final boolean VERBOSE_LOGGING = true;
+    private static final int MAX_HISTORY_ITEMS = 200;
+
+    private int historyPageSize = 100;
+    private int historyCurrentPage = 1;
+    private List<StudySessionWithStats> allFilteredSessions;
 
     private final StudySessionRepository repository;
     private final Executor processingExecutor;
@@ -59,6 +65,9 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private MutableLiveData<Boolean> isRingsExpanded = new MutableLiveData<>(false);
 
     private final MutableLiveData<List<AIRecommendation>> aiRecommendations = new MutableLiveData<>();
+
+    private List<StudySessionWithStats> allSessions;
+    private List<StudySessionWithStats> allHistoricalSessions;
 
     // ViewState for UI feedback
     private final MutableLiveData<ViewState> viewState = new MutableLiveData<>(ViewState.LOADING);
@@ -108,7 +117,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private final Observer<List<StudySessionWithStats>> sessionsObserver = this::handleSessionsUpdate;
 
     private int daysToLoad = 30;
-    private List<StudySessionWithStats> allSessions;
 
     public AnalyticsViewModel(@NonNull Application application) {
         super(application);
@@ -244,6 +252,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
         cachedSessions = sessions;
         lastLoadTime = System.currentTimeMillis();
         allSessions = sessions;
+        allHistoricalSessions = new ArrayList<>(sessions);
 
         if (VERBOSE_LOGGING) Log.d(TAG, "    Moving to background thread for filtering...");
 
@@ -278,6 +287,28 @@ public class AnalyticsViewModel extends AndroidViewModel {
         });
 
         if (VERBOSE_LOGGING) Log.d(TAG, "<<< handleSessionsUpdate END (background work queued)");
+    }
+
+    public void loadAllSessionsForCalendar(OnCalendarDataLoadedCallback callback) {
+        processingExecutor.execute(() -> {
+            try {
+                // Get absolutely everything from database
+                List<StudySessionWithStats> allSessionsEver = repository.getRecentSessionsSync(Integer.MAX_VALUE);
+
+                Log.d(TAG, "Calendar data loaded: " + allSessionsEver.size() + " total sessions");
+
+                // Callback with complete dataset
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    callback.onDataLoaded(allSessionsEver);
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error loading calendar data", e);
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    callback.onDataLoaded(new ArrayList<>());
+                });
+            }
+        });
     }
 
     private void processAllDataInBackground(List<StudySessionWithStats> allSessions,
@@ -374,7 +405,28 @@ public class AnalyticsViewModel extends AndroidViewModel {
             aiRecommendations.postValue(recommendations);
 
             if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Posting session history...");
-            sessionHistory.postValue(filteredSessions);
+
+            List<StudySessionWithStats> historyToShow = filteredSessions;
+
+            if (filteredSessions.size() > MAX_HISTORY_ITEMS) {
+                Log.w(TAG, "    [BG] Capping history from " + filteredSessions.size() +
+                        " to " + MAX_HISTORY_ITEMS + " most recent sessions");
+
+                List<StudySessionWithStats> sortedSessions = new ArrayList<>(filteredSessions);
+                Collections.sort(sortedSessions, (a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
+
+                historyToShow = sortedSessions.subList(0, MAX_HISTORY_ITEMS);
+            }
+
+            // Store complete filtered list for pagination
+            allFilteredSessions = new ArrayList<>(filteredSessions);
+            Collections.sort(allFilteredSessions, (a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
+            historyCurrentPage = 1;
+
+            int endIndex = Math.min(historyPageSize, allFilteredSessions.size());
+            List<StudySessionWithStats> firstPage = allFilteredSessions.subList(0, endIndex);
+
+            sessionHistory.postValue(firstPage);
 
             if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Caching results...");
             resultCache = new ResultCache(allSessions, dateRange);
@@ -399,8 +451,33 @@ public class AnalyticsViewModel extends AndroidViewModel {
             viewState.postValue(ViewState.ERROR);
         }
     }
+
+    public void loadMoreHistory() {
+        if (allFilteredSessions == null) return;
+
+        historyCurrentPage++;
+        int endIndex = Math.min(historyCurrentPage * historyPageSize, allFilteredSessions.size());
+
+        List<StudySessionWithStats> paginatedHistory = allFilteredSessions.subList(0, endIndex);
+        sessionHistory.postValue(paginatedHistory);
+    }
+
+    public boolean hasMoreHistory() {
+        return allFilteredSessions != null &&
+                historyCurrentPage * historyPageSize < allFilteredSessions.size();
+    }
+
     public List<StudySessionWithStats> getAllSessionsForCalendar() {
-        return allSessions != null ? allSessions : new ArrayList<>();
+        if (allHistoricalSessions != null && !allHistoricalSessions.isEmpty()) {
+            return allHistoricalSessions;
+        }
+
+        if (allSessions != null && !allSessions.isEmpty()) {
+            return allSessions;
+        }
+
+        Log.w(TAG, "getAllSessionsForCalendar: No sessions available");
+        return new ArrayList<>();
     }
 
     public void deleteSession(StudySessionWithStats session) {
@@ -500,5 +577,9 @@ public class AnalyticsViewModel extends AndroidViewModel {
         resultCache = null;
         cachedSessions = null;
         allSessions = null;
+    }
+
+    public interface OnCalendarDataLoadedCallback {
+        void onDataLoaded(List<StudySessionWithStats> allSessions);
     }
 }

@@ -230,54 +230,131 @@ public class DataProcessor {
     ) {
         Log.d("DataProcessor", "calculateQualityHeatmap START - range: " + dateRange.getDisplayName());
 
+        // ✅ Cap to prevent infinite loops with ALL_TIME
         DateRange cappedRange = dateRange;
         if (dateRange.getRangeType() == DateRange.RangeType.ALL_TIME) {
-            Log.d("DataProcessor", "ALL_TIME detected, capping to last 90 days");
+            Log.d("DataProcessor", "ALL_TIME detected, capping to last 90 days for heatmap");
             cappedRange = DateRange.lastNDays(90);
         } else if (dateRange.getDurationInDays() > 365) {
-            Log.d("DataProcessor", "Range > 365 days, capping to 365 days");
+            Log.d("DataProcessor", "Range > 365 days, capping to 365 days for performance");
             long cappedStart = dateRange.getEndTimestamp() - (365L * 24 * 60 * 60 * 1000);
             cappedRange = DateRange.custom(cappedStart, dateRange.getEndTimestamp());
         }
 
+        // Filter sessions to the (possibly capped) range
         List<StudySessionWithStats> filteredSessions = filterSessionsInRange(sessions, cappedRange);
         Log.d("DataProcessor", "Filtered sessions for heatmap: " + filteredSessions.size());
 
         if (filteredSessions.isEmpty()) {
-            Log.d("DataProcessor", "No sessions for heatmap, returning empty");
+            Log.d("DataProcessor", "No sessions for heatmap, returning empty list");
             return new ArrayList<>();
         }
 
+        // ✅ Create a cell for EVERY HOUR of EVERY DAY in the range
         Map<String, HeatmapCell> cellMap = new HashMap<>();
         Calendar calendar = Calendar.getInstance();
 
-        for (StudySessionWithStats session : filteredSessions) {
-            calendar.setTimeInMillis(session.getTimestamp());
+        // Start at beginning of first day
+        calendar.setTimeInMillis(cappedRange.getStartTimestamp());
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
 
+        long hourMs = 60 * 60 * 1000L;
+        long currentHourStart = calendar.getTimeInMillis();
+
+        // Iterate through every hour in the range
+        while (currentHourStart <= cappedRange.getEndTimestamp()) {
+            calendar.setTimeInMillis(currentHourStart);
+
+            int year = calendar.get(Calendar.YEAR);
+            int month = calendar.get(Calendar.MONTH);
+            int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
             int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
             int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
 
-            String key = dayOfWeek + "-" + hourOfDay;
+            // Create unique key: YYYY-MM-DD-HH
+            String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
 
-            HeatmapCell cell = cellMap.get(key);
-            if (cell == null) {
-                cell = new HeatmapCell(dayOfWeek, hourOfDay);
-                cellMap.put(key, cell);
-            }
+            HeatmapCell cell = new HeatmapCell();
+            cell.setYear(year);
+            cell.setMonth(month);
+            cell.setDayOfMonth(dayOfMonth);
+            cell.setDayOfWeek(dayOfWeek);
+            cell.setHourOfDay(hourOfDay);
+            cell.setTimestamp(currentHourStart);
+            cell.setSessionCount(0);
+            cell.setAvgQuality(0);
+            cell.setTotalMinutes(0);
 
-            cell.setSessionCount(cell.getSessionCount() + 1);
-            cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
+            cellMap.put(hourKey, cell);
+
+            // Move to next hour
+            currentHourStart += hourMs;
         }
 
+        Log.d("DataProcessor", "Created " + cellMap.size() + " hourly cells for range");
+
+        // Now populate cells with actual session data
+        for (StudySessionWithStats session : filteredSessions) {
+            calendar.setTimeInMillis(session.getTimestamp());
+
+            int year = calendar.get(Calendar.YEAR);
+            int month = calendar.get(Calendar.MONTH);
+            int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
+            int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
+
+            String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
+
+            HeatmapCell cell = cellMap.get(hourKey);
+            if (cell != null) {
+                // Accumulate session data for this hour
+                cell.setSessionCount(cell.getSessionCount() + 1);
+                cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
+                cell.setTotalMinutes(cell.getTotalMinutes() + session.getDurationMinutes());
+            } else {
+                // Session might span multiple hours - create cell if it doesn't exist
+                // This handles sessions that start in one hour but we're processing them
+                HeatmapCell newCell = new HeatmapCell();
+                calendar.setTimeInMillis(session.getTimestamp());
+
+                newCell.setYear(year);
+                newCell.setMonth(month);
+                newCell.setDayOfMonth(dayOfMonth);
+                newCell.setDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK));
+                newCell.setHourOfDay(hourOfDay);
+
+                // Set timestamp to start of this hour
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                newCell.setTimestamp(calendar.getTimeInMillis());
+
+                newCell.setSessionCount(1);
+                newCell.setAvgQuality(session.getFocusScore());
+                newCell.setTotalMinutes(session.getDurationMinutes());
+
+                cellMap.put(hourKey, newCell);
+            }
+        }
+
+        // Calculate averages and convert to list
         List<HeatmapCell> result = new ArrayList<>();
         for (HeatmapCell cell : cellMap.values()) {
             if (cell.getSessionCount() > 0) {
+                // Calculate average quality
                 cell.setAvgQuality(cell.getAvgQuality() / cell.getSessionCount());
             }
             result.add(cell);
         }
 
-        Log.d("DataProcessor", "Heatmap cells created: " + result.size());
+        // Sort chronologically (oldest to newest for scrolling)
+        Collections.sort(result, (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp()));
+
+        Log.d("DataProcessor", "Heatmap complete: " + result.size() + " hourly cells with " +
+                filteredSessions.size() + " sessions");
+
         return result;
     }
 

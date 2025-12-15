@@ -116,7 +116,11 @@ public class StudySessionRepository {
     }
 
     public List<StudySessionWithStats> getRecentSessionsSync(int limit) {
-        // Prevent OOM by capping at reasonable limit
+        if (limit == Integer.MAX_VALUE) {
+            Log.d("StudySessionRepository", "Loading ALL sessions (no limit)");
+            return studySessionDao.getRecentSessions(10000);
+        }
+
         if (limit > 500) {
             Log.w("StudySessionRepository", "Requested limit " + limit + " exceeds maximum 500, capping");
             limit = 500;
