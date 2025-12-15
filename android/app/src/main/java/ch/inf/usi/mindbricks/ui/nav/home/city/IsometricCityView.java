@@ -109,6 +109,11 @@ public class IsometricCityView extends View {
     private static final float ZOOM_SENSITIVITY_FACTOR = 0.2f;
 
     /**
+     * Margin for clamping pan to prevent the map from going too far off-screen.
+     */
+    private static final float PAN_MARGIN_DP = 50f;
+
+    /**
      * Current pan offsets for panning the view.
      */
     private float panX = 0f;
@@ -168,6 +173,10 @@ public class IsometricCityView extends View {
                 scaleFactor *= scaleFactorChange;
                 // clamp scale factor to min/max limits
                 scaleFactor = Math.max(MIN_SCALE, Math.min(scaleFactor, MAX_SCALE));
+                
+                // Constrain panning after zoom
+                clampPan();
+
                 // force redraw of canvas
                 invalidate();
                 return true;
@@ -237,6 +246,9 @@ public class IsometricCityView extends View {
         // recompute correct pan to center
         panX = targetCenterX - gridCenterX * scaleFactor;
         panY = targetCenterY - gridCenterY * scaleFactor;
+
+        // Ensure the new pan values are within bounds
+        clampPan();
 
         // redraw
         invalidate();
@@ -328,7 +340,6 @@ public class IsometricCityView extends View {
                 TilePlacement placement = worldState.getPlacementAt(r, c);
 
                 // check if this cell is the anchor of a placed tile (avoid drawing same tile multiple times)
-                // FIXME: we need to implement sprites with multi-cell occupancy properly
                 boolean isAnchor = placement != null && worldState.isAnchor(r, c);
 
                 // draw only the anchor cell of the tile placement
@@ -456,6 +467,10 @@ public class IsometricCityView extends View {
                     // update pan offsets
                     panX += dx;
                     panY += dy;
+                    
+                    // Constrain panning
+                    clampPan();
+
                     // force redraw
                     invalidate();
                     // update last touch position
@@ -467,6 +482,48 @@ public class IsometricCityView extends View {
                 break;
         }
         return true;
+    }
+
+    /**
+     * Clamp panX and panY to keep the map within view bounds.
+     */
+    private void clampPan() {
+        if (worldState == null) return;
+
+        float panMarginPx = PAN_MARGIN_DP * getResources().getDisplayMetrics().density;
+        float gridW = worldState.getCols() * tileWidth * scaleFactor;
+        float gridH = worldState.getRows() * tileHeight * scaleFactor;
+        float viewW = getWidth();
+        float viewH = getHeight();
+
+        // horizontal clamping
+        if (gridW < viewW) {
+            // If content fits in view = recenter
+            float targetScreenLeft = (viewW - gridW) / 2f;
+            panX = targetScreenLeft - originX * scaleFactor;
+        } else {
+            // Content larger than view = limit panning
+            float currentScreenLeft = originX * scaleFactor + panX;
+            float minScreenLeft = viewW - gridW - panMarginPx;
+            float maxScreenLeft = panMarginPx;
+            if (currentScreenLeft < minScreenLeft) panX = minScreenLeft - originX * scaleFactor;
+            if (currentScreenLeft > maxScreenLeft) panX = maxScreenLeft - originX * scaleFactor;
+        }
+
+        // vertical clamping
+        float visibleH = Math.min(exclusionZoneTopY, viewH);
+        if (gridH < visibleH) {
+            // If content fits in visible height = recenter
+            float targetScreenTop = (visibleH - gridH) / 2f;
+            panY = targetScreenTop - originY * scaleFactor;
+        } else {
+            // Content larger than visible height = limit panning
+            float currentScreenTop = originY * scaleFactor + panY;
+            float minScreenTop = visibleH - gridH - panMarginPx;
+            float maxScreenTop = panMarginPx;
+            if (currentScreenTop < minScreenTop) panY = minScreenTop - originY * scaleFactor;
+            if (currentScreenTop > maxScreenTop) panY = maxScreenTop - originY * scaleFactor;
+        }
     }
 
     /**
