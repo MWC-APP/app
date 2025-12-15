@@ -32,6 +32,7 @@ import ch.inf.usi.mindbricks.model.visual.TagUsage;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.repository.StudySessionRepository;
+import ch.inf.usi.mindbricks.util.UnifiedPreferencesManager;
 import ch.inf.usi.mindbricks.util.database.DataProcessor;
 import ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine;
 
@@ -390,29 +391,22 @@ public class AnalyticsViewModel extends AndroidViewModel {
                 if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] ALL_TIME detected, capping rings to last 90 days");
             }
 
+            UnifiedPreferencesManager unifiedPrefs = new UnifiedPreferencesManager(getApplication());
+            int dailyMinutesTarget = unifiedPrefs.getDailyStudyMinutesGoal();
+            float dailyFocusTarget = unifiedPrefs.getTargetFocusScore();
+
+            if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Using goals from preferences: " + dailyMinutesTarget + " min, " + dailyFocusTarget + "% focus");
+
             List<DailyRings> history = DataProcessor.calculateDailyRingsHistory(
                     getApplication(),
                     allSessions,
                     ringsDateRange,
-                    30,
+                    dailyMinutesTarget,
                     5
             );
             dailyRingsHistory.postValue(history);
 
-            // AI Recommendations
-            if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Computing AI recommendations...");
-            List<AIRecommendation> recommendations = new ArrayList<>();
-            recommendations.add(DataProcessor.generateAIRecommendations(
-                    filteredSessions,
-                    getApplication().getApplicationContext(),
-                    dateRange
-            ));
-            aiRecommendations.postValue(recommendations);
-
-            if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Posting session history...");
-
             List<StudySessionWithStats> historyToShow = filteredSessions;
-
             if (filteredSessions.size() > MAX_HISTORY_ITEMS) {
                 Log.w(TAG, "    [BG] Capping history from " + filteredSessions.size() +
                         " to " + MAX_HISTORY_ITEMS + " most recent sessions");
@@ -448,7 +442,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
             resultCache.heatmap = heatmap;
             resultCache.streak = streak;
             resultCache.dailyRings = history;
-            resultCache.aiRecommendations = recommendations;
             resultCache.filteredSessions = filteredSessions;
             resultCache.tagUsage = tagUsage;
 

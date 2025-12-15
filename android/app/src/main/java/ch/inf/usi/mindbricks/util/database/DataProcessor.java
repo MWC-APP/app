@@ -27,6 +27,7 @@ import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
 import ch.inf.usi.mindbricks.model.visual.GoalRing;
+import ch.inf.usi.mindbricks.util.UnifiedPreferencesManager;
 
 /**
  * Utility class for processing and analyzing study session data.
@@ -567,29 +568,65 @@ public class DataProcessor {
         return result;
     }
 
-    public static List<GoalRing> calculateGoalRings(
-            Context context,
-            List<StudySessionWithStats> sessions,
-            int dailyMinutesTarget,
-            float dailyFocusTarget) {
+    public static List<GoalRing> calculateGoalRings(Context context,
+                                                    List<StudySessionWithStats> sessions,
+                                                    int dailyMinutesTarget,
+                                                    float dailyFocusTarget) {
+
+        UnifiedPreferencesManager unifiedPrefs = new UnifiedPreferencesManager(context);
+
+        // Use unified preferences for targets if not provided
+        if (dailyMinutesTarget <= 0) {
+            dailyMinutesTarget = unifiedPrefs.getDailyStudyMinutesGoal();
+        }
+
+        if (dailyFocusTarget <= 0) {
+            dailyFocusTarget = unifiedPrefs.getTargetFocusScore();
+        }
 
         List<GoalRing> rings = new ArrayList<>();
 
-        // Calculate totals from sessions
+        // Filter today's sessions
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        long startOfToday = today.getTimeInMillis();
+
+        today.add(Calendar.DAY_OF_MONTH, 1);
+        long startOfTomorrow = today.getTimeInMillis();
+
+        List<StudySessionWithStats> todaySessions = new ArrayList<>();
+        for (StudySessionWithStats session : sessions) {
+            if (session.getTimestamp() >= startOfToday && session.getTimestamp() < startOfTomorrow) {
+                todaySessions.add(session);
+            }
+        }
+
+        // Calculate totals
         int totalMinutes = 0;
         float totalFocus = 0;
-        int sessionCount = 0;
+        int sessionCount = todaySessions.size();
 
-        for (StudySessionWithStats session : sessions) {
+        for (StudySessionWithStats session : todaySessions) {
             totalMinutes += session.getDurationMinutes();
             totalFocus += session.getFocusScore();
-            sessionCount++;
         }
 
         float avgFocus = sessionCount > 0 ? totalFocus / sessionCount : 0;
 
+        // Get today's primary study topic
+        String todayTopic = getTodayPrimaryStudyTopic(sessions);
+
+        // Create rings with study topic if available
+        String timeRingTitle = "Study Time";
+        if (todayTopic != null && !todayTopic.isEmpty()) {
+            timeRingTitle = todayTopic + " Time";
+        }
+
         rings.add(new GoalRing(
-                "Study Time",
+                timeRingTitle,
                 totalMinutes,
                 dailyMinutesTarget,
                 "min"
@@ -602,11 +639,12 @@ public class DataProcessor {
                 "%"
         ));
 
-        // TODO -> setup target due to the questionare
+        // Session target
+        int dailySessionTarget = Math.max(3, dailyMinutesTarget / 60);
         rings.add(new GoalRing(
                 "Sessions",
                 sessionCount,
-                5,
+                dailySessionTarget,
                 "sessions"
         ));
 
@@ -737,6 +775,61 @@ public class DataProcessor {
         return schedule;
     }
 
+    public static String getTodayPrimaryStudyTopic(List<StudySessionWithStats> sessions) {
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        long startOfToday = today.getTimeInMillis();
+
+        today.add(Calendar.DAY_OF_MONTH, 1);
+        long startOfTomorrow = today.getTimeInMillis();
+
+        // Count tags from today's sessions
+        Map<String, Integer> tagCounts = new HashMap<>();
+        int maxCount = 0;
+        String primaryTopic = null;
+
+        for (StudySessionWithStats session : sessions) {
+            if (session.getTimestamp() >= startOfToday && session.getTimestamp() < startOfTomorrow) {
+                String tagTitle = session.getTagTitle();
+                if (tagTitle != null && !tagTitle.isEmpty() && !tagTitle.equals("No tag")) {
+                    int count = tagCounts.getOrDefault(tagTitle, 0) + 1;
+                    tagCounts.put(tagTitle, count);
+
+                    if (count > maxCount) {
+                        maxCount = count;
+                        primaryTopic = tagTitle;
+                    }
+                }
+            }
+        }
+
+        return primaryTopic;
+    }
+
+    public static int getTodayTotalMinutes(List<StudySessionWithStats> sessions) {
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        long startOfToday = today.getTimeInMillis();
+
+        today.add(Calendar.DAY_OF_MONTH, 1);
+        long startOfTomorrow = today.getTimeInMillis();
+
+        int totalMinutes = 0;
+        for (StudySessionWithStats session : sessions) {
+            if (session.getTimestamp() >= startOfToday && session.getTimestamp() < startOfTomorrow) {
+                totalMinutes += session.getDurationMinutes();
+            }
+        }
+
+        return totalMinutes;
+    }
+
     private static void generateActivityBlocks(AIRecommendation schedule,
                                                Context context,
                                                List<HourScore> hourScores,
@@ -751,7 +844,6 @@ public class DataProcessor {
                 System.currentTimeMillis()
         );
 
-        // TODO add values to be customizable
         // Default schedule based on typical patterns
         // Sleep hours
         for (int h = 0; h < 6; h++) {
@@ -772,11 +864,6 @@ public class DataProcessor {
 
         if(hourlyActivities[19] == null)
             hourlyActivities[19] = AIRecommendation.ActivityType.MEALS;
-
-
-        //  TODO based on the questions the ifs will be deterministic.
-        // -> adding a json with the setup and reading it from it?
-        // -> setting up as static variables in Dataprocessor on creation?
 
         // Now override based on productivity
         for (HourScore score : hourScores) {
@@ -809,7 +896,6 @@ public class DataProcessor {
                 }
                 // Evening low productivity -> Social
                 else if (hour >= 18 && hour <= 22) {
-                    //TODO replace with calendar activities
                     hourlyActivities[hour] = AIRecommendation.ActivityType.SOCIAL;
                 }
                 // Otherwise -> Breaks

@@ -19,6 +19,7 @@ import ch.inf.usi.mindbricks.model.visual.GoalRing;
 
 /**
  * Apple Activity Rings style visualization for daily goals
+ * Updated to clearly display daily targets in legend
  */
 public class GoalRingsView extends View {
 
@@ -45,7 +46,6 @@ public class GoalRingsView extends View {
     private int colorOut;
     private int colorMid;
     private int colorIn;
-
 
     public GoalRingsView(Context context) {
         super(context);
@@ -120,9 +120,9 @@ public class GoalRingsView extends View {
 
         if (!isCompactView) {
             drawFull(canvas);
-            isCompactView = true;
-        } else
+        } else {
             drawCompact(canvas);
+        }
     }
 
     private void drawFull(Canvas canvas) {
@@ -141,11 +141,7 @@ public class GoalRingsView extends View {
         ringPaint.setStrokeWidth(strokeWidth);
         backgroundPaint.setStrokeWidth(strokeWidth);
 
-        float offset = 0;
-        if (isCompactView)
-            offset = 20;
-        else
-            offset = 120;
+        float offset = isCompactView ? 20 : 120;
 
         for (int i = 0; i < rings.size(); i++) {
             GoalRing ring = rings.get(i);
@@ -161,6 +157,7 @@ public class GoalRingsView extends View {
             // Draw progress ring
             float sweepAngle = (ring.getProgress() / 100f) * 360f;
 
+            // Set color based on ring position
             switch (i) {
                 case 0:
                     ring.setColor(colorIn);
@@ -190,15 +187,10 @@ public class GoalRingsView extends View {
         backgroundPaint.setStrokeWidth(originalStrokeWidth);
     }
 
-
     private void drawCenterText(Canvas canvas, float textSize) {
         if (rings.isEmpty()) return;
 
-        float offset = 0;
-        if (isCompactView)
-            offset = 10;
-        else
-            offset = 120;
+        float offset = isCompactView ? 10 : 120;
 
         // Calculate overall completion
         float totalProgress = 0;
@@ -226,7 +218,7 @@ public class GoalRingsView extends View {
             return;
 
         float startY = centerY + 210f;
-        float lineHeight = 70f;
+        float lineHeight = 110f;
 
         for (int i = 0; i < rings.size(); i++) {
             GoalRing ring = rings.get(i);
@@ -236,29 +228,46 @@ public class GoalRingsView extends View {
             Paint colorPaint = new Paint();
             colorPaint.setColor(ring.getColor());
             colorPaint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(80, y - 20, 15, colorPaint);
+            canvas.drawCircle(80, y - 5, 15, colorPaint);
 
-            // Draw label
+            // Draw label (ring title)
             String label = ring.getTitle();
             labelPaint.setTextAlign(Paint.Align.LEFT);
             labelPaint.setTextSize(32f);
             labelPaint.setColor(colorTextPrimary);
             canvas.drawText(label, 120, y - 10, labelPaint);
 
-            // Draw progress text
-            String progressText = String.format(Locale.getDefault(),
-                    "%.0f / %.0f %s", ring.getCurrent(), ring.getTarget(), ring.getUnit());
-            labelPaint.setTextSize(28f);
-            labelPaint.setColor(colorTextSecondary);
-            canvas.drawText(progressText, 120, y + 25, labelPaint);
+            // Draw current progress (bold, primary color)
+            String currentText = String.format(Locale.getDefault(),
+                    "%.0f %s", ring.getCurrent(), ring.getUnit());
+            labelPaint.setTextSize(32f);
+            labelPaint.setColor(colorTextPrimary);
+            labelPaint.setFakeBoldText(true);
+            canvas.drawText(currentText, 120, y + 25, labelPaint);
+            labelPaint.setFakeBoldText(false);
 
-            // Draw achievement icon
+            // Draw target (goal) below current in lighter color
+            String targetText = String.format(Locale.getDefault(),
+                    "Goal: %.0f %s", ring.getTarget(), ring.getUnit());
+            labelPaint.setTextSize(30f);
+            labelPaint.setColor(colorTextSecondary);
+            canvas.drawText(targetText, 120, y + 55, labelPaint);
+
+            // Draw achievement icon or progress percentage on right side
             if (ring.isAchieved()) {
                 Paint iconPaint = new Paint();
                 iconPaint.setColor(ring.getColor());
-                iconPaint.setTextSize(36f);
+                iconPaint.setTextSize(40f);
                 iconPaint.setTextAlign(Paint.Align.RIGHT);
-                canvas.drawText("✓", getWidth() - 80, y, iconPaint);
+                canvas.drawText("✓", getWidth() - 80, y + 10, iconPaint);
+            } else {
+                // Draw progress percentage
+                Paint percentPaint = new Paint();
+                percentPaint.setColor(colorTextSecondary);
+                percentPaint.setTextSize(40f);
+                percentPaint.setTextAlign(Paint.Align.RIGHT);
+                String percentText = String.format(Locale.getDefault(), "%.0f%%", ring.getProgress());
+                canvas.drawText(percentText, getWidth() - 80, y + 10, percentPaint);
             }
         }
     }
