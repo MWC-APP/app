@@ -106,7 +106,7 @@ public class IsometricCityView extends View {
     /**
      * Multiplicative factory for zoom sensitivity (lower = less)
      */
-    private static final float ZOOM_SENSITIVITY_FACTOR = 0.1f;
+    private static final float ZOOM_SENSITIVITY_FACTOR = 0.2f;
 
     /**
      * Current pan offsets for panning the view.
