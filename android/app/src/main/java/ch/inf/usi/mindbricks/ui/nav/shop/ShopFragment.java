@@ -85,6 +85,11 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
     private String selectedTileId;
 
     /**
+     * Toast instance to invalidate previous toasts (avoid spamming)
+     */
+    private Toast currentToast;
+
+    /**
      * Enum that defines purchase quantities based on tile type.
      */
     private enum PurchaseQuantity {
@@ -200,7 +205,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
             public void onTileSelected(TileAsset asset) {
                 selectedTileId = asset.id();
                 inventoryAdapter.setSelectedTileId(selectedTileId);
-                Toast.makeText(requireContext(), "Selected " + asset.displayName() + " for placement.", Toast.LENGTH_SHORT).show();
+                showToast("Selected " + asset.displayName() + " for placement.");
             }
 
             @Override
@@ -353,7 +358,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
                     tileGameViewModel.removePlacement(placement);
                     VibrationHelper.vibrate(requireContext(), VibrationHelper.VibrationType.DESTROY_TILE);
                     SoundPlayer.playSound(requireContext(), R.raw.purchase);
-                    Toast.makeText(getContext(), name + " removed.", Toast.LENGTH_SHORT).show();
+                    showToast(name + " removed.");
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -371,14 +376,14 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         Map<String, Integer> inventory = tileGameViewModel.getInventory().getValue();
         int quantity = inventory != null ? inventory.getOrDefault(tileId, 0) : 0;
         if (quantity <= 0) {
-            Toast.makeText(requireContext(), "You don't have that tile in your inventory.", Toast.LENGTH_SHORT).show();
+            showToast("You don't have that tile in your inventory.");
             return;
         }
 
         // get the tile asset
         TileAsset asset = assetIndex.get(tileId);
         if (asset == null) {
-            Toast.makeText(requireContext(), "Unknown tile type.", Toast.LENGTH_SHORT).show();
+            showToast("Unknown tile type.");
             return;
         }
 
@@ -389,7 +394,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
 
         // check if placement is within bounds
         if (!tileGameViewModel.isWithinBounds(row, col, height, width)) {
-            Toast.makeText(requireContext(), "Can't place tile there - outside grid bounds.", Toast.LENGTH_SHORT).show();
+            showToast("Can't place tile there - outside grid bounds.");
             return;
         }
 
@@ -444,7 +449,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
     private void attemptPlacement(int row, int col, String tileId, int height, int width) {
         boolean placed = tileGameViewModel.placeTile(row, col, tileId, height, width);
         if (!placed) {
-            Toast.makeText(requireContext(), "Couldn't place tile there.", Toast.LENGTH_SHORT).show();
+            showToast("Couldn't place tile there.");
             return;
         }
 
@@ -468,7 +473,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
     private void attemptPlacementWithReplacement(int row, int col, String tileId, int height, int width) {
         boolean placed = tileGameViewModel.placeTileWithReplacement(row, col, tileId, height, width);
         if (!placed) {
-            Toast.makeText(requireContext(), "Couldn't place tile there.", Toast.LENGTH_SHORT).show();
+            showToast("Couldn't place tile there.");
             return;
         }
 
@@ -476,7 +481,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         tileGameViewModel.consumeFromInventory(tileId);
 
         // notify user with feedback
-        Toast.makeText(requireContext(), "Tile placed! Buildings destroyed.", Toast.LENGTH_SHORT).show();
+        showToast("Tile placed! Buildings destroyed.");
         SoundPlayer.playSound(getContext(), R.raw.purchase);
 
         // vibrate to indicate destruction
@@ -495,7 +500,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
 
         // check if enough coins
         if (currentCoins == null || currentCoins < item.price()) {
-            Toast.makeText(getContext(), "Not enough coins to buy " + item.displayName(), Toast.LENGTH_SHORT).show();
+            showToast("Not enough coins to buy " + item.displayName());
             return;
         }
 
@@ -525,9 +530,9 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         if (purchaseSuccessful) {
             int quantity = purchaseQuantity(item);
             tileGameViewModel.addToInventory(item.id(), quantity);
-            Toast.makeText(getContext(), "You purchased " + quantity + " x " + item.displayName() + "!", Toast.LENGTH_LONG).show();
+            showToast("You purchased " + quantity + " x " + item.displayName() + "!");
         } else {
-            Toast.makeText(getContext(), "Something went wrong. Please try again.", Toast.LENGTH_SHORT).show();
+            showToast("Something went wrong. Please try again.");
         }
     }
 
@@ -601,6 +606,18 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
             binding.cityView.recenterMap();
             initialPositioningDone = true;
         }
+    }
+
+    /**
+     * Show a toast message removing previous toast to prevent spamming the user.
+     * @param message Message to display
+     */
+    private void showToast(String message) {
+        if (currentToast != null) {
+            currentToast.cancel();
+        }
+        currentToast = Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT);
+        currentToast.show();
     }
 
     @Override
