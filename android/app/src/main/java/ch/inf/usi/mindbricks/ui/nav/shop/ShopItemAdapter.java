@@ -1,5 +1,6 @@
 package ch.inf.usi.mindbricks.ui.nav.shop;
 
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,15 +13,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.util.SoundPlayer;
+import ch.inf.usi.mindbricks.game.TileAsset;
+import ch.inf.usi.mindbricks.game.TileBitmapLoader;
 
 public class ShopItemAdapter extends RecyclerView.Adapter<ShopItemAdapter.ShopItemViewHolder> {
 
-    private final List<ShopItem> items;
+    private final List<TileAsset> items;
     private final OnItemBuyClickListener buyClickListener;
-    public ShopItemAdapter(List<ShopItem> items, OnItemBuyClickListener listener) {
+    private final TileBitmapLoader bitmapLoader;
+
+    public ShopItemAdapter(List<TileAsset> items, TileBitmapLoader loader, OnItemBuyClickListener listener) {
         this.items = items;
         this.buyClickListener = listener;
+        this.bitmapLoader = loader;
     }
 
     @NonNull
@@ -33,12 +38,14 @@ public class ShopItemAdapter extends RecyclerView.Adapter<ShopItemAdapter.ShopIt
 
     @Override
     public void onBindViewHolder(@NonNull ShopItemViewHolder holder, int position) {
-        ShopItem currentItem = items.get(position);
-        holder.itemName.setText(currentItem.getName());
-        holder.itemPrice.setText(String.valueOf(currentItem.getPrice()));
-        holder.itemImage.setImageResource(currentItem.getDrawableResId());
+        TileAsset currentItem = items.get(position);
+        holder.itemName.setText(currentItem.displayName());
+        holder.itemPrice.setText(String.valueOf(currentItem.price()));
 
-        // Set the listener on the entire item view
+        Bitmap preview = bitmapLoader.getPreview(currentItem);
+        if (preview != null) holder.itemImage.setImageBitmap(preview);
+        else holder.itemImage.setImageResource(android.R.drawable.ic_menu_report_image);
+
         holder.itemView.setOnClickListener(v -> {
             if (buyClickListener != null) {
                 buyClickListener.onItemBuyClick(currentItem);
@@ -52,7 +59,7 @@ public class ShopItemAdapter extends RecyclerView.Adapter<ShopItemAdapter.ShopIt
     }
 
     public interface OnItemBuyClickListener {
-        void onItemBuyClick(ShopItem item);
+        void onItemBuyClick(TileAsset item);
     }
 
     public static class ShopItemViewHolder extends RecyclerView.ViewHolder {

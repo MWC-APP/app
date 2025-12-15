@@ -1,160 +1,590 @@
 package ch.inf.usi.mindbricks.ui.nav.home.city;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.DragEvent;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.util.PreferencesManager;
+import java.util.HashMap;
+import java.util.Map;
+
+import ch.inf.usi.mindbricks.game.TileAsset;
+import ch.inf.usi.mindbricks.game.TileBitmapLoader;
+import ch.inf.usi.mindbricks.game.TilePlacement;
+import ch.inf.usi.mindbricks.game.TileWorldState;
 
 public class IsometricCityView extends View {
 
-    private List<CitySlot> slots = new ArrayList<>();
-    private final Paint paintUnlocked = new Paint();
-    private final Paint paintLocked = new Paint();
-    private final Paint paintOutline = new Paint();
+    /**
+     * Paint object for drawing grid outlines.
+     */
+    private final Paint gridOutline = new Paint();
 
-    private float cellWidth;
-    private float cellHeight;
+    /**
+     * Paint object for filling the base tile area.
+     */
+    private final Paint baseFill = new Paint();
 
+    /**
+     * Paint object for highlighting the drop area during drag.
+     */
+    private final Paint dragHighlightPaint = new Paint();
+
+    /**
+     * Current state of the tile world (grid and placements).
+     */
+    private TileWorldState worldState;
+
+    /**
+     * Index of available tile assets by their IDs.
+     */
+    private Map<String, TileAsset> assetIndex = new HashMap<>();
+
+    /**
+     * Loader for tile bitmaps.
+     */
+    private TileBitmapLoader bitmapLoader;
+
+    /**
+     * Listener for tile drop events.
+     */
+    private OnTileDropListener onTileDropListener;
+
+    /**
+     * Top Y coordinate of the exclusion zone (bottom sheet).
+     */
+    private float exclusionZoneTopY = Float.MAX_VALUE;
+
+    /**
+     * Width of each tile in pixels.
+     */
+    private float tileWidth;
+
+    /**
+     * Height of each tile in pixels.
+     */
+    private float tileHeight;
+
+    /**
+     * Origin coordinates for drawing the grid.
+     */
+    private float originX;
+
+    /**
+     * Origin Y coordinate for drawing the grid.
+     */
+    private float originY;
+
+    /**
+     * Current scale factor for zooming.
+     * Default increased to start more zoomed-in for better view of multi-cell buildings.
+     */
+    private float scaleFactor = MAX_SCALE;
+
+    /**
+     * Minimum allowed scale factor.
+     * Increased to prevent excessive zoom-out that makes buildings too small.
+     */
+    private static final float MIN_SCALE = 2.0f;
+
+    /**
+     * Maximum allowed scale factor.
+     */
+    private static final float MAX_SCALE = 4f;
+
+    /**
+     * Multiplicative factory for zoom sensitivity (lower = less)
+     */
+    private static final float ZOOM_SENSITIVITY_FACTOR = 0.5f;
+
+    /**
+     * Current pan offsets for panning the view.
+     */
+    private float panX = 0f;
+
+    /**
+     * Current pan Y offset for panning the view.
+     */
+    private float panY = 0f;
+
+    /**
+     * Last touch X coordinate (for panning).
+     */
+    private float lastTouchX;
+
+    /**
+     * Last touch Y coordinate (for panning).
+     */
+    private float lastTouchY;
+
+    /**
+     * Scale gesture detector for handling pinch-to-zoom gestures.
+     */
+    private final ScaleGestureDetector scaleGestureDetector;
+
+    // Drag state tracking
+    private String draggingTileId = null;
+    private int draggingRow = -1;
+    private int draggingCol = -1;
+
+    /**
+     * Constructor method.
+     * @param context Context of the view
+     * @param attrs Attribute set from XML
+     */
     public IsometricCityView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        paintUnlocked.setColor(Color.GREEN);
-        paintLocked.setColor(Color.RED);
-        paintOutline.setColor(Color.BLACK);
-        paintOutline.setStyle(Paint.Style.STROKE);
-        paintOutline.setStrokeWidth(4f);
+
+        // set up paint for grid outline
+        gridOutline.setColor(Color.BLACK);
+        gridOutline.setStyle(Paint.Style.STROKE);
+        gridOutline.setStrokeWidth(2f);
+        gridOutline.setAlpha(0); // by default - transparent
+
+        // set base fill color (fill any gaps in the grid)
+        baseFill.setColor(Color.argb(255, 205, 230, 200));
+
+        // set drag highlight color (orange, semi-transparent)
+        dragHighlightPaint.setColor(Color.argb(128, 255, 165, 0));
+        dragHighlightPaint.setStyle(Paint.Style.FILL);
+
+        // initialize scale gesture detector (pinch-to-zoom support)
+        scaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(@NonNull ScaleGestureDetector detector) {
+                // update scale factor based on gesture + apply sensitivity
+                float scaleFactorChange = 1.0f + (detector.getScaleFactor() - 1.0f) * ZOOM_SENSITIVITY_FACTOR;
+                scaleFactor *= scaleFactorChange;
+                // clamp scale factor to min/max limits
+                scaleFactor = Math.max(MIN_SCALE, Math.min(scaleFactor, MAX_SCALE));
+                // force redraw of canvas
+                invalidate();
+                return true;
+            }
+        });
+
+        // set drag listener for tile dropping
+        setOnDragListener(this::handleDrag);
     }
 
-    public void setSlots(List<CitySlot> slots) {
-        this.slots = slots;
-        invalidate(); // redraw the view
+    public void setTileAssets(Map<String, TileAsset> assetIndex, TileBitmapLoader loader) {
+        if (assetIndex != null) this.assetIndex = assetIndex;
+        this.bitmapLoader = loader;
+        // redraw using loader
+        invalidate();
+    }
+
+    /**
+     * Set the current world state to be displayed.
+     * @param worldState The world state object to render
+     */
+    public void setWorldState(@Nullable TileWorldState worldState) {
+        this.worldState = worldState;
+        // FIXME: is this really needed?
+        requestLayout();
+        // redraw canvas using new world state
+        invalidate();
+    }
+
+    /**
+     * Set the listener for tile drop events.
+     * @param listener The listener to notify on tile drops
+     */
+    public void setOnTileDropListener(OnTileDropListener listener) {
+        this.onTileDropListener = listener;
+    }
+
+    /**
+     * Set the exclusion zone top y coordinate. Drops within this area will be ignored
+     *
+     * @param topY The Y coordinate of the exclusion zone in screen coordinates
+     */
+    public void setExclusionZoneTopY(float topY) {
+        this.exclusionZoneTopY = topY;
+    }
+
+    /**
+     * Recenter the map in the visible area (above the exclusion zone).
+     */
+    public void recenterMap() {
+        if (worldState == null || getWidth() == 0 || getHeight() == 0) return;
+
+        // recompute geometry
+        computeGeometry();
+
+        // Calculate visible height (view height - covered bottom part)
+        float visibleHeight = (exclusionZoneTopY < getHeight()) ? exclusionZoneTopY : getHeight();
+
+        // compute true center
+        float gridCenterX = getWidth() / 2f;
+        float gridCenterY = getHeight() / 2f;
+
+        // Target center on screen (center of the visible area)
+        float targetCenterX = getWidth() / 2f;
+        float targetCenterY = visibleHeight / 2f;
+
+        // recompute correct pan to center
+        panX = targetCenterX - gridCenterX * scaleFactor;
+        panY = targetCenterY - gridCenterY * scaleFactor;
+
+        // redraw
+        invalidate();
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onSizeChanged(int w, int h, int old_w, int old_h) {
+        // notify size change
+        super.onSizeChanged(w, h, old_w, old_h);
+        // recompute geometry (fit new size)
+        computeGeometry();
+    }
+
+    @Override
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
+        if (worldState == null) return;
 
-        if (slots == null || slots.isEmpty()) return;
+        // draw the grid
+        computeGeometry();
 
-        int maxCol = 0, maxRow = 0;
-        for (CitySlot slot : slots) {
-            if (slot.getCol() > maxCol) maxCol = slot.getCol();
-            if (slot.getRow() > maxRow) maxRow = slot.getRow();
+        // draw tiles
+        canvas.save(); // push default state
+        canvas.translate(panX, panY); // apply transformations
+        canvas.scale(scaleFactor, scaleFactor); // apply scaling
+
+        // get base tile bitmap
+        Bitmap baseTile = resolveBaseBitmap();
+        if (baseTile == null) {
+            Log.e("IsometricCityView", "Base tile ID '" + worldState.getBaseTileId() + "' could not be resolved. Impossible to draw base tile.");
         }
 
-        cellWidth = getWidth() / (float) (maxCol + 1);
-        cellHeight = getHeight() / (float) (maxRow + 1);
+        // Determine drop zone bounds if dragging
+        int dropStartRow = -1, dropEndRow = -1;
+        int dropStartCol = -1, dropEndCol = -1;
 
-        for (CitySlot slot : slots) {
-            float left = slot.getCol() * cellWidth;
-            float top = slot.getRow() * cellHeight;
-            float right = left + cellWidth;
-            float bottom = top + cellHeight;
-
-            // Fill slot
-            canvas.drawRect(left, top, right, bottom, slot.isUnlocked() ? paintUnlocked : paintLocked);
-            // Outline
-            canvas.drawRect(left, top, right, bottom, paintOutline);
-
-            // Draw building if assigned
-            if (slot.getBuildingResId() != null) {
-                Bitmap buildingBitmap = BitmapFactory.decodeResource(
-                        getResources(),
-                        slot.getBuildingResId()
-                );
-                canvas.drawBitmap(
-                        buildingBitmap,
-                        null,
-                        new Rect((int) left, (int) top, (int) right, (int) bottom),
-                        null
-                );
+        if (draggingTileId != null && draggingRow != -1 && draggingCol != -1) {
+            TileAsset asset = assetIndex.get(draggingTileId);
+            if (asset != null) {
+                int[] size = asset.getSize();
+                int h = size[0];
+                int w = size[1];
+                dropStartRow = draggingRow;
+                dropEndRow = draggingRow + h - 1;
+                dropStartCol = draggingCol;
+                dropEndCol = draggingCol + w - 1;
             }
         }
+
+        // Pass 1: Draw base tiles (ground) for all cells
+        for (int r = 0; r < worldState.getRows(); r++) {
+            for (int c = 0; c < worldState.getCols(); c++) {
+                // identify tile rectangle (cell of the grid)
+                float left = originX + c * tileWidth;
+                float top = originY + r * tileHeight;
+                float right = left + tileWidth;
+                float bottom = top + tileHeight;
+
+                // draw base fill
+                canvas.drawRect(left, top, right, bottom, baseFill);
+
+                // draw base tile
+                if (baseTile != null) {
+                    drawGridBitmap(canvas, baseTile, left, top, tileWidth, tileHeight, 1.0f);
+                }
+
+                // Check if we need to highlight this cell
+                boolean isDropZone = r >= dropStartRow && r <= dropEndRow && c >= dropStartCol && c <= dropEndCol;
+                boolean isDragging = draggingTileId != null;
+                boolean isOccupied = worldState.getPlacementAt(r, c) != null;
+
+                // Draw drag highlight if this cell is within the drop zone OR (dragging is active AND cell is occupied)
+                if (isDropZone || (isDragging && isOccupied)) {
+                    canvas.drawRect(left, top, right, bottom, dragHighlightPaint);
+                }
+            }
+        }
+
+        // Pass 2: Draw placed objects and grid outlines
+        for (int r = 0; r < worldState.getRows(); r++) {
+            for (int c = 0; c < worldState.getCols(); c++) {
+                // identify tile rectangle (cell of the grid)
+                float left = originX + c * tileWidth;
+                float top = originY + r * tileHeight;
+                float right = left + tileWidth;
+                float bottom = top + tileHeight;
+
+                // get tile at this position of the grid
+                TilePlacement placement = worldState.getPlacementAt(r, c);
+
+                // check if this cell is the anchor of a placed tile (avoid drawing same tile multiple times)
+                // FIXME: we need to implement sprites with multi-cell occupancy properly
+                boolean isAnchor = placement != null && worldState.isAnchor(r, c);
+
+                // draw only the anchor cell of the tile placement
+                if (placement != null && isAnchor) {
+                    // adjust with scaling
+                    float targetW = tileWidth * placement.getWidth();
+                    float targetH = tileHeight * placement.getHeight();
+
+                    // load bitmap with expected size
+                    Bitmap placed = resolveBitmap(
+                        placement.getTileId(),
+                        (int) targetW,
+                        (int) targetH
+                    );
+
+                    // draw bitmap
+                    drawGridBitmap(canvas, placed, left, top, targetW, targetH, 0.98f);
+                }
+
+                // draw grid outline overlay
+                canvas.drawRect(left, top, right, bottom, gridOutline);
+            }
+        }
+
+        // restore default state (pop transformations/scaling)
+        canvas.restore();
+    }
+
+    /**
+     * Compute the geometry of the grid based on the current view size and world state.
+     */
+    private void computeGeometry() {
+        // compute number of rows and columns
+        int rows = worldState != null ? worldState.getRows() : 8;
+        int cols = worldState != null ? worldState.getCols() : 8;
+
+        // compute tile size to fit the view
+        float availableW = getWidth();
+        float availableH = getHeight();
+
+        // pick the smaller dimension to ensure the grid fits (square tiles)
+        tileWidth = Math.min(availableW / cols, availableH / rows);
+        //noinspection SuspiciousNameCombination
+        tileHeight = tileWidth;
+
+        // compute origin to center the grid
+        float contentW = cols * tileWidth;
+        float contentH = rows * tileHeight;
+        originX = (availableW - contentW) / 2f;
+        originY = (availableH - contentH) / 2f;
+    }
+
+    /**
+     * Convert screen coordinates to grid coordinates.
+     *
+     * @param x x coordinate (col)
+     * @param y y coordinate (row)
+     * @return int array with [row, col] or null if out of bounds
+     */
+    @Nullable
+    private int[] screenToGrid(float x, float y) {
+        if (worldState == null) return null;
+        // account for pan and scale
+        float unscaledX = (x - panX) / scaleFactor;
+        float unscaledY = (y - panY) / scaleFactor;
+
+        // compute relative to origin
+        float relX = unscaledX - originX;
+        float relY = unscaledY - originY;
+
+        // compute grid coordinates
+        int c = (int) Math.floor(relX / tileWidth);
+        int r = (int) Math.floor(relY / tileHeight);
+
+        // check bounds -> if out of bounds return null
+        if (r < 0 || c < 0 || r >= worldState.getRows() || c >= worldState.getCols()) return null;
+
+        // return grid coordinates
+        return new int[]{r, c};
+    }
+
+    /**
+     * Get the bitmap for the given tile ID, loading it if necessary.
+     *
+     * @param tileId The tile identifier
+     * @param width Width of the bitmap in pixels
+     * @param height Height of the bitmap in pixels
+     * @return The loaded bitmap
+     */
+    private Bitmap resolveBitmap(@NonNull String tileId, int width, int height) {
+        // ensure that user has set the bitmap loader
+        if (bitmapLoader == null) throw new IllegalStateException("BitmapLoader not set. This must be called after setTileAssets().");
+
+        // get the asset for the given tile ID
+        TileAsset asset = assetIndex.get(tileId);
+        if (asset == null) throw new IllegalArgumentException("Tile ID '" + tileId + "' not found in asset index.");
+
+        // load and return the bitmap (lazy-loaded and cached inside the loader)
+        return bitmapLoader.getBitmap(asset, width, height);
+    }
+
+    /**
+     * Resolve the bitmap for the base tile of the world.
+     * @return The base tile bitmap, or null if not found
+     */
+    @Nullable
+    private Bitmap resolveBaseBitmap() {
+        return resolveBitmap(worldState.getBaseTileId(), (int) tileWidth, (int) tileHeight);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            float touchX = event.getX();
-            float touchY = event.getY();
-
-            CitySlot clickedSlot = findClickedSlot(touchX, touchY);
-            if (clickedSlot != null && clickedSlot.isUnlocked()) {
-                showBuildingSelectionDialog(clickedSlot);
-            }
+        scaleGestureDetector.onTouchEvent(event);
+        // handle panning
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN: // keep track of last touch position
+                lastTouchX = event.getX();
+                lastTouchY = event.getY();
+                break;
+            case MotionEvent.ACTION_MOVE: // compute delta and update pan offsets
+                if (!scaleGestureDetector.isInProgress()) {
+                    // compute delta
+                    float dx = event.getX() - lastTouchX;
+                    float dy = event.getY() - lastTouchY;
+                    // update pan offsets
+                    panX += dx;
+                    panY += dy;
+                    // force redraw
+                    invalidate();
+                    // update last touch position
+                    lastTouchX = event.getX();
+                    lastTouchY = event.getY();
+                }
+                break;
+            default:
+                break;
         }
         return true;
     }
 
-    private CitySlot findClickedSlot(float x, float y) {
-        for (CitySlot slot : slots) {
-            float left = slot.getCol() * cellWidth;
-            float top = slot.getRow() * cellHeight;
-            float right = left + cellWidth;
-            float bottom = top + cellHeight;
+    /**
+     * Draw a bitmap centered and scaled within the target rectangle.
+     *
+     * @param canvas Canvas to draw on
+     * @param bitmap Bitmap to draw
+     * @param left left margin
+     * @param top top margin
+     * @param targetWidth effective width
+     * @param targetHeight effective height
+     * @param fitFactor scaling factor to apply within the target area
+     */
+    private void drawGridBitmap(Canvas canvas, Bitmap bitmap, float left, float top, float targetWidth, float targetHeight, float fitFactor) {
+        if (bitmap == null) throw new IllegalArgumentException("Bitmap cannot be null");
 
-            if (x >= left && x <= right && y >= top && y <= bottom) {
-                return slot;
-            }
-        }
-        return null;
+        // compute scale to fit within target area
+        float scale = Math.min(targetWidth / bitmap.getWidth(), targetHeight / bitmap.getHeight()) * fitFactor;
+        float drawW = bitmap.getWidth() * scale;
+        float drawH = bitmap.getHeight() * scale;
+
+        // center the bitmap within the target area
+        float dx = left + (targetWidth - drawW) / 2f;
+        float dy = top + (targetHeight - drawH) / 2f;
+
+        // draw the bitmap in the computed rectangle
+        canvas.drawBitmap(bitmap, null, new RectF(dx, dy, dx + drawW, dy + drawH), null);
     }
 
-    private void showBuildingSelectionDialog(CitySlot slot) {
-        Context context = getContext();
-        PreferencesManager prefs = new PreferencesManager(context);
-
-        Set<String> purchasedIds = prefs.getPurchasedItemIds();
-
-        if (purchasedIds == null || purchasedIds.isEmpty()) {
-            Toast.makeText(context, "You need to own a building first!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        List<String> names = new ArrayList<>();
-        List<Integer> resIds = new ArrayList<>();
-
-        for (String id : purchasedIds) {
-            if (id.equals("building_1")) {
-                names.add("house1");
-                resIds.add(R.drawable.house1);
-            }
-            if (id.equals("building_2")) {
-                names.add("house2");
-                resIds.add(R.drawable.house2);
-            }
-        }
-
-        if (names.isEmpty()) return;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Select Building");
-
-        builder.setItems(names.toArray(new String[0]), (dialog, which) -> {
-            slot.setBuildingResId(resIds.get(which));
-            invalidate();
-        });
-
-        if (slot.getBuildingResId() != null) {
-            builder.setNeutralButton("Remove Building", (dialog, which) -> {
-                slot.setBuildingResId(null);
+    /**
+     * Handle drag events for tile dropping.
+     *
+     * @param view the view receiving the drag event
+     * @param event the drag event
+     * @return true if the event was handled, false otherwise
+     */
+    private boolean handleDrag(View view, DragEvent event) {
+        switch (event.getAction()) {
+            case DragEvent.ACTION_DRAG_STARTED: // accept all drag events
+                // Get the tile ID from localState
+                if (event.getLocalState() instanceof String) {
+                    draggingTileId = (String) event.getLocalState();
+                }
+                // make sure to change the alpha of the grid outline to indicate drop target
+                gridOutline.setAlpha(50);
                 invalidate();
-            });
-        }
+                return true;
 
-        builder.show();
+            case DragEvent.ACTION_DRAG_LOCATION:
+                // detect which cell we are hovering
+                int[] pos = screenToGrid(event.getX(), event.getY());
+
+                // if detected -> update state
+                if (pos != null) {
+                    if (draggingRow != pos[0] || draggingCol != pos[1]) {
+                        draggingRow = pos[0];
+                        draggingCol = pos[1];
+                        invalidate();
+                    }
+                }
+                // if not detected -> reset
+                else {
+                    if (draggingRow != -1 || draggingCol != -1) {
+                        draggingRow = -1;
+                        draggingCol = -1;
+                        invalidate();
+                    }
+                }
+                return true;
+
+            case DragEvent.ACTION_DRAG_EXITED:
+                draggingRow = -1;
+                draggingCol = -1;
+                invalidate();
+                return true;
+
+            case DragEvent.ACTION_DROP: // handle tile drop
+                if (onTileDropListener == null) return false; // ignore if no listener is set
+
+                // validate clip data -> we want to have exactly one item
+                if (event.getClipData() == null || event.getClipData().getItemCount() != 1) return false;
+
+                // get tile ID from clip data
+                String tileId = String.valueOf(event.getClipData().getItemAt(0).getText());
+
+                // check if drop location is inside the exclusion zone
+                if (event.getY() >= exclusionZoneTopY) {
+                    // cancel drop + reset state
+                    resetDragState();
+                    return false;
+                }
+
+                // convert screen coordinates to grid coordinates
+                int[] grid = screenToGrid(event.getX(), event.getY());
+
+                boolean handled = false;
+                if (grid != null) {
+                    onTileDropListener.onTileDropped(grid[0], grid[1], tileId);
+                    handled = true;
+                }
+
+                resetDragState();
+                return handled;
+
+            case DragEvent.ACTION_DRAG_ENDED:
+                resetDragState();
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    private void resetDragState() {
+        draggingTileId = null;
+        draggingRow = -1;
+        draggingCol = -1;
+        gridOutline.setAlpha(0);
+        invalidate();
     }
 }

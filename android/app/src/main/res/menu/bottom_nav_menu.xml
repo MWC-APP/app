@@ -12,11 +12,6 @@
         android:title="@string/title_shop" />
 
     <item
-        android:id="@+id/navigation_profile"
-        android:icon="@drawable/ic_avatar_placeholder"
-        android:title="@string/title_profile" />
-
-    <item
         android:id="@+id/navigation_analytics"
         android:icon="@drawable/ic_analytics"
         android:title="Visualisation" />

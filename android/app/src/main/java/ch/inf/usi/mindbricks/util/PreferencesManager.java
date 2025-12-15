@@ -1,16 +1,24 @@
 package ch.inf.usi.mindbricks.util;
 
 import android.content.Context;
-import android.content.SharedPreferences;import com.google.gson.Gson;
+import android.content.SharedPreferences;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import ch.inf.usi.mindbricks.config.PreferencesKey;
+import ch.inf.usi.mindbricks.game.TileWorldState;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.plan.DayHours;
 
@@ -74,14 +82,6 @@ public class PreferencesManager {
     public String getUserAvatarUri() {
         return preferences.getString(PreferencesKey.USER_AVATAR_URI.getName(), null);
     }
-
-
-    public void purchaseItem(String itemId) {
-        Set<String> purchasedIds = getPurchasedItemIds();
-        purchasedIds.add(itemId);
-        preferences.edit().putStringSet(PreferencesKey.USER_PURCHASED_ITEMS.getName(), purchasedIds).apply();
-    }
-
 
     public Set<String> getPurchasedItemIds() {
         // Retrieve the stored set. The second argument is the default value if the key is not found
@@ -148,5 +148,50 @@ public class PreferencesManager {
 
     public void setFirstSession(boolean isFirst) {
         preferences.edit().putBoolean(PreferencesKey.IS_FIRST_SESSION.getName(), isFirst).apply();
+    }
+
+    // -- Coin Balance --
+    public int getBalance() {
+        return preferences.getInt(PreferencesKey.COIN_BALANCE.getName(), 0);
+    }
+
+    public void setBalance(int balance) {
+        preferences.edit().putInt(PreferencesKey.COIN_BALANCE.getName(), balance).apply();
+    }
+
+    // -- Inventory manager --
+    public void saveInventory(Map<String, Integer> inventory) {
+        preferences.edit().putString(PreferencesKey.INVENTORY_JSON.getName(),
+                gson.toJson(inventory)).apply();
+    }
+
+    @NonNull
+    public Map<String, Integer> getInventory() {
+        // get raw json
+        String json = preferences.getString(PreferencesKey.INVENTORY_JSON.getName(), null);
+        if (json == null || json.isEmpty()) return new HashMap<>();
+
+        // convert to map
+        Type mapType = new TypeToken<Map<String, Integer>>() {
+        }.getType();
+        Map<String, Integer> parsed = gson.fromJson(json, mapType);
+
+        // return parsed map or empty map if null
+        return parsed != null ? new HashMap<>(parsed) : new HashMap<>();
+    }
+
+    // -- World state --
+    public void saveWorldState(TileWorldState state) {
+        preferences.edit().putString(PreferencesKey.WORLD_STATE_JSON.getName(),
+                gson.toJson(state)).apply();
+    }
+
+    @Nullable
+    public TileWorldState getWorldState() {
+        String json = preferences.getString(PreferencesKey.WORLD_STATE_JSON.getName(), null);
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        return gson.fromJson(json, TileWorldState.class);
     }
 }
