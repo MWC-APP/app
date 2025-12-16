@@ -4,8 +4,9 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.CountDownTimer;
+import android.content.pm.PackageManager;import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -185,48 +186,52 @@ public class HomeViewModel extends AndroidViewModel {
     // Starts a pause session
     // help source: https://www.reddit.com/r/developersIndia/comments/v5b06t/i_built_a_pomodoro_timer_to_demonstrate_how_a/
     private void startPauseSession(boolean isLongPause, int studyDurationMinutes, int pauseDurationMinutes, int longPauseDurationMinutes) {
-        int baseBreakMinutes = isLongPause ? longPauseDurationMinutes : pauseDurationMinutes;
+        dbExecutor.execute(() -> {
+            PAMScore lastPAM = AppDatabase.getInstance(getApplication())
+                    .pamScoreDao()
+                    .getLatestScore();
 
-        PAMScore lastPAM = AppDatabase.getInstance(getApplication())
-                .pamScoreDao()
-                .getLatestScore();
+            new Handler(Looper.getMainLooper()).post(() -> {
+                int baseBreakMinutes = isLongPause ? longPauseDurationMinutes : pauseDurationMinutes;
+                BreakManager breakManager = new BreakManager(getApplication());
+                int adaptedBreakMinutes = breakManager.calculateAdaptiveBreakDuration(
+                        lastPAM, baseBreakMinutes, isLongPause
+                );
 
-        BreakManager breakManager = new BreakManager(getApplication());
-        int adaptedBreakMinutes = breakManager.calculateAdaptiveBreakDuration(
-                lastPAM, baseBreakMinutes, isLongPause
-        );
+                long pauseDurationMillis = TimeUnit.MINUTES.toMillis(adaptedBreakMinutes);
 
-        long pauseDurationMillis = TimeUnit.MINUTES.toMillis(adaptedBreakMinutes);
-
-        // Show explanation if break was adjusted
-        if (adaptedBreakMinutes != baseBreakMinutes) {
-            String explanation = breakManager.getBreakDurationExplanation(
-                    lastPAM, baseBreakMinutes, adaptedBreakMinutes
-            );
-
-            Toast.makeText(getApplication(), explanation, Toast.LENGTH_LONG).show();
-        }
-        timer = new CountDownTimer(pauseDurationMillis, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                currentTime.postValue(millisUntilFinished);
-            }
-
-            @Override
-            public void onFinish() {
-                if (isLongPause) {
-                    SoundPlayer.playSound(getApplication(), R.raw.end_cycle);
-                    VibrationHelper.vibrate(getApplication(), VibrationHelper.VibrationType.CYCLE_COMPLETE);
-                    notificationHelper.showNotification("Cycle Complete!", "Great work!", 2);
-                    stopTimerAndReset();
-                } else {
-                    notificationHelper.showNotification("Break's Over!", "Time to get back to studying.", 3);
-                    boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
-                            == PackageManager.PERMISSION_GRANTED;
-                    startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
+                if (adaptedBreakMinutes != baseBreakMinutes) {
+                    String explanation = breakManager.getBreakDurationExplanation(
+                            lastPAM, baseBreakMinutes, adaptedBreakMinutes
+                    );
+                    Toast.makeText(getApplication(), explanation, Toast.LENGTH_LONG).show();
                 }
-            }
-        }.start();
+
+                currentState.setValue(isLongPause ? PomodoroState.LONG_PAUSE : PomodoroState.PAUSE);
+
+                timer = new CountDownTimer(pauseDurationMillis, 1000) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        currentTime.postValue(millisUntilFinished);
+                    }
+
+                    @Override
+                    public void onFinish() {
+                        if (isLongPause) {
+                            SoundPlayer.playSound(getApplication(), R.raw.end_cycle);
+                            VibrationHelper.vibrate(getApplication(), VibrationHelper.VibrationType.CYCLE_COMPLETE);
+                            notificationHelper.showNotification("Cycle Complete!", "Great work!", 2);
+                            stopTimerAndReset();
+                        } else {
+                            notificationHelper.showNotification("Break's Over!", "Time to get back to studying.", 3);
+                            boolean hasMicPermission = ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO)
+                                    == PackageManager.PERMISSION_GRANTED;
+                            startStudySession(studyDurationMinutes, pauseDurationMinutes, longPauseDurationMinutes, hasMicPermission);
+                        }
+                    }
+                }.start();
+            });
+        });
     }
 
     // Skips the current step and proceeds to the next one in the cycle
@@ -333,14 +338,14 @@ public class HomeViewModel extends AndroidViewModel {
             long startTime = currentSessionStartTime;
             dbExecutor.execute(() -> {
                 AppDatabase db = AppDatabase.getInstance(getApplication());
-                
+
                 // Update duration
                 long elapsedMillis = System.currentTimeMillis() - startTime;
                 int durationMinutes = (int) TimeUnit.MILLISECONDS.toMinutes(elapsedMillis);
 
                 // Ensure at least one minute
-                if (durationMinutes == 0 && elapsedMillis > 30000) durationMinutes = 1; 
-                
+                if (durationMinutes == 0 && elapsedMillis > 30000) durationMinutes = 1;
+
                 db.studySessionDao().updateDuration(sessionIdToUpdate, durationMinutes);
 
                 float avgNoise = db.sessionSensorLogDao().getAverageNoise(sessionIdToUpdate);
@@ -368,42 +373,37 @@ public class HomeViewModel extends AndroidViewModel {
     }
 
     public void onQuestionnaireCompleted(SessionQuestionnaire questionnaire) {
-        PAMScore pamScore = PAMScore.fromQuestionnaire(questionnaire);
+        dbExecutor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplication());
+            PAMScore pamScore = PAMScore.fromQuestionnaire(questionnaire);
+            PAMScore previousPAM = db.pamScoreDao().getLatestScore();
 
-        PAMScore previousPAM = AppDatabase.getInstance(getApplication())
-                .pamScoreDao()
-                .getLatestScore();
+            if (previousPAM != null) {
+                pamScore.setPreviousTotalScore(previousPAM.getTotalScore());
+            }
 
-        if (previousPAM != null) {
-            pamScore.setPreviousTotalScore(previousPAM.getTotalScore());
-        }
+            long pamId = db.pamScoreDao().insert(pamScore);
 
-        new Thread(() -> {
-            long pamId = AppDatabase.getInstance(getApplication())
-                    .pamScoreDao()
-                    .insert(pamScore);
-        }).start();
+            List<PAMScore> last5Scores = db.pamScoreDao().getLastNScores(5);
 
-        CueManager envManager = new CueManager(getApplication());
-        envManager.applyCues(pamScore);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                CueManager envManager = new CueManager(getApplication());
+                envManager.applyCues(pamScore);
 
-        UserPreferencesManager prefsManager = new UserPreferencesManager(getApplication());
-        UserPreferences.PAMThresholds thresholds = prefsManager.getPAMThresholds();
+                UserPreferencesManager prefsManager = new UserPreferencesManager(getApplication());
+                UserPreferences.PAMThresholds thresholds = prefsManager.getPAMThresholds();
 
-        FeedbackManager.FeedbackIntervention intervention =
-                FeedbackManager.detectAndRecommend(previousPAM, pamScore, thresholds);
+                FeedbackManager.FeedbackIntervention intervention =
+                        FeedbackManager.detectAndRecommend(previousPAM, pamScore, thresholds);
 
+                TaskDifficultyRecommender.TaskRecommendation taskRec =
+                        TaskDifficultyRecommender.analyzeRecentSessions(last5Scores, thresholds);
 
-        List<PAMScore> last5Scores = AppDatabase.getInstance(getApplication())
-                .pamScoreDao()
-                .getLastNScores(5);
-
-        TaskDifficultyRecommender.TaskRecommendation taskRec =
-                TaskDifficultyRecommender.analyzeRecentSessions(last5Scores, thresholds);
-
-        if (taskRec.getAction() != TaskDifficultyRecommender.RecommendationAction.MAINTAIN_CURRENT) {
-            showTaskRecommendationDialog(taskRec);
-        }
+                if (taskRec.getAction() != TaskDifficultyRecommender.RecommendationAction.MAINTAIN_CURRENT) {
+                    showTaskRecommendationDialog(taskRec);
+                }
+            });
+        });
     }
 
     private void showAffectiveInterventionDialog(FeedbackManager.FeedbackIntervention intervention) {
