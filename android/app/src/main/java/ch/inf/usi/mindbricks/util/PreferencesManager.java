@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +22,7 @@ import ch.inf.usi.mindbricks.config.PreferencesKey;
 import ch.inf.usi.mindbricks.game.TileWorldState;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.model.plan.DayHours;
+import ch.inf.usi.mindbricks.model.plan.DayKey;
 
 public class PreferencesManager {
 
@@ -201,5 +203,29 @@ public class PreferencesManager {
             return null;
         }
         return gson.fromJson(json, TileWorldState.class);
+    }
+
+    // helper methods
+    public int getDailyStudyMinutesGoal(long milliseconds) {
+       // get study plan
+        List<DayHours> plan = getStudyPlan();
+
+        // extract day of the week
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(milliseconds);
+        int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1;
+
+        // get key for this precise day
+        DayKey dayKey = DayKey.fromIndex(dayOfWeek);
+
+        // get study time for the day
+        for (DayHours day : plan) {
+            if (day.dayKey() == dayKey) {
+                return (int) Math.floor(day.hours() * 60);
+            }
+        }
+
+        // NOTE: we don't have an objective, so we return 0 minutes
+        return 0;
     }
 }

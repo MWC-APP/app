@@ -52,4 +52,17 @@ public enum DayKey {
     public short getIndex() {
         return index;
     }
+
+    public static DayKey fromIndex(int dayOfWeek) {
+        return switch(dayOfWeek) {
+            case 0 -> MONDAY;
+            case 1 -> TUESDAY;
+            case 2 -> WEDNESDAY;
+            case 3 -> THURSDAY;
+            case 4 -> FRIDAY;
+            case 5 -> SATURDAY;
+            case 6 -> SUNDAY;
+            default -> throw new IllegalArgumentException("Invalid day of week: " + dayOfWeek);
+        };
+    }
 }
