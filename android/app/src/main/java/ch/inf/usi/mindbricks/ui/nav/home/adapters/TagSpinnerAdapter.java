@@ -57,7 +57,7 @@ public class TagSpinnerAdapter extends ArrayAdapter<Tag> {
     private View createView(int position, View convertView, ViewGroup parent) {
         // inflate the layout for each tag
         if (convertView == null) {
-            convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_spinner_tag, parent, false);
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.component_spinner_tag_item, parent, false);
         }
 
         // load data from the tag into the view

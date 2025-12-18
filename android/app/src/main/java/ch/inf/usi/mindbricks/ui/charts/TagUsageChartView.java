@@ -15,7 +15,6 @@ import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
-import com.github.mikephil.charting.formatter.PercentFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 
 import java.util.ArrayList;
@@ -47,7 +46,7 @@ public class TagUsageChartView extends LinearLayout {
 
     private void init(Context context) {
         setOrientation(VERTICAL);
-        LayoutInflater.from(context).inflate(R.layout.view_tag_usage_chart, this, true);
+        LayoutInflater.from(context).inflate(R.layout.component_analytics_tag_usage_chart, this, true);
 
         summaryText = findViewById(R.id.tagUsageSummary);
         pieChart = findViewById(R.id.tagUsagePieChart);

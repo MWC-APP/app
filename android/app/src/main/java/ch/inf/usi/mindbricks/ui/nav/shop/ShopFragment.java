@@ -294,7 +294,7 @@ public class ShopFragment extends Fragment implements ShopItemAdapter.OnItemBuyC
         LayoutInflater inflater = LayoutInflater.from(getContext());
         for (Map.Entry<String, List<TileAsset>> entry : grouped.entrySet()) {
             if (entry.getValue().isEmpty()) continue;
-            View sectionView = inflater.inflate(R.layout.shop_section, binding.shopSectionsContainer, false);
+            View sectionView = inflater.inflate(R.layout.component_shop_section, binding.shopSectionsContainer, false);
             TextView title = sectionView.findViewById(R.id.section_title);
             RecyclerView recyclerView = sectionView.findViewById(R.id.section_recycler);
             title.setText(entry.getKey());

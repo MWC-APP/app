@@ -58,7 +58,7 @@ public class HourlyDistributionChartView extends LinearLayout {
 
     private void init(Context context) {
         setOrientation(VERTICAL);
-        LayoutInflater.from(context).inflate(R.layout.view_hourly_distribution_chart, this, true);
+        LayoutInflater.from(context).inflate(R.layout.component_analytics_hourly_distribution_chart, this, true);
 
         summaryText = findViewById(R.id.hourlyDistributionSummary);
         studyMinutesChart = findViewById(R.id.studyMinutesChart);

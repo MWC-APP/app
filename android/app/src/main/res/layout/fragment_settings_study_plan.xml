@@ -35,7 +35,7 @@
 
             <include
                 android:id="@+id/dayMonday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -43,7 +43,7 @@
 
             <include
                 android:id="@+id/dayTuesday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -51,7 +51,7 @@
 
             <include
                 android:id="@+id/dayWednesday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -59,7 +59,7 @@
 
             <include
                 android:id="@+id/dayThursday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -67,7 +67,7 @@
 
             <include
                 android:id="@+id/dayFriday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -75,7 +75,7 @@
 
             <include
                 android:id="@+id/daySaturday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -83,7 +83,7 @@
 
             <include
                 android:id="@+id/daySunday"
-                layout="@layout/view_study_day_slider" />
+                layout="@layout/item_study_day_slider" />
         </LinearLayout>
 
         <!-- Total Section -->

@@ -92,7 +92,7 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.Inve
     @Override
     public InventoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.inventory_item, parent, false);
+                .inflate(R.layout.component_inventory_item, parent, false);
         return new InventoryViewHolder(view);
     }
 

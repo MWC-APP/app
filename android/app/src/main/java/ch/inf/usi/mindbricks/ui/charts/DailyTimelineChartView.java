@@ -41,7 +41,7 @@ public class DailyTimelineChartView extends LinearLayout {
 
     private void init(Context context) {
         setOrientation(VERTICAL);
-        LayoutInflater.from(context).inflate(R.layout.view_daily_timeline_chart, this, true);
+        LayoutInflater.from(context).inflate(R.layout.component_daily_timeline_chart, this, true);
 
         titleText = findViewById(R.id.dailyTimelineTitle);
         summaryText = findViewById(R.id.dailyTimelineSummary);
@@ -74,7 +74,7 @@ public class DailyTimelineChartView extends LinearLayout {
 
     private void addTimeSlotView(DailyRecommendation.TimeSlot slot) {
         LinearLayout slotView = (LinearLayout) LayoutInflater.from(getContext())
-                .inflate(R.layout.item_time_slot, slotsContainer, false);
+                .inflate(R.layout.component_plan_time_slot_item, slotsContainer, false);
 
         TextView labelText = slotView.findViewById(R.id.slotLabel);
         TextView timeText = slotView.findViewById(R.id.slotTime);

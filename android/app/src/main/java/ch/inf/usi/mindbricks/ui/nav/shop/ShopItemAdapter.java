@@ -32,7 +32,7 @@ public class ShopItemAdapter extends RecyclerView.Adapter<ShopItemAdapter.ShopIt
     @Override
     public ShopItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.shop_item, parent, false);
+                .inflate(R.layout.item_shop_item, parent, false);
         return new ShopItemViewHolder(view);
     }
 

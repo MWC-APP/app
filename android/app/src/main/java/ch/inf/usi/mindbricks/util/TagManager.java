@@ -89,7 +89,7 @@ public class TagManager {
         // render each tag as a chip
         for (Tag tag : tags) {
             Chip chip = (Chip) LayoutInflater.from(fragment.requireContext())
-                    .inflate(R.layout.view_tag_chip, tagChipGroup, false);
+                    .inflate(R.layout.component_tag_chip, tagChipGroup, false);
             chip.setText(tag.getTitle());
             chip.setTextColor(fragment.requireContext().getColor(R.color.black));
             chip.setChipBackgroundColor(ColorStateList.valueOf(tag.getColor()));
@@ -129,7 +129,7 @@ public class TagManager {
         int[] palette = Tags.getTagColorPalette(fragment.requireContext());
         for (int i = 0; i < palette.length; i++) {
             Chip chip = (Chip) LayoutInflater.from(fragment.requireContext())
-                    .inflate(R.layout.view_color_chip, colorGroup, false);
+                    .inflate(R.layout.component_color_chip, colorGroup, false);
             chip.setId(View.generateViewId());
             chip.setChipBackgroundColor(ColorStateList.valueOf(palette[i]));
             chip.setCheckable(true);
@@ -219,7 +219,7 @@ public class TagManager {
         int[] palette = Tags.getTagColorPalette(fragment.requireContext());
         for (int i = 0; i < palette.length; i++) {
             Chip chip = (Chip) LayoutInflater.from(fragment.requireContext())
-                    .inflate(R.layout.view_color_chip, colorGroup, false);
+                    .inflate(R.layout.component_color_chip, colorGroup, false);
             chip.setId(View.generateViewId());
             chip.setChipBackgroundColor(ColorStateList.valueOf(palette[i]));
             chip.setCheckable(true);

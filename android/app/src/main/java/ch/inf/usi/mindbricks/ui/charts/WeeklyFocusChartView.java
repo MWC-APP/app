@@ -68,7 +68,7 @@ public class WeeklyFocusChartView extends LinearLayout {
      */
     private void init(Context context) {
         setOrientation(VERTICAL);
-        LayoutInflater.from(context).inflate(R.layout.view_weekly_focus_chart, this, true);
+        LayoutInflater.from(context).inflate(R.layout.component_analytics_weekly_focus_chart, this, true);
 
         // Find views
         summaryText = findViewById(R.id.weeklyFocusSummary);

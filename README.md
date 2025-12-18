@@ -9,13 +9,13 @@ Here is the full list of the refactors I (@lucadibello) managed to do during in 
 
 - [x] Split the `HomeFragment` class (HUGE, contains both UI-related code / data-related code and some helper methods) into multiple smaller classes, each with a single responsibility (`HomeViewModel` for data-related code and `HomeFragmentHelper` for helper methods).
 - [x] The questionnaires are handled poorly (not using constants, emotion questionnaire answer passed to the perceived productivity questionnaire without any reason, constructors with too many parameters, etc). I refactored the questionnaire-related code to make it more modular and easier to maintain.
-- [x] The code still used a database seeder, while we have a `debug` settings menu available on debug builds. I removed the class entirely
+- [x] The code still used a database seeder, while we have a `debug` settings menu available on debug builds. I removed the class entirely.
 - [x] Removed unused string resources.
 - [x] Deleted old `ProfileFragment` (removed, wasn't needed anymore).
-
+- [x] Moving hardcoded strings in layout files to string resources.
+- [x] Renamed UI resource files to follow a consistent naming convention: `activity_*` for activities, `fragment_*` for fragments, `component_*` for custom views/components, `item_*` for RecyclerView items.
+- [x] Splitting string resources into multiple files based on their usage (e.g., `strings_home.xml`, `strings_settings.xml`, etc).
 
 - [] Adding `@author` tags to all classes to make it clear who did what
 - [] Added Javadocs to all classes, methods, fields, etc.
-- [] Splitting string resources into multiple files based on their usage (e.g., `strings_home.xml`, `strings_settings.xml`, etc).
 - [] Remove unused layout resources.
-- [] Moving hardcoded strings in layout files to string resources.

@@ -1,6 +1,5 @@
 package ch.inf.usi.mindbricks.ui.charts;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -71,7 +70,7 @@ public class SessionHistoryAdapter extends RecyclerView.Adapter<SessionHistoryAd
     public SessionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         // Inflate the item layout
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_session_history, parent, false);
+                .inflate(R.layout.component_session_history_item, parent, false);
         return new SessionViewHolder(view);
     }
 

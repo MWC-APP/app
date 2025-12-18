@@ -131,7 +131,7 @@ public class ProductivityQuestionsDialogFragment extends DialogFragment {
      */
     private void setupQuestion(LinearLayout container, String questionText, RatingCallback callback) {
         View questionView = LayoutInflater.from(getContext())
-                .inflate(R.layout.item_questionnaire_question, container, false);
+                .inflate(R.layout.component_perceived_productivity_questionnaire_item, container, false);
 
         // write question
         TextView questionTextView = questionView.findViewById(R.id.question_text);
