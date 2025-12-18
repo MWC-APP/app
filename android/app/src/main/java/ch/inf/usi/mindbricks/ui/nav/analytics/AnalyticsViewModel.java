@@ -16,14 +16,10 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
-import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
-import ch.inf.usi.mindbricks.model.visual.GoalRing;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
@@ -32,7 +28,9 @@ import ch.inf.usi.mindbricks.model.visual.TagUsage;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.repository.StudySessionRepository;
-import ch.inf.usi.mindbricks.util.UnifiedPreferencesManager;
+import ch.inf.usi.mindbricks.util.AppExecutor;
+import ch.inf.usi.mindbricks.util.PreferencesManager;
+import ch.inf.usi.mindbricks.util.analytics.ResultCache;
 import ch.inf.usi.mindbricks.util.database.DataProcessor;
 import ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine;
 
@@ -49,8 +47,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private List<StudySessionWithStats> allFilteredSessions;
 
     private final StudySessionRepository repository;
-    private final Executor processingExecutor;
-
     //date ranges
     private DateRange currentDateRange;
     private final MutableLiveData<DateRange> dateRangeLiveData = new MutableLiveData<>();
@@ -63,14 +59,10 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private final MutableLiveData<List<HourlyQuality>> energyCurveData = new MutableLiveData<>();
     private final MutableLiveData<List<HeatmapCell>> heatmapData = new MutableLiveData<>();
     private final MutableLiveData<List<StreakDay>> streakData = new MutableLiveData<>();
-    private final MutableLiveData<List<GoalRing>> goalRingsData = new MutableLiveData<>();
     private MutableLiveData<List<DailyRings>> dailyRingsHistory = new MutableLiveData<>();
     private MutableLiveData<Boolean> isRingsExpanded = new MutableLiveData<>(false);
     private final MutableLiveData<List<TagUsage>> tagUsageData = new MutableLiveData<>();
     private final MutableLiveData<List<AIRecommendation>> aiRecommendations = new MutableLiveData<>();
-
-    private List<StudySessionWithStats> allSessions;
-    private List<StudySessionWithStats> allHistoricalSessions;
 
     // ViewState for UI feedback
     private final MutableLiveData<ViewState> viewState = new MutableLiveData<>(ViewState.LOADING);
@@ -79,67 +71,24 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private boolean isRefreshing = false;
 
     // Optimized caching system
-    private static class ResultCache {
-        final int sessionsHash;
-        final DateRange dateRange;
-        final long timestamp;
-
-        // Cached results
-        WeeklyStats weeklyStats;
-        List<TimeSlotStats> hourlyStats;
-        AIRecommendation dailyRecommendation;
-        List<HourlyQuality> energyCurve;
-        List<HeatmapCell> heatmap;
-        List<StreakDay> streak;
-        List<DailyRings> dailyRings;
-        List<AIRecommendation> aiRecommendations;
-        List<StudySessionWithStats> filteredSessions;
-        List<TagUsage> tagUsage;
-
-        ResultCache(List<StudySessionWithStats> sessions, DateRange range) {
-            this.sessionsHash = sessions.hashCode();
-            this.dateRange = range;
-            this.timestamp = System.currentTimeMillis();
-        }
-
-        boolean isValid(List<StudySessionWithStats> sessions, DateRange range) {
-            return sessions.hashCode() == this.sessionsHash
-                    && this.dateRange.equals(range)
-                    && (System.currentTimeMillis() - timestamp) < 300000; // 5 min validity
-        }
-    }
-
     private ResultCache resultCache;
-    private List<StudySessionWithStats> cachedSessions;
-    private long lastLoadTime = 0;
 
     // Debouncing for rapid updates
     private final Handler debounceHandler = new Handler(Looper.getMainLooper());
-    private Runnable pendingUpdate;
-    private static final long DEBOUNCE_DELAY_MS = 300;
-
-
     private LiveData<List<StudySessionWithStats>> sessionsSource;
     private final Observer<List<StudySessionWithStats>> sessionsObserver = this::handleSessionsUpdate;
-
-    private int daysToLoad = 30;
+    private final PreferencesManager preferencesManager;
 
     public AnalyticsViewModel(@NonNull Application application) {
         super(application);
         this.repository = new StudySessionRepository(application);
 
-        // Separate executor for data processing to avoid blocking database operations
-        this.processingExecutor = Executors.newSingleThreadExecutor();
+        // create preferences manager
+        this.preferencesManager = new PreferencesManager(application);
 
         // Initialize with default range: Last 30 days
         this.currentDateRange = DateRange.lastNDays(30);
         this.dateRangeLiveData.setValue(currentDateRange);
-    }
-
-
-    // loading data
-    public void loadData() {
-        loadDataForRange(currentDateRange);
     }
 
     public void loadLastNDays(int days) {
@@ -209,31 +158,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
         return Math.max(0, queryStart);
     }
 
-    // navigation
-    public void previousMonth() {
-        if (currentDateRange.getRangeType() != DateRange.RangeType.SPECIFIC_MONTH) {
-            Log.w(TAG, "previousMonth() only works for SPECIFIC_MONTH ranges");
-            return;
-        }
-
-        try {
-            DateRange prevMonth = currentDateRange.previousMonth();
-            loadDataForRange(prevMonth);
-        } catch (UnsupportedOperationException e) {
-            Log.e(TAG, "Error navigating to previous month", e);
-        }
-    }
-
-    public void nextMonth() {
-        if (currentDateRange.getRangeType() != DateRange.RangeType.SPECIFIC_MONTH) {
-            Log.w(TAG, "nextMonth() only works for SPECIFIC_MONTH ranges");
-            return;
-        }
-
-        DateRange nextMonth = currentDateRange.nextMonth();
-        loadDataForRange(nextMonth);
-    }
-
     private void handleSessionsUpdate(List<StudySessionWithStats> sessions) {
         if (VERBOSE_LOGGING) Log.d(TAG, ">>> handleSessionsUpdate START");
         if (VERBOSE_LOGGING) Log.d(TAG, "    Sessions count: " + (sessions != null ? sessions.size() : "null"));
@@ -253,16 +177,10 @@ public class AnalyticsViewModel extends AndroidViewModel {
             return;
         }
 
-        // Cache the sessions
-        cachedSessions = sessions;
-        lastLoadTime = System.currentTimeMillis();
-        allSessions = sessions;
-        allHistoricalSessions = new ArrayList<>(sessions);
-
         if (VERBOSE_LOGGING) Log.d(TAG, "    Moving to background thread for filtering...");
 
         // Move ALL processing to background thread
-        processingExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Background thread started");
 
             try {
@@ -295,7 +213,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
     }
 
     public void loadAllSessionsForCalendar(OnCalendarDataLoadedCallback callback) {
-        processingExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             try {
                 // Get absolutely everything from database
                 List<StudySessionWithStats> allSessionsEver = repository.getRecentSessionsSync(Integer.MAX_VALUE);
@@ -392,11 +310,13 @@ public class AnalyticsViewModel extends AndroidViewModel {
                 if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] ALL_TIME detected, capping rings to last 90 days");
             }
 
-            UnifiedPreferencesManager unifiedPrefs = new UnifiedPreferencesManager(getApplication());
-            int dailyMinutesTarget = unifiedPrefs.getDailyStudyMinutesGoal();
-            float dailyFocusTarget = unifiedPrefs.getTargetFocusScore();
+            // get the daily minutes target
+            // FIXME: what happens if we don't have a goal? I think it's not handled properly! @lucadibello
+            int dailyMinutesTarget = preferencesManager.getDailyStudyMinutesGoal(
+                    System.currentTimeMillis()
+            );
 
-            if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Using goals from preferences: " + dailyMinutesTarget + " min, " + dailyFocusTarget + "% focus");
+            if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Using goals from preferences: " + dailyMinutesTarget + " min");
 
             List<DailyRings> history = DataProcessor.calculateDailyRingsHistory(
                     getApplication(),
@@ -407,15 +327,12 @@ public class AnalyticsViewModel extends AndroidViewModel {
             );
             dailyRingsHistory.postValue(history);
 
-            List<StudySessionWithStats> historyToShow = filteredSessions;
             if (filteredSessions.size() > MAX_HISTORY_ITEMS) {
                 Log.w(TAG, "    [BG] Capping history from " + filteredSessions.size() +
                         " to " + MAX_HISTORY_ITEMS + " most recent sessions");
 
                 List<StudySessionWithStats> sortedSessions = new ArrayList<>(filteredSessions);
-                Collections.sort(sortedSessions, (a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
-
-                historyToShow = sortedSessions.subList(0, MAX_HISTORY_ITEMS);
+                sortedSessions.sort((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
             }
 
             // Tag Usage
@@ -471,7 +388,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
         Log.d(TAG, "Refreshing data (cache invalidated)");
         isRefreshing = true;
 
-        cachedSessions = null;
         resultCache = null;
 
         if (sessionsSource != null) {
@@ -512,24 +428,8 @@ public class AnalyticsViewModel extends AndroidViewModel {
         return dailyRecommendation;
     }
 
-    public LiveData<List<HourlyQuality>> getEnergyCurveData() {
-        return energyCurveData;
-    }
-
     public LiveData<List<HeatmapCell>> getHeatmapData() {
         return heatmapData;
-    }
-
-    public LiveData<List<StreakDay>> getStreakData() {
-        return streakData;
-    }
-
-    public LiveData<List<GoalRing>> getGoalRingsData() {
-        return goalRingsData;
-    }
-
-    public LiveData<List<AIRecommendation>> getAiRecommendations() {
-        return aiRecommendations;
     }
 
     public LiveData<List<StudySessionWithStats>> getSessionHistory() {
@@ -546,10 +446,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
 
     public LiveData<Boolean> isRingsExpanded() {
         return isRingsExpanded;
-    }
-
-    public LiveData<String> getErrorMessage() {
-        return errorMessage;
     }
 
     public LiveData<List<TagUsage>> getTagUsageData() {
@@ -570,13 +466,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
             sessionsSource.removeObserver(sessionsObserver);
         }
 
-        if (pendingUpdate != null) {
-            debounceHandler.removeCallbacks(pendingUpdate);
-        }
-
         resultCache = null;
-        cachedSessions = null;
-        allSessions = null;
     }
 
     public interface OnCalendarDataLoadedCallback {

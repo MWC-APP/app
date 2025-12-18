@@ -12,9 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import ch.inf.usi.mindbricks.database.AppDatabase;
-import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
-import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
@@ -27,7 +24,7 @@ import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
 import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
 import ch.inf.usi.mindbricks.model.visual.GoalRing;
-import ch.inf.usi.mindbricks.util.UnifiedPreferencesManager;
+import ch.inf.usi.mindbricks.util.PreferencesManager;
 
 /**
  * Utility class for processing and analyzing study session data.
@@ -572,16 +569,11 @@ public class DataProcessor {
                                                     List<StudySessionWithStats> sessions,
                                                     int dailyMinutesTarget,
                                                     float dailyFocusTarget) {
-
-        UnifiedPreferencesManager unifiedPrefs = new UnifiedPreferencesManager(context);
+        PreferencesManager manager = new PreferencesManager(context);
 
         // Use unified preferences for targets if not provided
         if (dailyMinutesTarget <= 0) {
-            dailyMinutesTarget = unifiedPrefs.getDailyStudyMinutesGoal();
-        }
-
-        if (dailyFocusTarget <= 0) {
-            dailyFocusTarget = unifiedPrefs.getTargetFocusScore();
+            dailyMinutesTarget = manager.getDailyStudyMinutesGoal(System.currentTimeMillis());
         }
 
         List<GoalRing> rings = new ArrayList<>();
