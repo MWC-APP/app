@@ -30,19 +30,58 @@ import ch.inf.usi.mindbricks.drivers.MicrophoneRecorder;
 import ch.inf.usi.mindbricks.drivers.SignificantMotionSensor;
 import ch.inf.usi.mindbricks.model.visual.SessionSensorLog;
 
+/**
+ * Foreground service for monitoring focus session.
+ *
+ * @author Luca Di Bello
+ */
 public class SensorService extends Service {
 
     // strings to signal to start / stop the service via intents
+
+    /**
+     * Key that identifies the action to start the service.
+     */
     public static final String ACTION_START_SESSION = "ch.inf.usi.mindbricks.service.START_SESSION";
+
+    /**
+     * Key that identifies the action to stop the service.
+     */
     public static final String ACTION_STOP_SESSION = "ch.inf.usi.mindbricks.service.STOP_SESSION";
 
+    /**
+     * Key that identifies the session ID to be logged.
+     */
     public static final String EXTRA_SESSION_ID = "session_id";
+
+    /**
+     * Tag for logging.
+     */
     private static final String TAG = "SensorService";
+
+    /**
+     * Channel ID for notifications.
+     */
     private static final String CHANNEL_ID = "SensorServiceChannel";
+
+    /**
+     * Notification ID.
+     */
     private static final int NOTIFICATION_ID = 1;
+
+    /**
+     * Interval in milliseconds between log samples.
+     */
     private static final long LOG_INTERVAL_MS = 5000;
 
+    /**
+     * ID of the current session (defaults to -1 when not in progress).
+     */
     private long currentSessionId = -1;
+
+    /**
+     * Flag indicating if the service is currently running.
+     */
     private boolean isRunning = false;
 
     // Sensors
