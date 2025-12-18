@@ -5,8 +5,9 @@ import android.app.Application;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -27,7 +28,6 @@ import ch.inf.usi.mindbricks.util.NotificationHelper;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 import ch.inf.usi.mindbricks.util.VibrationHelper;
-import ch.inf.usi.mindbricks.util.evaluation.BreakManager;
 
 /**
  * ViewModel for the Home screen managing Pomodoro timer cycles.
@@ -88,7 +88,7 @@ public class HomeViewModel extends AndroidViewModel {
      * Starts a new Pomodoro cycle from the beginning.
      * Must be in IDLE state.
      *
-     * @param studyDurationMinutes     duration of each study session
+     * @param studyDurationMinutes      duration of each study session
      * @param shortBreakDurationMinutes duration of short breaks
      * @param longBreakDurationMinutes  duration of long break
      * @param tag                       tag for the study session
@@ -107,7 +107,7 @@ public class HomeViewModel extends AndroidViewModel {
      * Continues to the next phase in the cycle (study or break).
      * Must be in IDLE state with nextPhase set.
      *
-     * @param studyDurationMinutes     duration of study sessions
+     * @param studyDurationMinutes      duration of study sessions
      * @param shortBreakDurationMinutes duration of short breaks
      * @param longBreakDurationMinutes  duration of long break
      */
@@ -351,28 +351,14 @@ public class HomeViewModel extends AndroidViewModel {
      */
     private void startBreakSession(boolean isLongBreak, int shortBreakMinutes, int longBreakMinutes) {
         AppExecutor.getInstance().execute(() -> {
-            // Calculate adaptive break duration based on PAM score
-            PAMScore lastPAM = AppDatabase.getInstance(getApplication())
-                    .pamScoreDao()
-                    .getLatestScore();
-
-            int baseBreakMinutes = isLongBreak ? longBreakMinutes : shortBreakMinutes;
-            BreakManager breakManager = new BreakManager(getApplication());
-            int adaptedBreakMinutes = breakManager.calculateAdaptiveBreakDuration(
-                    lastPAM, baseBreakMinutes, isLongBreak
-            );
-
-            // Show explanation if break was adjusted
-            if (adaptedBreakMinutes != baseBreakMinutes) {
-                String explanation = breakManager.getBreakDurationExplanation(
-                        lastPAM, baseBreakMinutes, adaptedBreakMinutes
-                );
-                Toast.makeText(getApplication(), explanation, Toast.LENGTH_LONG).show();
-            }
-
-            // Update state and start timer
+            // Update state
             currentPhase.postValue(isLongBreak ? Phase.LONG_BREAK : Phase.SHORT_BREAK);
-            startBreakTimer(adaptedBreakMinutes, isLongBreak);
+
+            // Start timer on main thread
+            int actualBreakLength = isLongBreak ? longBreakMinutes : shortBreakMinutes;
+            new Handler(Looper.getMainLooper()).post(() ->
+                    startBreakTimer(actualBreakLength, isLongBreak)
+            );
         });
     }
 
