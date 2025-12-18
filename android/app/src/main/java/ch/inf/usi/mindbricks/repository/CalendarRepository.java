@@ -5,15 +5,13 @@ import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.database.CalendarEventDao;
 import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
+import ch.inf.usi.mindbricks.util.AppExecutor;
 
 /**
  * Repository class for CalendarEvent data access.
@@ -23,12 +21,10 @@ public class CalendarRepository {
     private static final String TAG = "CalendarRepository";
 
     private final CalendarEventDao calendarEventDao;
-    private final Executor dbExecutor;
 
     public CalendarRepository(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
         calendarEventDao = db.calendarEventDao();
-        dbExecutor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -39,7 +35,7 @@ public class CalendarRepository {
      * @param callback Optional callback when operation completes
      */
     public void saveEvents(List<CalendarEvent> events, SaveCallback callback) {
-        dbExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             try {
                 calendarEventDao.upsertAll(events);
                 Log.d(TAG, "Saved " + events.size() + " events");
@@ -60,7 +56,7 @@ public class CalendarRepository {
     }
 
     public void saveEvent(CalendarEvent event) {
-        dbExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             try {
                 calendarEventDao.upsert(event);
                 Log.d(TAG, "Saved event: " + event.getTitle());
@@ -75,7 +71,7 @@ public class CalendarRepository {
      * Use before re-syncing to ensure clean state.
      */
     public void deleteEventsBySource(String source, Runnable onComplete) {
-        dbExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             try {
                 calendarEventDao.deleteBySource(source);
                 Log.d(TAG, "Deleted all events from source: " + source);
@@ -92,7 +88,7 @@ public class CalendarRepository {
      * Deletes events that are older than the specified number of days.
      */
     public void deleteOldEvents(int daysOld) {
-        dbExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.DAY_OF_YEAR, -daysOld);
             long cutoff = cal.getTimeInMillis();
@@ -107,7 +103,7 @@ public class CalendarRepository {
      * Call this after syncing with the current sync timestamp.
      */
     public void cleanupStaleEvents(String source, long syncTimestamp) {
-        dbExecutor.execute(() -> {
+        AppExecutor.getInstance().execute(() -> {
             calendarEventDao.deleteStaleEvents(source, syncTimestamp);
             Log.d(TAG, "Cleaned up stale events for source: " + source);
         });
