@@ -4,6 +4,7 @@ import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 import ch.inf.usi.mindbricks.R;
+import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.util.validators.TagValidator;
 
@@ -116,84 +118,24 @@ public class TagManager {
      * @param onTagCreatedListener Callback invoked when a tag is created (optional)
      * @param onCancelListener Callback invoked when dialog is cancelled (optional)
      */
-    public void showAddTagDialog(OnTagCreatedListener onTagCreatedListener, Runnable onCancelListener) {
-        // load the dialog view from the layout
-        View dialogView = LayoutInflater.from(fragment.requireContext()).inflate(R.layout.dialog_add_tag, null);
-
-        // extract fields from the view
-        TextInputLayout tagNameLayout = dialogView.findViewById(R.id.layoutTagName);
-        TextInputEditText editTagName = dialogView.findViewById(R.id.editTagName);
-        ChipGroup colorGroup = dialogView.findViewById(R.id.chipTagColors);
-
-        // load tag color selector for each available color
-        int[] palette = Tags.getTagColorPalette(fragment.requireContext());
-        for (int i = 0; i < palette.length; i++) {
-            Chip chip = (Chip) LayoutInflater.from(fragment.requireContext())
-                    .inflate(R.layout.component_color_chip, colorGroup, false);
-            chip.setId(View.generateViewId());
-            chip.setChipBackgroundColor(ColorStateList.valueOf(palette[i]));
-            chip.setCheckable(true);
-            chip.setChecked(i == 0);
-            colorGroup.addView(chip);
-        }
-
-        // create dialog with custom view
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(fragment.requireContext())
-                .setTitle(R.string.dialog_create_tag_title)
-                .setView(dialogView)
-                .setNegativeButton(android.R.string.cancel, (d, which) -> {
-                    if (onCancelListener != null) {
-                        onCancelListener.run();
-                    }
-                })
-                .setPositiveButton(R.string.dialog_create_tag_submit_option_title, null);
-
-        // show dialog and listen for positive button click
-        AlertDialog dialog = builder.create();
-        dialog.setOnShowListener(d -> dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener(v -> {
-                    // validate tag name
-                    String title = readText(editTagName);
-                    ValidationResult titleResult = TagValidator.validateTitle(title, fragment.requireContext());
-                    if (!titleResult.isValid()) {
-                        tagNameLayout.setError(titleResult.msg());
-                        return;
-                    }
-                    tagNameLayout.setError(null);
-
-                    // get the selected color
-                    int checkedChipId = colorGroup.getCheckedChipId();
-                    if (checkedChipId == View.NO_ID) {
-                        Snackbar.make(fragment.requireView(), R.string.dialog_create_tag_color_required_message, Snackbar.LENGTH_SHORT).show();
-                        return;
-                    }
-                    Chip selected = colorGroup.findViewById(checkedChipId);
-                    ColorStateList chipBgColor = Objects.requireNonNull(selected.getChipBackgroundColor());
-                    int color = chipBgColor.getDefaultColor();
-
-                    // create tag and add to list
-                    Tag newTag = new Tag(title, color);
+    public void showAddTagDialog(@Nullable OnTagCreatedListener onTagCreatedListener,
+                                 @Nullable Runnable onCancelListener) {
+        showTagCreationDialogInternal(
+                fragment,
+                newTag -> {
+                    // add to instance list and save to preferences
                     tags.add(newTag);
                     prefs.setUserTags(tags);
 
-                    // call callback if provided, otherwise render tags
+                    // call external callback if provided, otherwise render tags
                     if (onTagCreatedListener != null) {
                         onTagCreatedListener.onTagCreated(newTag);
                     } else {
                         renderTags();
                     }
-
-                    dialog.dismiss();
-                }));
-
-        // handle dialog cancellation
-        dialog.setOnCancelListener(d -> {
-            if (onCancelListener != null) {
-                onCancelListener.run();
-            }
-        });
-
-        dialog.show();
+                },
+                onCancelListener
+        );
     }
 
     /**
@@ -201,12 +143,39 @@ public class TagManager {
      *
      * @param fragment The fragment context
      * @param prefs PreferencesManager instance
-     * @param onTagCreatedListener Callback invoked when a tag is created
+     * @param onTagCreatedListener Callback invoked when a tag is created (optional)
      * @param onCancelListener Callback invoked when dialog is cancelled (optional)
      */
     public static void showTagCreationDialog(Fragment fragment, PreferencesManager prefs,
-                                             OnTagCreatedListener onTagCreatedListener,
-                                             Runnable onCancelListener) {
+                                             @Nullable OnTagCreatedListener onTagCreatedListener,
+                                             @Nullable Runnable onCancelListener) {
+        showTagCreationDialogInternal(
+                fragment,
+                newTag -> {
+                    // Save to preferences
+                    List<Tag> currentTags = prefs.getUserTags();
+                    currentTags.add(newTag);
+                    prefs.setUserTags(currentTags);
+
+                    // Call external callback
+                    if (onTagCreatedListener != null) {
+                        onTagCreatedListener.onTagCreated(newTag);
+                    }
+                },
+                onCancelListener
+        );
+    }
+
+    /**
+     * Internal implementation of tag creation dialog
+     *
+     * @param fragment The fragment context
+     * @param onTagCreatedListener Callback invoked when a tag is created and inserted into database
+     * @param onCancelListener Callback invoked when dialog is cancelled (optional)
+     */
+    private static void showTagCreationDialogInternal(Fragment fragment,
+                                                      @Nullable OnTagCreatedListener onTagCreatedListener,
+                                                      @Nullable Runnable onCancelListener) {
         // load the dialog view from the layout
         View dialogView = LayoutInflater.from(fragment.requireContext()).inflate(R.layout.dialog_add_tag, null);
 
@@ -261,21 +230,33 @@ public class TagManager {
                     ColorStateList chipBgColor = Objects.requireNonNull(selected.getChipBackgroundColor());
                     int color = chipBgColor.getDefaultColor();
 
-                    // create tag and save to preferences
+                    // create tag and insert into database first
                     Tag newTag = new Tag(title, color);
-                    List<Tag> currentTags = prefs.getUserTags();
-                    currentTags.add(newTag);
-                    prefs.setUserTags(currentTags);
 
-                    // call callback
-                    if (onTagCreatedListener != null) {
-                        onTagCreatedListener.onTagCreated(newTag);
-                    }
+                    // insert tag into database on background thread
+                    AppExecutor.getInstance().execute(() -> {
+                        // insert into database and get the generated ID
+                        long tagId = AppDatabase
+                                .getInstance(fragment.requireContext())
+                                .tagDao()
+                                .insert(newTag);
 
-                    dialog.dismiss();
+                        // set the ID on the tag object
+                        newTag.setId(tagId);
+
+                        // update UI on main thread
+                        fragment.requireActivity().runOnUiThread(() -> {
+                            // call the callback to handle tag storage and UI updates
+                            if (onTagCreatedListener != null) {
+                                onTagCreatedListener.onTagCreated(newTag);
+                            }
+
+                            dialog.dismiss();
+                        });
+                    });
                 }));
 
-        // handle dialog cancellation
+        // handle dialog cancel request
         dialog.setOnCancelListener(d -> {
             if (onCancelListener != null) {
                 onCancelListener.run();
@@ -285,10 +266,4 @@ public class TagManager {
         dialog.show();
     }
 
-    /**
-     * Reads text from a TextInputEditText
-     */
-    private String readText(TextInputEditText editText) {
-        return editText.getText() != null ? editText.getText().toString().trim() : "";
-    }
 }
