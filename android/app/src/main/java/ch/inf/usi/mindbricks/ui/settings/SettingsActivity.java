@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,7 +20,6 @@ import java.util.List;
 
 import ch.inf.usi.mindbricks.BuildConfig;
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.drivers.calendar.CalendarDriver;
 import ch.inf.usi.mindbricks.model.visual.calendar.CalendarSyncService;
 import ch.inf.usi.mindbricks.util.SoundPlayer;
 
@@ -30,7 +28,7 @@ import ch.inf.usi.mindbricks.util.SoundPlayer;
  *
  * @author Luca Di Bello
  * @author Marta
- * @author Loca0307
+ * @author Luca Beltrami
  */
 public class SettingsActivity extends AppCompatActivity {
 
@@ -83,35 +81,6 @@ public class SettingsActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void connectGoogleCalendar() {
-        syncService.authenticateDriver("google", this, new CalendarDriver.AuthCallback() {
-            @Override
-            public void onAuthSuccess() {
-                runOnUiThread(() -> {
-                    Toast.makeText(SettingsActivity.this,
-                            "Google Calendar connected!", Toast.LENGTH_SHORT).show();
-                    updateUI();
-                });
-            }
-
-            @Override
-            public void onAuthFailure(String error) {
-                runOnUiThread(() -> {
-                    Toast.makeText(SettingsActivity.this,
-                            "Failed: " + error, Toast.LENGTH_LONG).show();
-                });
-            }
-
-            @Override
-            public void onAuthCancelled() {
-                runOnUiThread(() -> {
-                    Toast.makeText(SettingsActivity.this,
-                            "Sign-in cancelled", Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
     }
 
     @Override

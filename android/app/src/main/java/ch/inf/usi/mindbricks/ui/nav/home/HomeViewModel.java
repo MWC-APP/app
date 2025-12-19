@@ -296,19 +296,27 @@ public class HomeViewModel extends AndroidViewModel {
         SoundPlayer.playSound(getApplication(), R.raw.end_session);
         VibrationHelper.vibrate(getApplication(), VibrationHelper.VibrationType.SESSION_END);
 
+        // store sessionId before completing session
+        final long completedSessionId = currentSessionId;
         completeCurrentSession();
 
         notificationHelper.showNotification("Study Complete!", "Time for a well-deserved break.", 1);
         earnedCoinsEvent.postValue(3); // Bonus coins for completing session
 
-        // Trigger questionnaire
-        if (currentSessionId != -1) {
-            showQuestionnaireEvent.postValue(currentSessionId);
+        // trigger questionnaire using saved sessionId
+        if (completedSessionId != -1) {
+            showQuestionnaireEvent.postValue(completedSessionId);
         }
 
-        // Start break (long break after 4 sessions)
-        boolean isLongBreak = currentPomodoroStep >= 4;
-        startBreakSession(isLongBreak, shortBreakMinutes, longBreakMinutes);
+        // Set up for next break
+        currentPhase.setValue(Phase.IDLE);
+        if (currentPomodoroStep < 4) {
+            nextPhase.setValue(Phase.SHORT_BREAK);
+            currentTime.setValue(TimeUnit.MINUTES.toMillis(shortBreakMinutes));
+        } else {
+            nextPhase.setValue(Phase.LONG_BREAK);
+            currentTime.setValue(TimeUnit.MINUTES.toMillis(longBreakMinutes));
+        }
     }
 
     /**

@@ -170,9 +170,18 @@ public class HomeFragment extends HomeFragmentHelper {
         super.onResume();
 
         // If idle, refresh timer display in case settings changed
-        if (homeViewModel.currentPhase.getValue() == HomeViewModel.Phase.IDLE) {
-            // NOTE: on first load, timerTextView is still null
-            if (timerTextView != null) updateTimerText(timerTextView, TimeUnit.MINUTES.toMillis(prefs.getTimerStudyDuration()));
+        if (homeViewModel.currentPhase.getValue() == HomeViewModel.Phase.IDLE && timerTextView != null) {
+            HomeViewModel.Phase nextPhase = homeViewModel.nextPhase.getValue();
+            if (nextPhase != null) {
+                long newDuration = switch (nextPhase) {
+                    case SHORT_BREAK ->
+                            TimeUnit.MINUTES.toMillis(prefs.getTimerShortPauseDuration());
+                    case LONG_BREAK -> TimeUnit.MINUTES.toMillis(prefs.getTimerLongPauseDuration());
+                    default -> TimeUnit.MINUTES.toMillis(prefs.getTimerStudyDuration());
+                };
+                updateTimerText(timerTextView, newDuration);
+                homeViewModel.currentTime.setValue(newDuration);
+            }
         }
 
         // Reload avatar in case it changed
@@ -226,12 +235,8 @@ public class HomeFragment extends HomeFragmentHelper {
         });
 
         homeViewModel.currentTime.observe(getViewLifecycleOwner(), millis -> {
-            // if idle -> show text
-            if (homeViewModel.currentPhase.getValue() == HomeViewModel.Phase.IDLE) {
-                updateTimerText(timerTextView, TimeUnit.MINUTES.toMillis(prefs.getTimerStudyDuration()));
-            }
-            // if running -> show remaining millis
-            else {
+            // Always show the time from ViewModel (which is set correctly for each phase)
+            if (millis != null) {
                 updateTimerText(timerTextView, millis);
             }
         });

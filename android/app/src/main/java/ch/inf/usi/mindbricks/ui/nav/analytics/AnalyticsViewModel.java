@@ -41,7 +41,7 @@ import ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine;
  */
 public class AnalyticsViewModel extends AndroidViewModel {
     private static final String TAG = "AnalyticsViewModel";
-    private static final boolean VERBOSE_LOGGING = true;
+    private static final boolean VERBOSE_LOGGING = false;
     private static final int MAX_HISTORY_ITEMS = 200;
     private static final int HISTORY_PAGE_SIZE = 100;
 

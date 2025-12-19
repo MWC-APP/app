@@ -111,17 +111,6 @@ public class TileWorldState {
     public void setBaseTileId(String baseTileId) { this.baseTileId = baseTileId; }
 
     /**
-     * Get tile ID placed at the specified position
-     * @param row Row index
-     * @param col Column index
-     * @return Tile ID at the position, or null if none
-     */
-    public String getPlacedTile(int row, int col) {
-        if (placedTiles == null) return null;
-        return placedTiles.get(key(row, col));
-    }
-
-    /**
      * Check if a tile can be placed at the specified position
      *
      * @param row Row index

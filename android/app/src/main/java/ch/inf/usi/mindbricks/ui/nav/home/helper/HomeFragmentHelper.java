@@ -217,6 +217,8 @@ public class HomeFragmentHelper extends Fragment {
                         }
                     }
             );
+            // Show the productivity questionnaire after emotion is selected
+            detailedQuestionnaireDialog.show(getChildFragmentManager(), "productivity_dialog");
         });
         emotionQuestionnaireDialog.show(getChildFragmentManager(), "emotion_dialog");
     }

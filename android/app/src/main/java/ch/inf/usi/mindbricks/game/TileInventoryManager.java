@@ -10,7 +10,7 @@ import ch.inf.usi.mindbricks.util.PreferencesManager;
 
 /**
  * Tile inventory manager to load, save, add, and consume tiles from the player inventory
- 
+ *
  * @author Luca Di Bello
  */
 public class TileInventoryManager {

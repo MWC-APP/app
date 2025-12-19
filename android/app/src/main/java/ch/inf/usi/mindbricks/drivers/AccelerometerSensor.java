@@ -18,7 +18,7 @@ import ch.inf.usi.mindbricks.drivers.base.OrientationListener;
 public class AccelerometerSensor extends BaseSensor implements SensorEventListener {
 
     private static final String TAG = "AccelerometerSensor";
-    private static final double FACE_UP_THRESHOLD = 2f;
+    private static final double FACE_UP_THRESHOLD = 4f;
     private static AccelerometerSensor INSTANCE;
     private final SensorManager sensorManager;
     private OrientationListener listener;
