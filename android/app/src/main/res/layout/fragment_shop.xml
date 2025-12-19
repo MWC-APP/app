@@ -8,6 +8,7 @@
     tools:context=".ui.nav.shop.ShopFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/world_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="16dp">
@@ -39,6 +40,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/page_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -62,6 +64,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
@@ -97,6 +100,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/inventory_empty_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -112,6 +116,7 @@
                     android:textColor="@android:color/darker_gray" />
 
                 <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/inventory_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="160dp"
@@ -132,6 +137,7 @@
                     android:textStyle="bold" />
 
                 <LinearLayout
+                    android:id="@+id/shop_sections_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"

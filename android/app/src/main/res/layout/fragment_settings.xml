@@ -32,9 +32,9 @@
         android:id="@+id/study_duration_slider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:valueFrom="15.0"
+        android:valueFrom="1.0"
         android:valueTo="120.0"
-        android:stepSize="5.0"
+        android:stepSize="1.0"
         android:value="25.0" />
 
     <!-- Short Pause Settings -->
@@ -62,9 +62,9 @@
         android:id="@+id/pause_duration_slider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:valueFrom="5.0"
+        android:valueFrom="1.0"
         android:valueTo="30.0"
-        android:stepSize="5.0"
+        android:stepSize="1.0"
         android:value="5.0" />
 
     <!-- Long Pause Settings -->
@@ -92,9 +92,9 @@
         android:id="@+id/long_pause_duration_slider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:valueFrom="10.0"
-        android:valueTo="45.0"
-        android:stepSize="5.0"
+        android:valueFrom="5.0"
+        android:valueTo="60.0"
+        android:stepSize="1.0"
         android:value="15.0" />
 
 </LinearLayout>
