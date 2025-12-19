@@ -33,7 +33,6 @@ import ch.inf.usi.mindbricks.model.Tag;
 import ch.inf.usi.mindbricks.ui.nav.NavigationLocker;
 import ch.inf.usi.mindbricks.ui.nav.home.helper.HomeFragmentHelper;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
-import ch.inf.usi.mindbricks.util.PreferencesManager;
 
 public class HomeFragment extends HomeFragmentHelper {
 
@@ -138,8 +137,7 @@ public class HomeFragment extends HomeFragmentHelper {
                 }
                 // Otherwise, start new cycle
                 else {
-                    PreferencesManager prefsListener = new PreferencesManager(requireContext());
-                    boolean isFirstTime = prefsListener.isFirstSession();
+                    boolean isFirstTime = prefs.isFirstSession();
 
                     // check if both permissions are already granted
                     boolean hasAudio = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
@@ -150,7 +148,7 @@ public class HomeFragment extends HomeFragmentHelper {
                     if (hasAudio && hasMotion) {
                         startDefaultSession();
                     } else if (isFirstTime) {
-                        prefsListener.setFirstSession(false);
+                        prefs.setFirstSession(false);
                         audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
                     } else {
                         startDefaultSession();
@@ -245,22 +243,21 @@ public class HomeFragment extends HomeFragmentHelper {
         int longPauseDuration = prefs.getTimerLongPauseDuration();
 
         Tag selectedTag = (Tag) tagSpinner.getSelectedItem();
+        assert selectedTag != null;
         homeViewModel.pomodoroTechnique(studyDuration, shortPauseDuration, longPauseDuration, selectedTag);
     }
 
     // Continues to the next phase (break or focus) based on current state
     private void startNextPhase() {
-        PreferencesManager prefs = new PreferencesManager(requireContext());
-
         // Retrieve study settings
         int studyDuration = prefs.getTimerStudyDuration();
         int shortPauseDuration = prefs.getTimerShortPauseDuration();
         int longPauseDuration = prefs.getTimerLongPauseDuration();
 
-        // Continue to the next phase
+        // Continue to the next phase with selected tag
         Tag selectedTag = (Tag) tagSpinner.getSelectedItem();
         assert selectedTag != null;
-        homeViewModel.continueToNextPhase(studyDuration, shortPauseDuration, longPauseDuration);
+        homeViewModel.continueToNextPhase(studyDuration, shortPauseDuration, longPauseDuration, selectedTag);
     }
 
     // Updates the color and width of the session indicator dots based on the current state
