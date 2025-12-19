@@ -1,6 +1,7 @@
 package ch.inf.usi.mindbricks.util;
 
 import android.content.res.ColorStateList;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 

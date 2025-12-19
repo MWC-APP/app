@@ -65,7 +65,6 @@ import ch.inf.usi.mindbricks.util.database.DataProcessor;
  */
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = "AnalyticsFragment";
-    private static final int TEST_DATA_COUNT = 900;
 
     // ViewModel
     private AnalyticsViewModel viewModel;
@@ -74,10 +73,8 @@ public class AnalyticsFragment extends Fragment {
     // Chart views
     private WeeklyFocusChartView weeklyFocusChart;
     private HourlyDistributionChartView hourlyDistributionChart;
-    private DailyTimelineChartView dailyTimelineChart;
     private QualityHeatmapChartView qualityHeatmapChart;
     private StreakCalendarView streakCalendarView;
-    private GoalRingsView goalRingsView;
     private AIRecommendationCardView aiRecommendationView;
     private LinearLayout aiLegendContainer;
     private TagUsageChartView tagUsagePieChart;
@@ -250,7 +247,6 @@ public class AnalyticsFragment extends Fragment {
         hourlyDistributionChart = view.findViewById(R.id.hourlyDistributionChart);
         qualityHeatmapChart = view.findViewById(R.id.qualityHeatmapChart);
         streakCalendarView = view.findViewById(R.id.streakCalendarView);
-        goalRingsView = view.findViewById(R.id.goalRingsView);
         aiRecommendationView = view.findViewById(R.id.aiRecommendationView);
         aiLegendContainer = view.findViewById(R.id.legendContainer);
         tagUsagePieChart = view.findViewById(R.id.tagUsageChart);
@@ -438,13 +434,6 @@ public class AnalyticsFragment extends Fragment {
         viewModel.getHourlyStats().observe(getViewLifecycleOwner(), stats -> {
             if (stats != null && hourlyDistributionChart != null) {
                 hourlyDistributionChart.setData(stats);
-            }
-        });
-
-        // Observe daily recommendations
-        viewModel.getDailyRecommendation().observe(getViewLifecycleOwner(), recommendation -> {
-            if (recommendation != null && dailyTimelineChart != null) {
-                dailyTimelineChart.setData(recommendation);
             }
         });
 

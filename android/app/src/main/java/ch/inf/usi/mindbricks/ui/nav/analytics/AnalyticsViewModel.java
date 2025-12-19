@@ -13,7 +13,6 @@ import androidx.lifecycle.Observer;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -44,10 +43,7 @@ public class AnalyticsViewModel extends AndroidViewModel {
     private static final String TAG = "AnalyticsViewModel";
     private static final boolean VERBOSE_LOGGING = true;
     private static final int MAX_HISTORY_ITEMS = 200;
-
-    private int historyPageSize = 100;
-    private int historyCurrentPage = 1;
-    private List<StudySessionWithStats> allFilteredSessions;
+    private static final int HISTORY_PAGE_SIZE = 100;
 
     private final StudySessionRepository repository;
     //date ranges
@@ -57,13 +53,13 @@ public class AnalyticsViewModel extends AndroidViewModel {
     // LiveData for different chart types
     private final MutableLiveData<WeeklyStats> weeklyStats = new MutableLiveData<>();
     private final MutableLiveData<List<TimeSlotStats>> hourlyStats = new MutableLiveData<>();
-    private final MutableLiveData<AIRecommendation> dailyRecommendation = new MutableLiveData<AIRecommendation>();
+    private final MutableLiveData<AIRecommendation> dailyRecommendation = new MutableLiveData<>();
     private final MutableLiveData<List<StudySessionWithStats>> sessionHistory = new MutableLiveData<>();
     private final MutableLiveData<List<HourlyQuality>> energyCurveData = new MutableLiveData<>();
     private final MutableLiveData<List<HeatmapCell>> heatmapData = new MutableLiveData<>();
     private final MutableLiveData<List<StreakDay>> streakData = new MutableLiveData<>();
-    private MutableLiveData<List<DailyRings>> dailyRingsHistory = new MutableLiveData<>();
-    private MutableLiveData<Boolean> isRingsExpanded = new MutableLiveData<>(false);
+    private final MutableLiveData<List<DailyRings>> dailyRingsHistory = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isRingsExpanded = new MutableLiveData<>(false);
     private final MutableLiveData<List<TagUsage>> tagUsageData = new MutableLiveData<>();
     private final MutableLiveData<List<AIRecommendation>> aiRecommendations = new MutableLiveData<>();
 
@@ -348,11 +344,10 @@ public class AnalyticsViewModel extends AndroidViewModel {
             tagUsageData.postValue(tagUsage);
 
             // Store complete filtered list for pagination
-            allFilteredSessions = new ArrayList<>(filteredSessions);
-            Collections.sort(allFilteredSessions, (a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
-            historyCurrentPage = 1;
+            List<StudySessionWithStats> allFilteredSessions = new ArrayList<>(filteredSessions);
+            allFilteredSessions.sort((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
 
-            int endIndex = Math.min(historyPageSize, allFilteredSessions.size());
+            int endIndex = Math.min(HISTORY_PAGE_SIZE, allFilteredSessions.size());
             List<StudySessionWithStats> firstPage = allFilteredSessions.subList(0, endIndex);
 
             sessionHistory.postValue(firstPage);

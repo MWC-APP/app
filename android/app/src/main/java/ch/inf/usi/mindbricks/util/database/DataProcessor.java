@@ -32,7 +32,7 @@ import ch.inf.usi.mindbricks.util.PreferencesManager;
  * Contains methods to transform raw session data into chart-ready statistics.
  *
  * @author Luca Di Bello
- * @author Marta
+ * @author Marta Šafářová
  */
 public class DataProcessor {
 
