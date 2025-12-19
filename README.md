@@ -17,7 +17,6 @@ Here is the full list of the refactors I (@lucadibello) managed to do during in 
 - [x] Splitting string resources into multiple files based on their usage (e.g., `strings_home.xml`, `strings_settings.xml`, etc).
 - [x] Removed the substring "AI" from all resource files (misleading, we are not using any AI in the app. Just structured data and simple algorithms). Leftover from the initial idea of the app
 - [x] Remove unused layout resources.
-- [x] Removed daily `focus target` ring (it's not the focus time objective, it's the objective focus score) - every student wants to maximize their focus score, we don't have to set a target for it (also, we didn't have a UI to set it, was 70% by default).
 - [x] Refactored `HomeViewModel` to remove duplicated code and remove passing the same parameters multiple times to different methods and updated `HomeFragment` accordingly.
 - [x] Refactored `UserPreferences` into `UserPreferencesLoader`: now we return JSON objects instead of using multiple inner classes to represent the preferences (not flexible, if the JSON changes we need to change the entire class).
 - [x] Refactored `RecommendationEngine`: now using new `UserPreferencesLoader` to load user preferences, removed duplicated code, improved readability.
@@ -26,7 +25,9 @@ Here is the full list of the refactors I (@lucadibello) managed to do during in 
 - [x] `TagManager` class had two methods doing the same thing in different ways. I merged them into a single method.
 - [x] Solved bug in tags management: when adding a tag, we were not setting the correct ID to the POJO object, causing foreign key constraint exceptions when trying to save sessions with newly created tags.
 - [x] Solved bug where we the app was still referencing the previous tag ID after the user has selected a different tag for a session.
+- [] Before we locked only the navbar and the settings menu when studying. Now we lock also the tag spinner.
 
+- [] More granular settings for timer (short/long/focus)
 - [] Adding `@author` tags to all classes to make it clear who did what
 - [] Added Javadocs to all classes, methods, fields, etc.
 
