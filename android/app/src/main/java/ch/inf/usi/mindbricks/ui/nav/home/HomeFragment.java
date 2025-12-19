@@ -189,6 +189,10 @@ public class HomeFragment extends HomeFragmentHelper {
             settingsIcon.setEnabled(!isStudying);
             settingsIcon.setAlpha(isStudying ? 0.5f : 1.0f);
 
+            // Lock the tag spinner during an active session
+            tagSpinner.setEnabled(!isRunning);
+            tagSpinner.setAlpha(isRunning ? 0.5f : 1.0f);
+
             if (isRunning) {
                 startSessionButton.setEnabled(false);
                 new Handler(Looper.getMainLooper()).postDelayed(() -> startSessionButton.setEnabled(true), 1500);
