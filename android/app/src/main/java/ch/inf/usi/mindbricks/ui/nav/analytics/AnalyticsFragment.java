@@ -29,7 +29,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import android.content.Intent;
 import com.google.android.material.button.MaterialButton;
 import ch.inf.usi.mindbricks.ui.settings.SettingsActivity;
-import com.google.android.material.button.MaterialButton;
+
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 
@@ -661,7 +661,7 @@ public class AnalyticsFragment extends Fragment {
         View colorBox = new View(requireContext());
 
         GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(Color.parseColor(item.colorHex));
+        drawable.setColor(Color.parseColor(item.colorHex()));
         drawable.setCornerRadius(dpToPx(4));
         colorBox.setBackground(drawable);
 
@@ -674,7 +674,7 @@ public class AnalyticsFragment extends Fragment {
 
         // Create label with themed text color
         TextView label = new TextView(requireContext());
-        label.setText(item.name);
+        label.setText(item.name());
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         label.setTextColor(ContextCompat.getColor(requireContext(), R.color.analytics_text_primary));
         layout.addView(label);

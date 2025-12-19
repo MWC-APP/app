@@ -344,35 +344,6 @@ public class SessionQuestionnaire {
     }
 
     /**
-     * Checks if all detailed productivity ratings are present and valid.
-     * Useful for analytics and graph generation.
-     *
-     * @return true if all detailed ratings are non-null, false otherwise
-     */
-    public boolean hasCompleteRatings() {
-        return hasProductivityQuestions &&
-                enthusiasmRating != null &&
-                energyRating != null &&
-                engagementRating != null &&
-                satisfactionRating != null &&
-                anticipationRating != null;
-    }
-
-    /**
-     * Calculates the average rating across all detailed productivity metrics.
-     * Prepared for future use in graphs and analytics.
-     *
-     * @return average rating (0.0-max scale), or -1 if ratings are incomplete
-     */
-    public float getAverageRating() {
-        if (!hasCompleteRatings()) {
-            return -1f;
-        }
-        return (enthusiasmRating + energyRating + engagementRating +
-                satisfactionRating + anticipationRating) / 5f;
-    }
-
-    /**
      * Returns a string representation of the questionnaire for debugging.
      *
      * @return string containing all questionnaire fields

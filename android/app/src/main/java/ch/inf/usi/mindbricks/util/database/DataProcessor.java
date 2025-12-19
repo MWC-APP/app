@@ -11,17 +11,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
-import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.DailyRecommendation;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
 import ch.inf.usi.mindbricks.model.visual.HourlyQuality;
 import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.TagUsage;
 import ch.inf.usi.mindbricks.model.visual.TimeSlotStats;
 import ch.inf.usi.mindbricks.model.visual.WeeklyStats;
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.StreakDay;
 import ch.inf.usi.mindbricks.model.visual.GoalRing;
 import ch.inf.usi.mindbricks.util.PreferencesManager;
@@ -229,11 +230,11 @@ public class DataProcessor {
     ) {
         Log.d("DataProcessor", "calculateQualityHeatmap START - range: " + dateRange.getDisplayName());
 
-        // ✅ Cap to prevent infinite loops with ALL_TIME
+        // Cap to prevent excessive memory usage
         DateRange cappedRange = dateRange;
         if (dateRange.getRangeType() == DateRange.RangeType.ALL_TIME) {
-            Log.d("DataProcessor", "ALL_TIME detected, capping to last 90 days for heatmap");
-            cappedRange = DateRange.lastNDays(90);
+            Log.d("DataProcessor", "ALL_TIME detected, capping to last 365 days for heatmap");
+            cappedRange = DateRange.lastNDays(365);
         } else if (dateRange.getDurationInDays() > 365) {
             Log.d("DataProcessor", "Range > 365 days, capping to 365 days for performance");
             long cappedStart = dateRange.getEndTimestamp() - (365L * 24 * 60 * 60 * 1000);
@@ -249,53 +250,11 @@ public class DataProcessor {
             return new ArrayList<>();
         }
 
-        // ✅ Create a cell for EVERY HOUR of EVERY DAY in the range
+        // OPTIMIZED: Only create cells for hours with actual sessions (not every hour in range)
         Map<String, HeatmapCell> cellMap = new HashMap<>();
         Calendar calendar = Calendar.getInstance();
 
-        // Start at beginning of first day
-        calendar.setTimeInMillis(cappedRange.getStartTimestamp());
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        long hourMs = 60 * 60 * 1000L;
-        long currentHourStart = calendar.getTimeInMillis();
-
-        // Iterate through every hour in the range
-        while (currentHourStart <= cappedRange.getEndTimestamp()) {
-            calendar.setTimeInMillis(currentHourStart);
-
-            int year = calendar.get(Calendar.YEAR);
-            int month = calendar.get(Calendar.MONTH);
-            int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
-            int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-            int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
-
-            // Create unique key: YYYY-MM-DD-HH
-            String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
-
-            HeatmapCell cell = new HeatmapCell();
-            cell.setYear(year);
-            cell.setMonth(month);
-            cell.setDayOfMonth(dayOfMonth);
-            cell.setDayOfWeek(dayOfWeek);
-            cell.setHourOfDay(hourOfDay);
-            cell.setTimestamp(currentHourStart);
-            cell.setSessionCount(0);
-            cell.setAvgQuality(0);
-            cell.setTotalMinutes(0);
-
-            cellMap.put(hourKey, cell);
-
-            // Move to next hour
-            currentHourStart += hourMs;
-        }
-
-        Log.d("DataProcessor", "Created " + cellMap.size() + " hourly cells for range");
-
-        // Now populate cells with actual session data
+        // Process each session and create cells only for hours that have data
         for (StudySessionWithStats session : filteredSessions) {
             calendar.setTimeInMillis(session.getTimestamp());
 
@@ -307,54 +266,60 @@ public class DataProcessor {
             String hourKey = year + "-" + month + "-" + dayOfMonth + "-" + hourOfDay;
 
             HeatmapCell cell = cellMap.get(hourKey);
-            if (cell != null) {
-                // Accumulate session data for this hour
-                cell.setSessionCount(cell.getSessionCount() + 1);
-                cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
-                cell.setTotalMinutes(cell.getTotalMinutes() + session.getDurationMinutes());
-            } else {
-                // Session might span multiple hours - create cell if it doesn't exist
-                // This handles sessions that start in one hour but we're processing them
-                HeatmapCell newCell = new HeatmapCell();
-                calendar.setTimeInMillis(session.getTimestamp());
-
-                newCell.setYear(year);
-                newCell.setMonth(month);
-                newCell.setDayOfMonth(dayOfMonth);
-                newCell.setDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK));
-                newCell.setHourOfDay(hourOfDay);
-
-                // Set timestamp to start of this hour
-                calendar.set(Calendar.MINUTE, 0);
-                calendar.set(Calendar.SECOND, 0);
-                calendar.set(Calendar.MILLISECOND, 0);
-                newCell.setTimestamp(calendar.getTimeInMillis());
-
-                newCell.setSessionCount(1);
-                newCell.setAvgQuality(session.getFocusScore());
-                newCell.setTotalMinutes(session.getDurationMinutes());
-
-                cellMap.put(hourKey, newCell);
+            if (cell == null) {
+                // Create new cell for this hour
+                cell = createHeatmapCell(calendar);
+                cellMap.put(hourKey, cell);
             }
+
+            // Accumulate session data
+            cell.setSessionCount(cell.getSessionCount() + 1);
+            cell.setAvgQuality(cell.getAvgQuality() + session.getFocusScore());
+            cell.setTotalMinutes(cell.getTotalMinutes() + session.getDurationMinutes());
         }
 
+        Log.d("DataProcessor", "Created " + cellMap.size() + " hourly cells (only for hours with sessions)");
+
         // Calculate averages and convert to list
-        List<HeatmapCell> result = new ArrayList<>();
-        for (HeatmapCell cell : cellMap.values()) {
+        List<HeatmapCell> result = new ArrayList<>(cellMap.values());
+        for (HeatmapCell cell : result) {
             if (cell.getSessionCount() > 0) {
                 // Calculate average quality
                 cell.setAvgQuality(cell.getAvgQuality() / cell.getSessionCount());
             }
-            result.add(cell);
         }
 
-        // Sort chronologically (oldest to newest for scrolling)
+        // Sort chronologically (oldest to newest)
         Collections.sort(result, (a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp()));
 
         Log.d("DataProcessor", "Heatmap complete: " + result.size() + " hourly cells with " +
                 filteredSessions.size() + " sessions");
 
         return result;
+    }
+
+    /**
+     * Helper method to create a HeatmapCell from a Calendar instance.
+     * Sets timestamp to the start of the hour.
+     */
+    private static HeatmapCell createHeatmapCell(Calendar cal) {
+        HeatmapCell cell = new HeatmapCell();
+        cell.setYear(cal.get(Calendar.YEAR));
+        cell.setMonth(cal.get(Calendar.MONTH));
+        cell.setDayOfMonth(cal.get(Calendar.DAY_OF_MONTH));
+        cell.setDayOfWeek(cal.get(Calendar.DAY_OF_WEEK));
+        cell.setHourOfDay(cal.get(Calendar.HOUR_OF_DAY));
+
+        // Set timestamp to start of hour
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        cell.setTimestamp(cal.getTimeInMillis());
+
+        cell.setSessionCount(0);
+        cell.setAvgQuality(0);
+        cell.setTotalMinutes(0);
+        return cell;
     }
 
     public static List<StreakDay> calculateStreakCalendar(List<StudySessionWithStats> sessions,
@@ -477,7 +442,7 @@ public class DataProcessor {
             if (!sessionsByDay.containsKey(dayKey)) {
                 sessionsByDay.put(dayKey, new ArrayList<>());
             }
-            sessionsByDay.get(dayKey).add(session);
+            Objects.requireNonNull(sessionsByDay.get(dayKey)).add(session);
         }
 
         Log.d("DataProcessor", "  Days with sessions: " + sessionsByDay.size());
@@ -497,7 +462,7 @@ public class DataProcessor {
             result.add(dailyRings);
         }
 
-        Collections.sort(result, (a, b) -> Long.compare(b.getDate().toEpochDay(), a.getDate().toEpochDay()));
+        result.sort((a, b) -> Long.compare(b.getDate().toEpochDay(), a.getDate().toEpochDay()));
 
         Log.d("DataProcessor", "  Daily rings created: " + result.size());
         return result;
@@ -515,55 +480,6 @@ public class DataProcessor {
         return calendar;
     }
 
-    private static Calendar getEndCalendar(DateRange dateRange) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(dateRange.getEndTimestamp());
-
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.MINUTE, 59);
-        calendar.set(Calendar.SECOND, 59);
-        calendar.set(Calendar.MILLISECOND, 999);
-
-        return calendar;
-    }
-
-
-    private static List<DailyRings> createEmptyDailyRings(
-            Context context,
-            DateRange dateRange,
-            int dailyMinutesTarget,
-            float dailyFocusTarget) {
-
-        List<DailyRings> result = new ArrayList<>();
-
-        Calendar startCal = getStartCalendar(dateRange);
-        Calendar endCal = getEndCalendar(dateRange);
-
-        // Start from end date and go backwards to start date
-        Calendar currentCal = (Calendar) endCal.clone();
-
-        while (!currentCal.before(startCal)) {
-            int year = currentCal.get(Calendar.YEAR);
-            int month = currentCal.get(Calendar.MONTH) + 1;
-            int day = currentCal.get(Calendar.DAY_OF_MONTH);
-
-            LocalDate date = LocalDate.of(year, month, day);
-
-            List<GoalRing> emptyRings = calculateGoalRings(
-                    context,
-                    new ArrayList<>(),
-                    dailyMinutesTarget,
-                    dailyFocusTarget
-            );
-
-            DailyRings dayData = new DailyRings(date, emptyRings);
-            result.add(dayData);
-
-            currentCal.add(Calendar.DAY_OF_MONTH, -1);
-        }
-
-        return result;
-    }
 
     public static List<GoalRing> calculateGoalRings(Context context,
                                                     List<StudySessionWithStats> sessions,
@@ -715,56 +631,18 @@ public class DataProcessor {
         return usageList;
     }
 
-    //"ai" generation
+    /**
+     * Generate AI recommendations by delegating to RecommendationEngine.
+     * This method now simply wraps the RecommendationEngine to maintain API compatibility.
+     */
     public static AIRecommendation generateAIRecommendations(
             List<StudySessionWithStats> allSessions, Context context, DateRange dateRange) {
 
-        AIRecommendation schedule = new AIRecommendation();
+        // Delegate to RecommendationEngine for all schedule generation logic
+        ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine engine =
+                new ch.inf.usi.mindbricks.util.evaluation.RecommendationEngine(context);
 
-        List<StudySessionWithStats> sessions = filterSessionsInRange(allSessions, dateRange);
-        schedule.setTotalSessions(sessions.size());
-
-        if (sessions.isEmpty()) {
-            schedule.setSummaryMessage("Not enough data. Complete more study sessions for personalized schedule.");
-            return schedule;
-        }
-
-        // Calculate hourly productivity stats
-        List<TimeSlotStats> hourlyStats = calculateHourlyDistribution(allSessions, dateRange);
-
-        // Find productive and unproductive hours
-        List<HourScore> hourScores = new ArrayList<>();
-        for (TimeSlotStats stats : hourlyStats) {
-            if (stats.getSessionCount() > 0) {
-                hourScores.add(new HourScore(
-                        stats.getHourOfDay(),
-                        stats.getAverageFocusScore(),
-                        stats.getSessionCount()
-                ));
-            }
-        }
-
-        Collections.sort(hourScores, (a, b) ->
-                Float.compare(b.focusScore, a.focusScore));
-
-        // Calculate average productivity
-        float avgProductivity = 0;
-        for (HourScore score : hourScores) {
-            avgProductivity += score.focusScore;
-        }
-        if (!hourScores.isEmpty()) {
-            avgProductivity /= hourScores.size();
-            schedule.setAverageProductivity(avgProductivity);
-        }
-
-        // Generate activity blocks based on patterns
-        generateActivityBlocks(schedule, context, hourScores, avgProductivity);
-
-        // Generate summary message
-        String summary = generateScheduleSummary(schedule, hourScores);
-        schedule.setSummaryMessage(summary);
-
-        return schedule;
+        return engine.generateAdaptiveSchedule(allSessions, System.currentTimeMillis());
     }
 
     public static String getTodayPrimaryStudyTopic(List<StudySessionWithStats> sessions) {
@@ -822,218 +700,6 @@ public class DataProcessor {
         return totalMinutes;
     }
 
-    private static void generateActivityBlocks(AIRecommendation schedule,
-                                               Context context,
-                                               List<HourScore> hourScores,
-                                               float avgProductivity) {
-
-        AIRecommendation.ActivityType[] hourlyActivities =
-                new AIRecommendation.ActivityType[24];
-
-        CalendarIntegrationHelper calendarHelper = new CalendarIntegrationHelper(context);
-        int calendarBlockedHours = calendarHelper.applyCalendarConstraints(
-                hourlyActivities,
-                System.currentTimeMillis()
-        );
-
-        // Default schedule based on typical patterns
-        // Sleep hours
-        for (int h = 0; h < 6; h++) {
-            if(hourlyActivities[h] == null)
-                hourlyActivities[h] = AIRecommendation.ActivityType.SLEEP;
-        }
-        for (int h = 23; h < 24; h++) {
-            if(hourlyActivities[h] == null)
-                hourlyActivities[h] = AIRecommendation.ActivityType.SLEEP;
-        }
-
-        // Meal times
-        if(hourlyActivities[7] == null)
-            hourlyActivities[7] = AIRecommendation.ActivityType.MEALS;
-
-        if(hourlyActivities[12] == null)
-            hourlyActivities[12] = AIRecommendation.ActivityType.MEALS;
-
-        if(hourlyActivities[19] == null)
-            hourlyActivities[19] = AIRecommendation.ActivityType.MEALS;
-
-        // Now override based on productivity
-        for (HourScore score : hourScores) {
-            int hour = score.hour;
-
-            // Skip sleep and meal hours
-            if (hour >= 0 && hour < 6) continue;
-            if (hour == 23) continue;
-            if (hour == 7 || hour == 12 || hour == 19) continue;
-
-            // High productivity hours -> top 30% -> Deep Study
-            if (score.focusScore >= avgProductivity * 1.2f) {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.DEEP_STUDY;
-            }
-            // Good productivity -> above average -> Light Study or Work
-            else if (score.focusScore >= avgProductivity) {
-                // Alternate between light study and work
-                if (hour % 2 == 0) {
-                    hourlyActivities[hour] = AIRecommendation.ActivityType.LIGHT_STUDY;
-                } else {
-                    hourlyActivities[hour] = AIRecommendation.ActivityType.WORK;
-                }
-            }
-
-            // Below average productivity -> Other activities
-            else {
-                // Morning/afternoon low productivity -> Exercise
-                if (hour >= 6 && hour <= 11 && hourlyActivities[hour] == null) {
-                    hourlyActivities[hour] = AIRecommendation.ActivityType.EXERCISE;
-                }
-                // Evening low productivity -> Social
-                else if (hour >= 18 && hour <= 22) {
-                    hourlyActivities[hour] = AIRecommendation.ActivityType.SOCIAL;
-                }
-                // Otherwise -> Breaks
-                else if (hourlyActivities[hour] == null) {
-                    hourlyActivities[hour] = AIRecommendation.ActivityType.BREAKS;
-                }
-            }
-        }
-
-        // Fill remaining null slots with sensible defaults
-        for (int h = 6; h < 23; h++) {
-            if (hourlyActivities[h] == null) {
-                if (h >= 8 && h <= 10) {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.WORK;
-                } else if (h >= 13 && h <= 17) {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.LIGHT_STUDY;
-                } else if (h >= 20 && h <= 22) {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.SOCIAL;
-                } else {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.BREAKS;
-                }
-            }
-        }
-
-        // Convert hour array into activity blocks -> merge consecutive same activities
-        AIRecommendation.ActivityType currentActivity = hourlyActivities[0];
-        int blockStart = 0;
-
-        for (int h = 1; h < 24; h++) {
-            if (hourlyActivities[h] != currentActivity) {
-                int confidence = calculateBlockConfidence(hourScores, blockStart, h, currentActivity);
-                String reason = generateBlockReason(currentActivity, blockStart, h, hourScores, avgProductivity);
-
-                schedule.addActivityBlock(new AIRecommendation.ActivityBlock(
-                        currentActivity, blockStart, h, confidence, reason
-                ));
-
-                currentActivity = hourlyActivities[h];
-                blockStart = h;
-            }
-        }
-
-        // Add final block
-        int confidence = calculateBlockConfidence(hourScores, blockStart, 24, currentActivity);
-        String reason = generateBlockReason(currentActivity, blockStart, 24, hourScores, avgProductivity);
-        schedule.addActivityBlock(new AIRecommendation.ActivityBlock(
-                currentActivity, blockStart, 24, confidence, reason
-        ));
-    }
-
-    private static int calculateBlockConfidence(List<HourScore> hourScores,
-                                                int startHour, int endHour,
-                                                AIRecommendation.ActivityType activity) {
-        // TODO based on questinnare add confidence
-
-        // For study activities, confidence based on actual session data
-        if (activity == AIRecommendation.ActivityType.DEEP_STUDY ||
-                activity == AIRecommendation.ActivityType.LIGHT_STUDY) {
-
-            int sessionsInBlock = 0;
-            for (HourScore score : hourScores) {
-                if (score.hour >= startHour && score.hour < endHour) {
-                    sessionsInBlock += score.sessionCount;
-                }
-            }
-            return Math.min(100, sessionsInBlock * 15); // 15 points per session
-        }
-
-        // For other activities, moderate confidence
-        return 60;
-    }
-
-    private static String generateScheduleSummary(AIRecommendation schedule,
-                                                  List<HourScore> hourScores) {
-        if (hourScores.isEmpty()) {
-            return "Start tracking your study sessions to get personalized recommendations!";
-        }
-
-        // Find best study hours
-        List<Integer> bestHours = new ArrayList<>();
-        for (int i = 0; i < Math.min(3, hourScores.size()); i++) {
-            bestHours.add(hourScores.get(i).hour);
-        }
-
-        Collections.sort(bestHours);
-
-        StringBuilder summary = new StringBuilder();
-        summary.append("Based on ").append(schedule.getTotalSessions())
-                .append(" sessions, your peak focus hours are ");
-
-        for (int i = 0; i < bestHours.size(); i++) {
-            int hour = bestHours.get(i);
-            if (hour == 0) summary.append("12 AM");
-            else if (hour < 12) summary.append(hour).append(" AM");
-            else if (hour == 12) summary.append("12 PM");
-            else summary.append(hour - 12).append(" PM");
-
-            if (i < bestHours.size() - 2) summary.append(", ");
-            else if (i == bestHours.size() - 2) summary.append(" and ");
-        }
-
-        summary.append(". Schedule deep work during these times!");
-
-        return summary.toString();
-    }
-
-    private static String generateBlockReason(AIRecommendation.ActivityType activity,
-                                              int startHour, int endHour,
-                                              List<HourScore> hourScores,
-                                              float avgProductivity) {
-
-        switch (activity) {
-            case DEEP_STUDY:
-                float maxFocus = 0;
-                for (HourScore score : hourScores) {
-                    if (score.hour >= startHour && score.hour < endHour) {
-                        maxFocus = Math.max(maxFocus, score.focusScore);
-                    }
-                }
-                return String.format("Peak focus period (%.0f%% productivity)", maxFocus);
-
-            case LIGHT_STUDY:
-                return "Good productivity, suitable for learning";
-
-            case WORK:
-                return "Productive time for structured tasks";
-
-            case EXERCISE:
-                return "Lower focus period, ideal for physical activity";
-
-            case SOCIAL:
-                return "Evening relaxation time";
-
-            case MEALS:
-                return "Regular meal time";
-
-            case BREAKS:
-                return "Rest period to maintain energy";
-
-            case SLEEP:
-                return "Restorative sleep for optimal performance";
-
-            default:
-                return "Recommended activity";
-        }
-    }
 
     // helpers
     public static List<StudySessionWithStats> filterSessionsInRange(List<StudySessionWithStats> allSessions, DateRange dateRange) {

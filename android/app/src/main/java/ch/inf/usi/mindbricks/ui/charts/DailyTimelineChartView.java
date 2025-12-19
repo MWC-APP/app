@@ -11,8 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
-import ch.inf.usi.mindbricks.model.visual.DailyRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.DailyRecommendation;
 
 /**
  * Custom view that displays recommended study times for the day

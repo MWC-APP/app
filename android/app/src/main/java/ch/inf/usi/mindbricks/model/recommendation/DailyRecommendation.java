@@ -1,4 +1,6 @@
-package ch.inf.usi.mindbricks.model.visual;
+package ch.inf.usi.mindbricks.model.recommendation;
+
+import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,6 +8,8 @@ import java.util.List;
 /**
  * Model representing daily study recommendations.
  * Contains suggested time slots and reasoning based on historical performance.
+ *
+ * @author Marta Šafářová
  */
 public class DailyRecommendation {
 
@@ -66,13 +70,6 @@ public class DailyRecommendation {
             this.reason = "";
         }
 
-        public TimeSlot(String startTime, String endTime, int productivityScore, String reason) {
-            this.startTime = startTime;
-            this.endTime = endTime;
-            this.productivityScore = productivityScore;
-            this.reason = reason;
-        }
-
         // Getters and Setters
 
         public String getStartTime() {
@@ -129,6 +126,7 @@ public class DailyRecommendation {
             }
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("TimeSlot[%s, score=%d, %s]",

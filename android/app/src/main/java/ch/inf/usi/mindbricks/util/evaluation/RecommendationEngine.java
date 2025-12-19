@@ -7,47 +7,46 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
-import ch.inf.usi.mindbricks.util.PreferencesManager;
-import ch.inf.usi.mindbricks.util.database.CalendarIntegrationHelper;
-import ch.inf.usi.mindbricks.model.evaluation.UserPreferences;
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.ActivityBlock;
+import ch.inf.usi.mindbricks.model.recommendation.ActivityType;
 import ch.inf.usi.mindbricks.model.visual.StudySessionWithStats;
 import ch.inf.usi.mindbricks.model.visual.calendar.CalendarEvent;
+import ch.inf.usi.mindbricks.repository.CalendarRepository;
+import ch.inf.usi.mindbricks.util.PreferencesManager;
+import ch.inf.usi.mindbricks.util.UserPreferenceLoader;
 import ch.inf.usi.mindbricks.util.database.DataProcessor;
 
 /**
  * Adaptive AI Recommendation Engine
- *
+ * <p>
  * Generates personalized daily schedules that allocate EXACTLY the specified
  * number of study hours based on the user's study plan.
  *
  * @author Marta Šafářová
- * (very) partially refactored by
+ * Refactored by
  * @author Luca Di Bello
  */
 public class RecommendationEngine {
 
     private static final String TAG = "RecommendationEngine";
     private final AppDatabase database;
-    private final CalendarIntegrationHelper calendarHelper;
+    private final CalendarRepository calendarRepository;
     private final PreferencesManager preferencesManager;
-    private final UserPreferences userPreferences;
+    private final UserPreferenceLoader preferenceLoader;
 
     public RecommendationEngine(Context context) {
         this.preferencesManager = new PreferencesManager(context);
-
-        /* FIXME:
-            we have have an infrastructure to load the user preferences dynamically, but we don't have the UI for it.
-            For this reason, we keep the default settings.
-         */
-        this.userPreferences = UserPreferences.createDefault();
+        this.preferenceLoader = UserPreferenceLoader.getInstance(context);
         this.database = AppDatabase.getInstance(context);
-        this.calendarHelper = new CalendarIntegrationHelper(context);
+        this.calendarRepository = new CalendarRepository(context);
     }
 
     public AIRecommendation generateAdaptiveSchedule(List<StudySessionWithStats> allSessions,
@@ -65,12 +64,12 @@ public class RecommendationEngine {
         // Get today's actual study topic from sessions
         String todayStudyTopic = DataProcessor.getTodayPrimaryStudyTopic(allSessions);
 
-        List<CalendarEvent> calendarEvents = calendarHelper.getEventsInRange(getStartOfDay(targetDate), getEndOfDay(targetDate));
+        List<CalendarEvent> calendarEvents = calendarRepository.getEventsInRangeSync(getStartOfDay(targetDate), getEndOfDay(targetDate));
 
         schedule.setTotalSessions(allSessions.size());
 
         // Initialize 24-hour activity array
-        AIRecommendation.ActivityType[] hourlyActivities = new AIRecommendation.ActivityType[24];
+        ActivityType[] hourlyActivities = new ActivityType[24];
 
         // Step 1: Apply fixed constraints (calendar, sleep)
         applyCalendarConstraints(hourlyActivities, calendarEvents);
@@ -89,8 +88,7 @@ public class RecommendationEngine {
         fillRemainingSlots(hourlyActivities);
 
         // Step 5: Convert to activity blocks
-        float avgProductivity = calculateAvgProductivity(allSessions);
-        buildActivityBlocks(schedule, hourlyActivities, avgProductivity);
+        buildActivityBlocks(schedule, hourlyActivities);
 
         // Step 6: Generate summary
         schedule.setSummaryMessage(generateSummaryMessage(
@@ -109,7 +107,7 @@ public class RecommendationEngine {
      * Allocate EXACTLY the specified number of study hours
      * Uses historical productivity data to place study blocks in optimal times
      */
-    private void allocateExactStudyHours(AIRecommendation.ActivityType[] hourlyActivities,
+    private void allocateExactStudyHours(ActivityType[] hourlyActivities,
                                          List<StudySessionWithStats> allSessions,
                                          float targetStudyHours) {
 
@@ -121,11 +119,9 @@ public class RecommendationEngine {
             Calendar cal = Calendar.getInstance();
             cal.setTimeInMillis(session.getTimestamp());
             int hour = cal.get(Calendar.HOUR_OF_DAY);
-
-            if (hour >= 0 && hour < 24) {
-                hourlyProductivity[hour] += session.getFocusScore();
-                hourlySessionCount[hour]++;
-            }
+            // NOTE: hour is for sure in range [0, 23]
+            hourlyProductivity[hour] += session.getFocusScore();
+            hourlySessionCount[hour]++;
         }
 
         // Calculate average productivity per hour
@@ -147,7 +143,7 @@ public class RecommendationEngine {
         }
 
         // Sort by productivity (highest first)
-        Collections.sort(availableHours, (a, b) -> Float.compare(b.productivity, a.productivity));
+        availableHours.sort((a, b) -> Float.compare(b.productivity, a.productivity));
 
         // Allocate exactly the target hours
         int hoursToAllocate = Math.round(targetStudyHours);
@@ -162,11 +158,11 @@ public class RecommendationEngine {
 
             // Determine study type based on productivity
             if (hourScore.productivity >= 75 || hourlySessionCount[hour] >= 3) {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.DEEP_STUDY;
+                hourlyActivities[hour] = ActivityType.DEEP_STUDY;
             } else if (hourScore.productivity >= 60) {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.LIGHT_STUDY;
+                hourlyActivities[hour] = ActivityType.LIGHT_STUDY;
             } else {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.LIGHT_STUDY;
+                hourlyActivities[hour] = ActivityType.LIGHT_STUDY;
             }
 
             hoursAllocated++;
@@ -202,14 +198,15 @@ public class RecommendationEngine {
         }
     }
 
-    private void applyCalendarConstraints(AIRecommendation.ActivityType[] hourlyActivities,
+    private void applyCalendarConstraints(ActivityType[] hourlyActivities,
                                           @NonNull List<CalendarEvent> events) {
-        if (userPreferences.getCalendarIntegration() == null ||
-                !userPreferences.getCalendarIntegration().isEnabled()) {
+        JsonObject calConfig = preferenceLoader.getCalendarIntegration();
+        if (calConfig == null || !preferenceLoader.isEnabled(calConfig)) {
             return;
         }
 
-        UserPreferences.CalendarIntegration calConfig = userPreferences.getCalendarIntegration();
+        int bufferBefore = preferenceLoader.getInt(calConfig, "bufferBeforeEvent", 0);
+        int bufferAfter = preferenceLoader.getInt(calConfig, "bufferAfterEvent", 0);
 
         for (CalendarEvent event : events) {
             Calendar cal = Calendar.getInstance();
@@ -221,148 +218,151 @@ public class RecommendationEngine {
             if (endHour == 0) endHour = 24;
 
             // Add buffer time
-            if (calConfig.getBufferBeforeEvent() > 0) {
-                startHour = Math.max(0, startHour - (calConfig.getBufferBeforeEvent() / 60));
+            if (bufferBefore > 0) {
+                startHour = Math.max(0, startHour - (bufferBefore / 60));
             }
-            if (calConfig.getBufferAfterEvent() > 0) {
-                endHour = Math.min(24, endHour + (calConfig.getBufferAfterEvent() / 60));
+            if (bufferAfter > 0) {
+                endHour = Math.min(24, endHour + (bufferAfter / 60));
             }
 
-            for (int h = startHour; h < endHour && h < 24; h++) {
-                hourlyActivities[h] = AIRecommendation.ActivityType.CALENDAR_EVENT;
+            for (int h = startHour; h < endHour; h++) {
+                hourlyActivities[h] = ActivityType.CALENDAR_EVENT;
             }
         }
     }
 
-    private void applySleepSchedule(AIRecommendation.ActivityType[] hourlyActivities) {
-        if (userPreferences.getSleepSchedule() == null) return;
+    private void applySleepSchedule(ActivityType[] hourlyActivities) {
+        JsonObject sleep = preferenceLoader.getSleepSchedule();
+        if (sleep == null) return;
 
-        UserPreferences.SleepSchedule sleep = userPreferences.getSleepSchedule();
-        UserPreferences.TimeOfDay bedtime = sleep.getBedtime();
-        UserPreferences.TimeOfDay wakeup = sleep.getWakeupTime();
-
-        if (bedtime == null || wakeup == null) return;
+        int bedtimeHour = preferenceLoader.getHour(sleep, "bedtime");
+        int wakeupHour = preferenceLoader.getHour(sleep, "wakeupTime");
 
         for (int h = 0; h < 24; h++) {
-            if (hourlyActivities[h] == null) {
-                UserPreferences.TimeOfDay current = new UserPreferences.TimeOfDay(h, 0);
-                if (current.isBetween(bedtime, wakeup)) {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.SLEEP;
+            if (hourlyActivities[h] == null && isSleepHour(h, bedtimeHour, wakeupHour)) {
+                hourlyActivities[h] = ActivityType.SLEEP;
+            }
+        }
+    }
+
+    /**
+     * Check if an hour falls within sleep schedule.
+     * Handles overnight sleep (e.g., 23:00 to 6:00)
+     */
+    private boolean isSleepHour(int hour, int bedtime, int wakeup) {
+        if (bedtime < wakeup) {
+            // Sleep doesn't wrap midnight (unusual case like 1am to 9am)
+            return hour >= bedtime && hour < wakeup;
+        } else {
+            // Sleep wraps midnight (normal case like 11pm to 6am)
+            return hour >= bedtime || hour < wakeup;
+        }
+    }
+
+    private void applyMealTimes(ActivityType[] hourlyActivities) {
+        JsonObject meals = preferenceLoader.getMealTimes();
+        if (meals == null) return;
+
+        // Process breakfast, lunch, dinner
+        for (String mealType : new String[]{"breakfast", "lunch", "dinner"}) {
+            JsonObject meal = meals.getAsJsonObject(mealType);
+            if (meal != null && preferenceLoader.getBoolean(meal, "enabled", false)) {
+                int hour = preferenceLoader.getInt(meal, "hour", -1);
+                if (hour >= 0 && hour < 24 && hourlyActivities[hour] == null) {
+                    hourlyActivities[hour] = ActivityType.MEALS;
                 }
             }
         }
     }
 
-    private void applyMealTimes(AIRecommendation.ActivityType[] hourlyActivities) {
-        if (userPreferences.getMealTimes() == null) return;
-
-        UserPreferences.MealTimes meals = userPreferences.getMealTimes();
-        List<UserPreferences.MealTime> enabledMeals = meals.getAllEnabledMeals();
-
-        for (UserPreferences.MealTime meal : enabledMeals) {
-            int hour = meal.getHour();
-            if (hour >= 0 && hour < 24 && hourlyActivities[hour] == null) {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.MEALS;
-            }
-        }
-    }
-
-    private void applyWorkSchedule(AIRecommendation.ActivityType[] hourlyActivities,
+    private void applyWorkSchedule(ActivityType[] hourlyActivities,
                                    long targetDate) {
-        if (userPreferences.getWorkSchedule() == null ||
-                !userPreferences.getWorkSchedule().isEnabled()) return;
+        JsonObject work = preferenceLoader.getWorkSchedule();
+        if (work == null || !preferenceLoader.isEnabled(work)) return;
 
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(targetDate);
         String dayOfWeek = getDayOfWeekString(cal);
 
-        UserPreferences.WorkSchedule work = userPreferences.getWorkSchedule();
-        if (!work.isWorkDay(dayOfWeek)) return;
+        List<String> workDays = preferenceLoader.getStringList(work, "workDays");
+        if (!workDays.contains(dayOfWeek.toUpperCase())) return;
 
-        int startHour = work.getStartTime().getHour();
-        int endHour = work.getEndTime().getHour();
+        int startHour = preferenceLoader.getHour(work, "startTime");
+        int endHour = preferenceLoader.getHour(work, "endTime");
+        boolean allowStudy = preferenceLoader.getBoolean(work, "allowStudyDuringWork", false);
 
         for (int h = startHour; h < endHour && h < 24; h++) {
-            if (hourlyActivities[h] == null && !work.isAllowStudyDuringWork()) {
-                hourlyActivities[h] = AIRecommendation.ActivityType.WORK;
+            if (hourlyActivities[h] == null && !allowStudy) {
+                hourlyActivities[h] = ActivityType.WORK;
             }
         }
     }
 
-    private void applyExerciseSchedule(AIRecommendation.ActivityType[] hourlyActivities) {
-        if (userPreferences.getExerciseSchedule() == null ||
-                !userPreferences.getExerciseSchedule().isEnabled()) return;
+    private void applyExerciseSchedule(ActivityType[] hourlyActivities) {
+        JsonObject exercise = preferenceLoader.getExerciseSchedule();
+        if (exercise == null || !preferenceLoader.isEnabled(exercise)) return;
 
-        UserPreferences.ExerciseSchedule exercise = userPreferences.getExerciseSchedule();
-        if (exercise.getPreferredTimes() == null) return;
+        if (!exercise.has("preferredTimes")) return;
 
-        for (UserPreferences.ExerciseBlock block : exercise.getPreferredTimes()) {
-            int hour = block.getHour();
-            int duration = block.getDuration();
+        for (JsonElement element : exercise.getAsJsonArray("preferredTimes")) {
+            JsonObject block = element.getAsJsonObject();
+            int hour = preferenceLoader.getInt(block, "hour", -1);
+            int duration = preferenceLoader.getInt(block, "duration", 0);
 
-            for (int h = hour; h < hour + (duration / 60) && h < 24; h++) {
-                if (hourlyActivities[h] == null) {
-                    hourlyActivities[h] = AIRecommendation.ActivityType.EXERCISE;
+            if (hour >= 0 && hour < 24) {
+                for (int h = hour; h < hour + (duration / 60) && h < 24; h++) {
+                    if (hourlyActivities[h] == null) {
+                        hourlyActivities[h] = ActivityType.EXERCISE;
+                    }
                 }
             }
         }
     }
 
-    private void applySocialTime(AIRecommendation.ActivityType[] hourlyActivities,
+    private void applySocialTime(ActivityType[] hourlyActivities,
                                  long targetDate) {
-        if (userPreferences.getSocialTime() == null ||
-                !userPreferences.getSocialTime().isEnabled() ||
-                !userPreferences.getSocialTime().isProtectFromStudy()) return;
+        JsonObject social = preferenceLoader.getSocialTime();
+        if (social == null || !preferenceLoader.isEnabled(social)) return;
+
+        boolean protectFromStudy = preferenceLoader.getBoolean(social, "protectFromStudy", false);
+        if (!protectFromStudy) return;
 
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(targetDate);
         String dayOfWeek = getDayOfWeekString(cal);
 
-        UserPreferences.SocialTime social = userPreferences.getSocialTime();
-        if (!social.getPreferredDays().contains(dayOfWeek.toUpperCase())) return;
+        List<String> preferredDays = preferenceLoader.getStringList(social, "preferredDays");
+        if (!preferredDays.contains(dayOfWeek.toUpperCase())) return;
 
-        List<Integer> socialHours = social.getPreferredHours();
-        if (socialHours == null) return;
-
+        List<Integer> socialHours = preferenceLoader.getIntList(social, "preferredHours");
         for (int hour : socialHours) {
             if (hour >= 0 && hour < 24 && hourlyActivities[hour] == null) {
-                hourlyActivities[hour] = AIRecommendation.ActivityType.SOCIAL;
+                hourlyActivities[hour] = ActivityType.SOCIAL;
             }
         }
     }
 
-    private void fillRemainingSlots(AIRecommendation.ActivityType[] hourlyActivities) {
+    private void fillRemainingSlots(ActivityType[] hourlyActivities) {
         for (int h = 0; h < 24; h++) {
             if (hourlyActivities[h] == null) {
-                hourlyActivities[h] = AIRecommendation.ActivityType.BREAKS;
+                hourlyActivities[h] = ActivityType.BREAKS;
             }
         }
-    }
-
-    private float calculateAvgProductivity(List<StudySessionWithStats> sessions) {
-        if (sessions.isEmpty()) return 0;
-
-        float sum = 0;
-        for (StudySessionWithStats session : sessions) {
-            sum += session.getFocusScore();
-        }
-        return sum / sessions.size();
     }
 
     private void buildActivityBlocks(AIRecommendation schedule,
-                                     AIRecommendation.ActivityType[] hourlyActivities,
-                                     float avgProductivity) {
-        AIRecommendation.ActivityType currentActivity = hourlyActivities[0];
+                                     ActivityType[] hourlyActivities) {
+        ActivityType currentActivity = hourlyActivities[0];
         int blockStart = 0;
 
         for (int h = 1; h < 24; h++) {
             if (hourlyActivities[h] != currentActivity) {
-                schedule.addActivityBlock(new AIRecommendation.ActivityBlock(
+                schedule.addActivityBlock(new ActivityBlock(
                         currentActivity,
                         blockStart,
                         h,
                         calculateConfidence(currentActivity),
-                        getActivityReason(currentActivity, avgProductivity)
+                        getActivityReason(currentActivity)
                 ));
 
                 currentActivity = hourlyActivities[h];
@@ -371,12 +371,12 @@ public class RecommendationEngine {
         }
 
         // Add final block
-        schedule.addActivityBlock(new AIRecommendation.ActivityBlock(
+        schedule.addActivityBlock(new ActivityBlock(
                 currentActivity,
                 blockStart,
                 24,
                 calculateConfidence(currentActivity),
-                getActivityReason(currentActivity, avgProductivity)
+                getActivityReason(currentActivity)
         ));
     }
 
@@ -430,16 +430,26 @@ public class RecommendationEngine {
 
         // Recent energy levels
         List<PAMScore> recentScores = database.pamScoreDao().getLastNScores(3);
-        if (recentScores != null && !recentScores.isEmpty() && userPreferences.getPamThresholds() != null) {
+        if (recentScores != null && !recentScores.isEmpty()) {
             float avgRecent = 0;
             for (PAMScore score : recentScores) {
                 avgRecent += score.getTotalScore();
             }
             avgRecent /= recentScores.size();
 
-            if (avgRecent < userPreferences.getPamThresholds().getLowThreshold()) {
+            // Use PAM thresholds from JSON or defaults
+            JsonObject personalGoals = preferenceLoader.getPersonalGoals();
+            int lowThreshold = 15;
+            int highThreshold = 35;
+
+            if (personalGoals != null) {
+                lowThreshold = preferenceLoader.getInt(personalGoals, "lowThreshold", 15);
+                highThreshold = preferenceLoader.getInt(personalGoals, "highThreshold", 35);
+            }
+
+            if (avgRecent < lowThreshold) {
                 summary.append("Low energy—schedule breaks.");
-            } else if (avgRecent > userPreferences.getPamThresholds().getHighThreshold()) {
+            } else if (avgRecent > highThreshold) {
                 summary.append("High energy—maximize focus.");
             }
         }
@@ -447,50 +457,28 @@ public class RecommendationEngine {
         return summary.toString();
     }
 
-    private int calculateConfidence(AIRecommendation.ActivityType type) {
-        switch (type) {
-            case SLEEP:
-            case CALENDAR_EVENT:
-                return 100;
-            case MEALS:
-            case EXERCISE:
-                return 95;
-            case DEEP_STUDY:
-            case LIGHT_STUDY:
-                return 90; // Higher confidence for exact allocation
-            case WORK:
-            case SOCIAL:
-                return 80;
-            case BREAKS:
-                return 70;
-            default:
-                return 50;
-        }
+    private int calculateConfidence(ActivityType type) {
+        return switch (type) {
+            case SLEEP, CALENDAR_EVENT -> 100;
+            case MEALS, EXERCISE -> 95;
+            case DEEP_STUDY, LIGHT_STUDY -> 90; // Higher confidence for exact allocation
+            case WORK, SOCIAL -> 80;
+            case BREAKS -> 70;
+        };
     }
 
-    private String getActivityReason(AIRecommendation.ActivityType type, float avgProductivity) {
-        switch (type) {
-            case DEEP_STUDY:
-                return "Optimal time for intensive focus work";
-            case LIGHT_STUDY:
-                return "Good for review, reading, practice";
-            case WORK:
-                return "Work hours";
-            case EXERCISE:
-                return "Exercise for energy and focus";
-            case SOCIAL:
-                return "Protected social time";
-            case MEALS:
-                return "Meal time";
-            case BREAKS:
-                return "Break to maintain energy";
-            case SLEEP:
-                return "Sleep for optimal rest";
-            case CALENDAR_EVENT:
-                return "Calendar commitment";
-            default:
-                return "Flexible time";
-        }
+    private String getActivityReason(ActivityType type) {
+        return switch (type) {
+            case DEEP_STUDY -> "Optimal time for intensive focus work";
+            case LIGHT_STUDY -> "Good for review, reading, practice";
+            case WORK -> "Work hours";
+            case EXERCISE -> "Exercise for energy and focus";
+            case SOCIAL -> "Protected social time";
+            case MEALS -> "Meal time";
+            case BREAKS -> "Break to maintain energy";
+            case SLEEP -> "Sleep for optimal rest";
+            case CALENDAR_EVENT -> "Calendar commitment";
+        };
     }
 
     private String getDayOfWeekString(Calendar cal) {

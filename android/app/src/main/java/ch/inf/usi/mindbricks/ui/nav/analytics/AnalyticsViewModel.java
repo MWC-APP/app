@@ -17,7 +17,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;

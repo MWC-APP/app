@@ -1,6 +1,5 @@
 package ch.inf.usi.mindbricks.ui.charts;
 
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -12,19 +11,14 @@ import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,14 +26,28 @@ import java.util.List;
 import java.util.Map;
 
 import ch.inf.usi.mindbricks.R;
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.ActivityBlock;
+import ch.inf.usi.mindbricks.model.recommendation.ActivityType;
 
 
+/**
+ * Card de
+ */
 public class AIRecommendationCardView extends View {
+    public static final float COLOR_DARKEN_FACTOR = 0.3f;
     private static final String TAG = "AIRecommendationChart";
-
+    private static final float MIN_ZOOM = 0.5f;
+    private static final float MAX_ZOOM = 3.0f;
+    private static final float MIN_CHART_WIDTH = 2400f;
+    // block thresholds
+    private static final int ICON_SIZE = 60;
+    // Layout dimensions
+    private final float leftMargin = 60f;
+    private final float topMargin = 60f;
+    private final float rightMargin = 60f;
+    private final float bottomMargin = 40;
     private AIRecommendation scheduleData;
-
     // Paints
     private Paint blockPaint;
     private Paint textPaint;
@@ -47,30 +55,13 @@ public class AIRecommendationCardView extends View {
     private Paint gridPaint;
     private Paint confidencePaint;
     private Paint linePaint;
-
-    // Layout dimensions
-    private float leftMargin = 60f;
-    private float topMargin = 60f;
-    private float rightMargin = 60f;
-    private float bottomMargin = 40;
-
     // Zoom
     private ScaleGestureDetector scaleDetector;
     private float scaleFactor = 1.0f;
-    private static final float MIN_ZOOM = 0.5f;
-    private static final float MAX_ZOOM = 3.0f;
-
-    private static final float MIN_CHART_WIDTH = 2400f;
-
-    // block thresholds
-    private static final float BLOCK_TEXT = 100f;
-    private static final float BLOCK_TIME = 140f;
-    private static final int ICON_SIZE = 60 ;
-
     // Activity type to Y-position mapping
     private List<ActivityLayer> activityLayers;
     private List<BlockBounds> blockBounds;
-    private Map<AIRecommendation.ActivityType, Bitmap> iconCache;
+    private Map<ActivityType, Bitmap> iconCache;
 
     public AIRecommendationCardView(Context context) {
         super(context);
@@ -138,7 +129,7 @@ public class AIRecommendationCardView extends View {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
 
         canvas.save();
@@ -152,7 +143,7 @@ public class AIRecommendationCardView extends View {
             return;
         }
 
-        List<AIRecommendation.ActivityBlock> blocks = scheduleData.getActivityBlocks();
+        List<ActivityBlock> blocks = scheduleData.getActivityBlocks();
         Log.d(TAG, "Drawing " + blocks.size() + " activity blocks");
 
         float chartWidth = (getWidth() / scaleFactor) - leftMargin - rightMargin;
@@ -185,8 +176,7 @@ public class AIRecommendationCardView extends View {
         return true;
     }
 
-    @SuppressLint("ResourceType")
-    private void showBlockDetails(AIRecommendation.ActivityBlock block) {
+    private void showBlockDetails(ActivityBlock block) {
         Context context = getContext();
         if (context == null) return;
 
@@ -220,29 +210,18 @@ public class AIRecommendationCardView extends View {
             imageView.setColorFilter(R.color.analytics_text_tertiary, android.graphics.PorterDuff.Mode.SRC_IN);
     }
 
-    private int getActivityIcon(AIRecommendation.ActivityType type) {
-        switch (type) {
-            case DEEP_STUDY:
-                return R.drawable.ic_book;
-            case LIGHT_STUDY:
-                return R.drawable.ic_books;
-            case WORK:
-                return R.drawable.ic_work;
-            case EXERCISE:
-                return R.drawable.ic_exercise;
-            case SOCIAL:
-                return R.drawable.ic_chat;
-            case MEALS:
-                return R.drawable.ic_coffee;
-            case BREAKS:
-                return R.drawable.ic_pause;
-            case SLEEP:
-                return R.drawable.ic_bed;
-            case CALENDAR_EVENT:
-                return R.drawable.ic_event;
-            default:
-                return android.R.drawable.ic_menu_info_details;
-        }
+    private int getActivityIcon(ActivityType type) {
+        return switch (type) {
+            case DEEP_STUDY -> R.drawable.ic_book;
+            case LIGHT_STUDY -> R.drawable.ic_books;
+            case WORK -> R.drawable.ic_work;
+            case EXERCISE -> R.drawable.ic_exercise;
+            case SOCIAL -> R.drawable.ic_chat;
+            case MEALS -> R.drawable.ic_coffee;
+            case BREAKS -> R.drawable.ic_pause;
+            case SLEEP -> R.drawable.ic_bed;
+            case CALENDAR_EVENT -> R.drawable.ic_event;
+        };
     }
 
     private void drawTimeGrid(Canvas canvas, float chartWidth, float chartHeight) {
@@ -274,7 +253,7 @@ public class AIRecommendationCardView extends View {
     }
 
     private void drawStackedActivityBlocks(Canvas canvas,
-                                           List<AIRecommendation.ActivityBlock> blocks,
+                                           List<ActivityBlock> blocks,
                                            float chartWidth, float chartHeight) {
 
         float hourWidth = chartWidth / 24f;
@@ -289,9 +268,8 @@ public class AIRecommendationCardView extends View {
         }
         float layerHeight = chartHeight / (maxLayer + 2);
 
-        boolean detail = false;
         for (int i = 0; i < blocks.size(); i++) {
-            AIRecommendation.ActivityBlock block = blocks.get(i);
+            ActivityBlock block = blocks.get(i);
             ActivityLayer layerInfo = activityLayers.get(i);
 
             float startX = leftMargin + (block.getStartHour() * hourWidth);
@@ -321,7 +299,7 @@ public class AIRecommendationCardView extends View {
             }
 
             // Draw outline
-            linePaint.setColor(darkenColor(color, 0.3f));
+            linePaint.setColor(darkenColor(color));
             linePaint.setAlpha(180);
             canvas.drawRoundRect(blockRect, 12, 12, linePaint);
 
@@ -333,10 +311,10 @@ public class AIRecommendationCardView extends View {
         textPaint.setAlpha(255);
     }
 
-    private void drawIcon(Canvas canvas, AIRecommendation.ActivityBlock block,
-                                  float startX, float blockWidth,
-                                  float baseY, float blockHeight) {
-        Bitmap icon = getIconBitmap(block.getActivityType(), ICON_SIZE);
+    private void drawIcon(Canvas canvas, ActivityBlock block,
+                          float startX, float blockWidth,
+                          float baseY, float blockHeight) {
+        Bitmap icon = getIconBitmap(block.getActivityType());
         if (icon != null) {
             float iconX = startX + (blockWidth - ICON_SIZE) / 2f;
             float iconY = baseY + (blockHeight - ICON_SIZE) / 2f;
@@ -346,7 +324,7 @@ public class AIRecommendationCardView extends View {
         }
     }
 
-    private Bitmap getIconBitmap(AIRecommendation.ActivityType type, int size) {
+    private Bitmap getIconBitmap(ActivityType type) {
         // Check cache first -> quicker access
         if (iconCache.containsKey(type)) {
             return iconCache.get(type);
@@ -357,7 +335,7 @@ public class AIRecommendationCardView extends View {
 
         if (drawable == null) return null;
 
-        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(AIRecommendationCardView.ICON_SIZE, AIRecommendationCardView.ICON_SIZE, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
         drawable.draw(canvas);
@@ -367,12 +345,12 @@ public class AIRecommendationCardView extends View {
         return bitmap;
     }
 
-    private void assignActivityLayers(List<AIRecommendation.ActivityBlock> blocks) {
+    private void assignActivityLayers(List<ActivityBlock> blocks) {
         activityLayers.clear();
-        List<AIRecommendation.ActivityType> typeOrder = new ArrayList<>();
+        List<ActivityType> typeOrder = new ArrayList<>();
 
-        for (AIRecommendation.ActivityBlock block : blocks) {
-            AIRecommendation.ActivityType type = block.getActivityType();
+        for (ActivityBlock block : blocks) {
+            ActivityType type = block.getActivityType();
 
             int layer = typeOrder.indexOf(type);
             if (layer == -1) {
@@ -412,10 +390,10 @@ public class AIRecommendationCardView extends View {
         }
 
         List<LegendItem> items = new ArrayList<>();
-        List<AIRecommendation.ActivityType> uniqueTypes = new ArrayList<>();
+        List<ActivityType> uniqueTypes = new ArrayList<>();
 
-        for (AIRecommendation.ActivityBlock block : scheduleData.getActivityBlocks()) {
-            AIRecommendation.ActivityType type = block.getActivityType();
+        for (ActivityBlock block : scheduleData.getActivityBlocks()) {
+            ActivityType type = block.getActivityType();
             if (!uniqueTypes.contains(type)) {
                 uniqueTypes.add(type);
                 items.add(new LegendItem(
@@ -436,11 +414,11 @@ public class AIRecommendationCardView extends View {
         return (hour - 12) + ":00 PM";
     }
 
-    private int darkenColor(int color, float factor) {
+    private int darkenColor(int color) {
         int a = Color.alpha(color);
-        int r = (int) (Color.red(color) * (1 - factor));
-        int g = (int) (Color.green(color) * (1 - factor));
-        int b = (int) (Color.blue(color) * (1 - factor));
+        int r = (int) (Color.red(color) * (1 - AIRecommendationCardView.COLOR_DARKEN_FACTOR));
+        int g = (int) (Color.green(color) * (1 - AIRecommendationCardView.COLOR_DARKEN_FACTOR));
+        int b = (int) (Color.blue(color) * (1 - AIRecommendationCardView.COLOR_DARKEN_FACTOR));
         return Color.argb(a, r, g, b);
     }
 
@@ -452,11 +430,15 @@ public class AIRecommendationCardView extends View {
         );
     }
 
+    public String getSummaryMessage() {
+        return scheduleData != null ? scheduleData.getSummaryMessage() : null;
+    }
+
     private static class ActivityLayer {
-        AIRecommendation.ActivityType type;
+        ActivityType type;
         int layer;
 
-        ActivityLayer(AIRecommendation.ActivityType type, int layer) {
+        ActivityLayer(ActivityType type, int layer) {
             this.type = type;
             this.layer = layer;
         }
@@ -464,9 +446,9 @@ public class AIRecommendationCardView extends View {
 
     private static class BlockBounds {
         RectF rect;
-        AIRecommendation.ActivityBlock block;
+        ActivityBlock block;
 
-        BlockBounds(RectF rect, AIRecommendation.ActivityBlock block) {
+        BlockBounds(RectF rect, ActivityBlock block) {
             this.rect = new RectF(rect);
             this.block = block;
         }
@@ -476,18 +458,7 @@ public class AIRecommendationCardView extends View {
         }
     }
 
-    public static class LegendItem {
-        public final String name;
-        public final String colorHex;
-
-        public LegendItem(String name, String colorHex) {
-            this.name = name;
-            this.colorHex = colorHex;
-        }
-    }
-
-    public String getSummaryMessage() {
-        return scheduleData != null ? scheduleData.getSummaryMessage() : null;
+    public record LegendItem(String name, String colorHex) {
     }
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {

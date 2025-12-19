@@ -17,7 +17,13 @@ Here is the full list of the refactors I (@lucadibello) managed to do during in 
 - [x] Splitting string resources into multiple files based on their usage (e.g., `strings_home.xml`, `strings_settings.xml`, etc).
 - [x] Removed the substring "AI" from all resource files (misleading, we are not using any AI in the app. Just structured data and simple algorithms). Leftover from the initial idea of the app
 - [x] Remove unused layout resources.
+- [x] Removed daily `focus target` ring (it's not the focus time objective, it's the objective focus score) - every student wants to maximize their focus score, we don't have to set a target for it (also, we didn't have a UI to set it, was 70% by default).
 - [x] Refactored `HomeViewModel` to remove duplicated code and remove passing the same parameters multiple times to different methods and updated `HomeFragment` accordingly.
+- [x] Refactored `UserPreferences` into `UserPreferencesLoader`: now we return JSON objects instead of using multiple inner classes to represent the preferences (not flexible, if the JSON changes we need to change the entire class).
+- [x] Refactored `RecommendationEngine`: now using new `UserPreferencesLoader` to load user preferences, removed duplicated code, improved readability.
+- [x] Refactored `CalendarIntegrationEngine`: we removed this class, and integrated its functionality directly into the `RecommendationEngine` (it was only used there, no need for an extra layer of abstraction).
 
 - [] Adding `@author` tags to all classes to make it clear who did what
 - [] Added Javadocs to all classes, methods, fields, etc.
+
+> During this time span, I did not add any new feature to the app, just refactored existing code to improve its quality and maintainability, as well as removing some bugs/inconsistencies/messy code.

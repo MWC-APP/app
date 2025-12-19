@@ -2,7 +2,7 @@ package ch.inf.usi.mindbricks.util.analytics;
 
 import java.util.List;
 
-import ch.inf.usi.mindbricks.model.visual.AIRecommendation;
+import ch.inf.usi.mindbricks.model.recommendation.AIRecommendation;
 import ch.inf.usi.mindbricks.model.visual.DailyRings;
 import ch.inf.usi.mindbricks.model.visual.DateRange;
 import ch.inf.usi.mindbricks.model.visual.HeatmapCell;
