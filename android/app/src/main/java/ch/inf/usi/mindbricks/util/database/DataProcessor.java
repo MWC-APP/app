@@ -422,7 +422,11 @@ public class DataProcessor {
         Log.d("DataProcessor", "  Filtered sessions: " + sessions.size());
 
         if (sessions.isEmpty()) {
-            Log.d("DataProcessor", "  No sessions, returning empty");
+            Log.d("DataProcessor", "  No sessions, creating empty ring for today");
+            // Create an empty ring for today to show current goal status
+            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), dailyMinutesTarget, 70);
+            DailyRings todayRings = new DailyRings(LocalDate.now(), emptyRings);
+            result.add(todayRings);
             return result;
         }
 
@@ -447,10 +451,21 @@ public class DataProcessor {
 
         Log.d("DataProcessor", "  Days with sessions: " + sessionsByDay.size());
 
+        // Get today's date for comparison
+        Calendar today = Calendar.getInstance();
+        String todayKey = String.format(Locale.US, "%d-%02d-%02d",
+                today.get(Calendar.YEAR),
+                today.get(Calendar.MONTH) + 1,
+                today.get(Calendar.DAY_OF_MONTH)
+        );
+
         for (Map.Entry<String, List<StudySessionWithStats>> entry : sessionsByDay.entrySet()) {
             List<StudySessionWithStats> daySessions = entry.getValue();
 
-            if (daySessions.size() < minSessionsForRing) {
+            // Always include today
+            boolean isToday = entry.getKey().equals(todayKey);
+
+            if (!isToday && daySessions.size() < minSessionsForRing) {
                 continue;
             }
 
@@ -460,6 +475,17 @@ public class DataProcessor {
 
             DailyRings dailyRings = new DailyRings(LocalDate.ofEpochDay(dayTimestamp / 86400000), rings);
             result.add(dailyRings);
+        }
+
+        // If today has no sessions -> add empty DailyRings
+        boolean todayIncluded = result.stream()
+                .anyMatch(dr -> dr.getDate().equals(LocalDate.now()));
+
+        if (!todayIncluded) {
+            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), dailyMinutesTarget, 70);
+            DailyRings todayRings = new DailyRings(LocalDate.now(), emptyRings);
+            result.add(todayRings);
+            Log.d("DataProcessor", "  Added empty ring for today (no sessions yet)");
         }
 
         result.sort((a, b) -> Long.compare(b.getDate().toEpochDay(), a.getDate().toEpochDay()));
@@ -494,30 +520,12 @@ public class DataProcessor {
 
         List<GoalRing> rings = new ArrayList<>();
 
-        // Filter today's sessions
-        Calendar today = Calendar.getInstance();
-        today.set(Calendar.HOUR_OF_DAY, 0);
-        today.set(Calendar.MINUTE, 0);
-        today.set(Calendar.SECOND, 0);
-        today.set(Calendar.MILLISECOND, 0);
-        long startOfToday = today.getTimeInMillis();
-
-        today.add(Calendar.DAY_OF_MONTH, 1);
-        long startOfTomorrow = today.getTimeInMillis();
-
-        List<StudySessionWithStats> todaySessions = new ArrayList<>();
-        for (StudySessionWithStats session : sessions) {
-            if (session.getTimestamp() >= startOfToday && session.getTimestamp() < startOfTomorrow) {
-                todaySessions.add(session);
-            }
-        }
-
-        // Calculate totals
+        // Calculate totals from the passed sessions (already filtered by caller)
         int totalMinutes = 0;
         float totalFocus = 0;
-        int sessionCount = todaySessions.size();
+        int sessionCount = sessions.size();
 
-        for (StudySessionWithStats session : todaySessions) {
+        for (StudySessionWithStats session : sessions) {
             totalMinutes += session.getDurationMinutes();
             totalFocus += session.getFocusScore();
         }

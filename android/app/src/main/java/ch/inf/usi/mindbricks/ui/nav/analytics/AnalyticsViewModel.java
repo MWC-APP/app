@@ -318,9 +318,12 @@ public class AnalyticsViewModel extends AndroidViewModel {
 
             if (VERBOSE_LOGGING) Log.d(TAG, "    [BG] Using goals from preferences: " + dailyMinutesTarget + " min");
 
+            // ensure we actually have some data
+            assert allSessions != null;
+
             List<DailyRings> history = DataProcessor.calculateDailyRingsHistory(
                     getApplication(),
-                    filteredSessions,
+                    allSessions,
                     ringsDateRange,
                     dailyMinutesTarget,
                     1
