@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 import ch.inf.usi.mindbricks.R;
 import ch.inf.usi.mindbricks.database.AppDatabase;
 import ch.inf.usi.mindbricks.model.Tag;
-import ch.inf.usi.mindbricks.model.evaluation.PAMScore;
 import ch.inf.usi.mindbricks.model.questionnare.SessionQuestionnaire;
 import ch.inf.usi.mindbricks.model.visual.StudySession;
 import ch.inf.usi.mindbricks.service.SensorService;
@@ -32,12 +31,14 @@ import ch.inf.usi.mindbricks.util.VibrationHelper;
 /**
  * ViewModel for the Home screen managing Pomodoro timer cycles.
  * Handles study sessions, breaks, and the overall Pomodoro flow.
+ *
+ * @author Luca Di Bello
+ * @author Marta Šafářová
+ * @author Luca Berami
  */
 public class HomeViewModel extends AndroidViewModel {
 
     private static final String TAG = "HomeViewModel";
-
-    // ==================== LiveData State ====================
 
     /**
      * Current remaining time in milliseconds
@@ -69,15 +70,11 @@ public class HomeViewModel extends AndroidViewModel {
      */
     public final MutableLiveData<Long> showQuestionnaireEvent = new MutableLiveData<>();
 
-    // ==================== Private State ====================
-
     private final NotificationHelper notificationHelper;
     private CountDownTimer timer;
     private int currentPomodoroStep = 0; // 1-4 for sessions in current cycle
     private long currentSessionId = -1;
     private long currentSessionStartTime = 0;
-
-    // ==================== Constructor ====================
 
     public HomeViewModel(Application application) {
         super(application);
@@ -110,9 +107,10 @@ public class HomeViewModel extends AndroidViewModel {
      * @param studyDurationMinutes      duration of study sessions
      * @param shortBreakDurationMinutes duration of short breaks
      * @param longBreakDurationMinutes  duration of long break
+     * @param tag                       tag for the next session
      */
     public void continueToNextPhase(int studyDurationMinutes, int shortBreakDurationMinutes,
-                                    int longBreakDurationMinutes) {
+                                    int longBreakDurationMinutes, @NonNull Tag tag) {
         if (currentPhase.getValue() != Phase.IDLE) {
             return;
         }
@@ -121,10 +119,6 @@ public class HomeViewModel extends AndroidViewModel {
         if (phase == null) {
             phase = Phase.FOCUS;
         }
-
-        // Get tag from preferences for continuing sessions
-        PreferencesManager prefs = new PreferencesManager(getApplication());
-        Tag tag = new Tag("Continued Session", 0xFF64B5F6); // Default tag
 
         switch (phase) {
             case FOCUS:
@@ -190,27 +184,17 @@ public class HomeViewModel extends AndroidViewModel {
      *
      * @param questionnaire the questionnaire to save
      */
-    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire) {
+    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire, float focusScore) {
         AppExecutor.getInstance().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(getApplication());
             long id = db.sessionQuestionnaireDao().insert(questionnaire);
             Log.d(TAG, "Questionnaire saved with ID: " + id);
-        });
-    }
-
-    /**
-     * Saves a questionnaire response and updates the session's focus score.
-     *
-     * @param questionnaire the questionnaire to save
-     * @param sessionId     the session ID to update
-     * @param focusScore    the calculated focus score
-     */
-    public void saveQuestionnaireResponse(SessionQuestionnaire questionnaire, long sessionId, float focusScore) {
-        AppExecutor.getInstance().execute(() -> {
-            AppDatabase db = AppDatabase.getInstance(getApplication());
-            long id = db.sessionQuestionnaireDao().insert(questionnaire);
-            db.studySessionDao().updateFocusScore(sessionId, focusScore);
-            Log.d(TAG, "Questionnaire saved with ID: " + id + ", focus score updated for session " + sessionId);
+            // set calculated focus score to the given questionnaire
+            db.studySessionDao().updateFocusScore(
+                    questionnaire.getSessionId(),
+                    focusScore
+            );
+            Log.d(TAG, "Focus score saved for session " + questionnaire.getSessionId());
         });
     }
 

@@ -245,6 +245,7 @@ public class HomeFragmentHelper extends Fragment {
         );
 
         // register the questionnaire
-        homeViewModel.saveQuestionnaireResponse(questionnaire);
+        float focusScore = productivityResult == null ? 0f : productivityResult.getFocusScore();
+        homeViewModel.saveQuestionnaireResponse(questionnaire, focusScore);
     }
 }
