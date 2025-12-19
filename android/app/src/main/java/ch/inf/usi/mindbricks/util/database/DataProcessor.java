@@ -401,12 +401,13 @@ public class DataProcessor {
             Context context,
             List<StudySessionWithStats> allSessions,
             DateRange dateRange,
-            int dailyMinutesTarget,
             int minSessionsForRing
     ) {
         Log.d("DataProcessor", "calculateDailyRingsHistory START");
         Log.d("DataProcessor", "  Range: " + dateRange.getDisplayName());
         Log.d("DataProcessor", "  Total sessions: " + allSessions.size());
+
+        PreferencesManager manager = new PreferencesManager(context);
 
         long rangeMs = dateRange.getEndTimestamp() - dateRange.getStartTimestamp();
         long maxMs = 365L * 24 * 60 * 60 * 1000;
@@ -427,7 +428,8 @@ public class DataProcessor {
         if (sessions.isEmpty()) {
             Log.d("DataProcessor", "  No sessions, creating empty ring for today");
             // Create an empty ring for today to show current goal status
-            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), dailyMinutesTarget, 70);
+            int todayGoal = manager.getDailyStudyMinutesGoal(System.currentTimeMillis());
+            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), todayGoal);
             DailyRings todayRings = new DailyRings(LocalDate.now(), emptyRings);
             result.add(todayRings);
             return result;
@@ -474,7 +476,10 @@ public class DataProcessor {
 
             long dayTimestamp = daySessions.get(0).getTimestamp();
 
-            List<GoalRing> rings = calculateGoalRings(context, daySessions, dailyMinutesTarget, 70);
+            // Get the correct daily goal for this specific day from the study plan
+            int daySpecificGoal = manager.getDailyStudyMinutesGoal(dayTimestamp);
+
+            List<GoalRing> rings = calculateGoalRings(context, daySessions, daySpecificGoal);
 
             DailyRings dailyRings = new DailyRings(LocalDate.ofEpochDay(dayTimestamp / 86400000), rings);
             result.add(dailyRings);
@@ -485,7 +490,8 @@ public class DataProcessor {
                 .anyMatch(dr -> dr.getDate().equals(LocalDate.now()));
 
         if (!todayIncluded) {
-            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), dailyMinutesTarget, 70);
+            int todayGoal = manager.getDailyStudyMinutesGoal(System.currentTimeMillis());
+            List<GoalRing> emptyRings = calculateGoalRings(context, new ArrayList<>(), todayGoal);
             DailyRings todayRings = new DailyRings(LocalDate.now(), emptyRings);
             result.add(todayRings);
             Log.d("DataProcessor", "  Added empty ring for today (no sessions yet)");
@@ -496,24 +502,11 @@ public class DataProcessor {
         Log.d("DataProcessor", "  Daily rings created: " + result.size());
         return result;
     }
-    
-    private static Calendar getStartCalendar(DateRange dateRange) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(dateRange.getStartTimestamp());
-
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        return calendar;
-    }
 
 
     public static List<GoalRing> calculateGoalRings(Context context,
                                                     List<StudySessionWithStats> sessions,
-                                                    int dailyMinutesTarget,
-                                                    float dailyFocusTarget) {
+                                                    int dailyMinutesTarget) {
         PreferencesManager manager = new PreferencesManager(context);
 
         // Use unified preferences for targets if not provided
@@ -551,10 +544,11 @@ public class DataProcessor {
                 "min"
         ));
 
+        // Show average focus score
         rings.add(new GoalRing(
-                "Focus Quality",
+                "Avg Focus Score",
                 avgFocus,
-                dailyFocusTarget,
+                100,
                 "%"
         ));
 

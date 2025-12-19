@@ -324,7 +324,6 @@ public class AnalyticsViewModel extends AndroidViewModel {
                     getApplication(),
                     allSessions,
                     ringsDateRange,
-                    dailyMinutesTarget,
                     1
             );
             dailyRingsHistory.postValue(history);
